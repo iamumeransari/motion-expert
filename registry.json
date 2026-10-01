@@ -1,1 +1,12 @@
-{"styles": []}
+{
+  "styles": [
+    {
+      "slug": "editorial-select",
+      "skill": "skills/editorial-select-motion",
+      "source": "https://x.com/i/status/2105327069190344705",
+      "captured": "2026-10-01",
+      "status": "capturing",
+      "fingerprint": "skills/editorial-select-motion/fingerprint.json"
+    }
+  ]
+}
