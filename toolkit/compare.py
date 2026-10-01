@@ -1113,10 +1113,11 @@ def sheets(beats, src_video, ren_video, out):
 
 EXACT = {
     "ssim_width": 960, "flow_width": 480, "thumb_width": 160, "grid_div": 4,
-    "ssim_shot_min": 0.97,      # every shot's mean SSIM must reach this
+    "ssim_shot_min": 0.975,     # every shot's mean SSIM must reach this
     "ssim_frame_min": 0.95,     # a frame below this is a divergent frame (ranges, flip)
-    "epe_shot_max": 1.0,        # every shot's mean flow EPE (px at 1920) must stay under this
-    "epe_frame_max": 3.0,       # a frame over this is a divergent frame
+    "rel_epe_shot_max": 0.15,   # every shot's flow error relative to its motion must stay under this
+    "rel_epe_frame_max": 0.25,  # a frame over this is a divergent frame
+    "rel_epe_floor": 0.5,       # px per frame at 1920 added to the motion so still frames don't divide by zero
     "moving_px": 1.0,           # px per frame at 1920 counted as moving, for epe_moving
     "cut_band": 0, "move_band": 1, "sfx_band": 1, "sfx_level_db": 2.0, "bed_band": 1,
     "frame_count_band": 1,
@@ -1160,7 +1161,7 @@ def exact_pass(src, ren, fps, cut_frames):
     g_size = (f_size[0] // EXACT["grid_div"], f_size[1] // EXACT["grid_div"])
     scale = 1920.0 / max(f_size)
     gs, gr = common.iter_frames(src, fps, s_size, gray=True), common.iter_frames(ren, fps, s_size, gray=True)
-    ssim, epe, epe_mov = [], [], []
+    ssim, epe, epe_mov, mag = [], [], [], []
     TS, TR, MS, MR, DS, DR = [], [], [], [], [], []
     prev = None
     pool = ThreadPoolExecutor(2)
@@ -1177,6 +1178,7 @@ def exact_pass(src, ren, fps, cut_frames):
         if prev is None:
             epe.append(np.nan)
             epe_mov.append(np.nan)
+            mag.append(np.nan)
             z = np.zeros(g_size[::-1], np.float16)
             MS.append(z); MR.append(z); DS.append(z); DR.append(z)
         else:
@@ -1186,6 +1188,7 @@ def exact_pass(src, ren, fps, cut_frames):
             mb = np.hypot(b[..., 0], b[..., 1]) * scale
             e = np.hypot(a[..., 0] - b[..., 0], a[..., 1] - b[..., 1]) * scale
             epe.append(float(e.mean()))
+            mag.append(float((ma.mean() + mb.mean()) / 2))
             mov = (ma > EXACT["moving_px"]) | (mb > EXACT["moving_px"])
             epe_mov.append(float(e[mov].mean()) if mov.mean() > 0.002 else 0.0)
             MS.append(cv2.resize(ma, g_size, interpolation=cv2.INTER_AREA).astype(np.float16))
@@ -1201,7 +1204,7 @@ def exact_pass(src, ren, fps, cut_frames):
         n_s += 1
     for _ in gr:
         n_r += 1
-    return {"ssim": np.array(ssim), "epe": np.array(epe), "epe_moving": np.array(epe_mov),
+    return {"ssim": np.array(ssim), "epe": np.array(epe), "epe_moving": np.array(epe_mov), "mag": np.array(mag),
             "TS": np.stack(TS), "TR": np.stack(TR), "MS": np.stack(MS), "MR": np.stack(MR),
             "DS": np.stack(DS), "DR": np.stack(DR), "n_source": n_s, "n_render": n_r,
             "size": (W, H), "render_fps": common.probe(ren)["fps"]}
@@ -1284,13 +1287,30 @@ def activity_events(a, frac, floor):
             peak = k + 0.5 * (a[k - 1] - a[k + 1]) / den
     far = np.concatenate([a[:max(0, k - 2)], a[k + 3:]])
     distinct = not len(far) or float(far.max()) < 0.85 * p
-    return {"start": start, "peak": peak if distinct else None, "settle": settle, "peak_value": p}
+    # half travel: where the cumulative activity over the window reaches half its total
+    c = np.cumsum(a)
+    j = int(np.searchsorted(c, c[-1] / 2))
+    half = j - 1 + (c[-1] / 2 - (c[j - 1] if j else 0.0)) / max(a[j], 1e-9) if j < len(a) else None
+    return {"start": start, "half": float(half) if half is not None else None,
+            "peak": peak if distinct else None, "settle": settle, "peak_value": p}
 
 
-def exact_moves(S, P, fps, bounds, band):
-    """For each source move, find the frames its motion starts, peaks and settles in
-    both videos inside the move's region and shot, and report the render's offsets."""
+def exact_moves(S, P, fps, bounds, band, cut_rows):
+    """For each source move, find the frames its motion starts, peaks, reaches half its
+    travel and settles in both videos inside the move's region and shot, and report the
+    render's offsets. A cut frame's activity (flow across a cut) is replaced by the next
+    frame's on each side, so a render cut that lands inside the window does not pose as
+    motion; the cut check owns that miss."""
     n = len(P["ssim"])
+    cuts_s = {r["frame_source"] for r in cut_rows}
+    cuts_r = {r["frame_render"] for r in cut_rows if r["frame_render"] is not None}
+
+    def masked(A, lo, hi, cuts, sl):
+        c = A[lo:hi + 1][:, sl[0], sl[1]].astype(np.float32).mean(axis=(1, 2))
+        for k in sorted(cuts, reverse=True):
+            if lo <= k <= hi:
+                c[k - lo] = c[k - lo + 1] if k < hi else (c[k - lo - 1] if k > lo else 0.0)
+        return c
     GH, GW = P["MS"].shape[1:]
     rows = []
     for i, mv in enumerate(get(S, "motion.moves") or []):
@@ -1311,8 +1331,8 @@ def exact_moves(S, P, fps, bounds, band):
         if hi - lo < 2:
             rows.append({**row, "status": "unmeasurable", "reason": "window under three frames"})
             continue
-        cs = As[lo:hi + 1, gy0:gy1, gx0:gx1].astype(np.float32).mean(axis=(1, 2))
-        cr = Ar[lo:hi + 1, gy0:gy1, gx0:gx1].astype(np.float32).mean(axis=(1, 2))
+        reg = (slice(gy0, gy1), slice(gx0, gx1))
+        cs, cr = masked(As, lo, hi, cuts_s, reg), masked(Ar, lo, hi, cuts_r, reg)
         es = activity_events(cs, EXACT["move_frac"], floor)
         if es is None:
             rows.append({**row, "status": "unmeasurable", "reason": "source motion under the noise floor"})
@@ -1324,14 +1344,18 @@ def exact_moves(S, P, fps, bounds, band):
                                 f"(frames {lo}-{hi}); rebuild it"})
             continue
         offs, src_f, ren_f, bad = {}, {}, {}, []
-        for key in ("start", "peak", "settle"):
+        for key in ("start", "half", "peak", "settle"):
             if es[key] is None or er[key] is None:
                 continue
-            src_f[key], ren_f[key] = round(lo + es[key], 2), round(lo + er[key], 2)
+            src_f[key], ren_f[key] = round(float(lo + es[key]), 2), round(float(lo + er[key]), 2)
             o = int(round(er[key] - es[key]))
             offs[key] = o
             if abs(o) > band:
                 bad.append(key)
+        if not offs:
+            rows.append({**row, "status": "unmeasurable",
+                         "reason": "no start, half-travel, peak or settle inside the move's shot window"})
+            continue
         fixes = []
         if "start" in bad:
             o = offs["start"]
@@ -1343,6 +1367,11 @@ def exact_moves(S, P, fps, bounds, band):
             what = (f"{'shorten' if o - so > 0 else 'lengthen'} the move by {abs(o - so) / fps:.3f}s"
                     if abs(o - so) > band else "it follows the start")
             fixes.append(f"settles {fr_s(o, fps).split(' (')[0]} {'late' if o > 0 else 'early'}; {what}")
+        if "half" in bad and not ({"start", "settle"} & set(bad)):
+            o = offs["half"]
+            fixes.append(f"reaches half its travel {fr_s(o, fps).split(' (')[0]} {'late' if o > 0 else 'early'}: it "
+                         f"travels on the wrong curve; {'speed up' if o > 0 else 'slow'} the first half "
+                         f"(ease toward cubic-bezier({', '.join(f'{v:.2f}' for v in mv.get('bezier', []))}))")
         if "peak" in bad:
             o = offs["peak"]
             if abs(offs.get("start", 0)) <= band and abs(offs.get("settle", 0)) <= band:
@@ -1463,7 +1492,8 @@ def frame_ranges(P, bounds, fps, n_max):
     over it, gaps of up to two frames bridged), ranked by summed excess; topped up with
     the worst remaining stretches when fewer than n_max diverge."""
     ssim, epe = P["ssim"], np.nan_to_num(P["epe"], nan=0.0)
-    score = np.maximum((1 - ssim) / (1 - EXACT["ssim_frame_min"]), epe / EXACT["epe_frame_max"])
+    rel = np.nan_to_num(P["rel_epe"], nan=0.0)
+    score = np.maximum((1 - ssim) / (1 - EXACT["ssim_frame_min"]), rel / EXACT["rel_epe_frame_max"])
     n = len(score)
     flagged = np.nonzero(score >= 1.0)[0]
     runs = []
@@ -1493,6 +1523,7 @@ def frame_ranges(P, bounds, fps, n_max):
         r["worst_frame"] = r["f0"] + int(np.argmax(score[sl]))
         r["min_ssim"] = round(float(ssim[sl].min()), 4)
         r["max_epe"] = round(float(epe[sl].max()), 2)
+        r["max_rel_epe"] = round(float(rel[sl].max()), 3)
         r["t0"], r["t1"] = round(r["f0"] / fps, 3), round((r["f1"] + 1) / fps, 3)
         r["shot"] = int(np.searchsorted(bounds, r["f0"], side="right")) if bounds else 1
     out.sort(key=lambda r: (not r["diverges"], -r["excess"], -r["peak_score"]))
@@ -1564,9 +1595,16 @@ def curves_plot(P, bounds, fps, path):
     ax[0].plot(k, P["ssim"], lw=0.8, color="#1f5fbf")
     ax[0].axhline(EXACT["ssim_frame_min"], color="#c33", lw=0.8, ls="--")
     ax[0].set_ylabel("SSIM (luma, 960w)")
-    ax[1].plot(k, P["epe"], lw=0.8, color="#bf6a1f")
-    ax[1].axhline(EXACT["epe_frame_max"], color="#c33", lw=0.8, ls="--")
-    ax[1].set_ylabel("flow EPE px @1920")
+    ax[1].plot(k, P["epe"], lw=0.8, color="#bf6a1f", label="EPE px @1920")
+    ax[1].plot(k, P["mag"], lw=0.6, color="#999", label="flow px @1920")
+    ax[1].set_yscale("symlog", linthresh=1.0)
+    ax[1].set_ylabel("flow, px per frame")
+    ax[1].legend(loc="upper right", fontsize=8)
+    r2 = ax[1].twinx()
+    r2.plot(k, P["rel_epe"], lw=0.6, color="#7a3fbf")
+    r2.axhline(EXACT["rel_epe_frame_max"], color="#c33", lw=0.8, ls="--")
+    r2.set_ylim(0, 2)
+    r2.set_ylabel("relative EPE", color="#7a3fbf")
     ax[1].set_xlabel(f"frame ({fps:g} fps)")
     for a in ax:
         for b in bounds[1:]:
@@ -1614,11 +1652,15 @@ def exact_block(R, S, a, out):
     # cut frames are excluded from flow stats (flow across a cut is meaningless)
     cut_rows = exact_cuts(S, P, fps, a.cut_band)
     epe = P["epe"].copy()
+    P["cut_frames_render"] = sorted({r["frame_render"] for r in cut_rows if r["frame_render"] is not None})
     for r in cut_rows:
         for k in (r["frame_source"], r["frame_render"]):
             if k is not None and 0 <= k < n:
                 epe[k] = np.nan
+                P["epe_moving"][k] = np.nan
+                P["mag"][k] = np.nan
     P["epe"] = epe
+    P["rel_epe"] = epe / (P["mag"] + EXACT["rel_epe_floor"])
     # per-shot means
     shots = []
     edges = bounds + [n]
@@ -1628,15 +1670,20 @@ def exact_block(R, S, a, out):
             continue
         ss = P["ssim"][f0:f1 + 1]
         ee = epe[f0:f1 + 1]
-        ee = ee[np.isfinite(ee)]
+        mm = P["mag"][f0:f1 + 1]
+        ok = np.isfinite(ee) & np.isfinite(mm)
+        ee, mm = ee[ok], mm[ok]
+        rel = float(ee.sum() / (mm + EXACT["rel_epe_floor"]).sum()) if len(ee) else 0.0
         shots.append({"shot": i + 1, "f0": f0, "f1": f1, "t0": round(f0 / fps, 3), "t1": round((f1 + 1) / fps, 3),
                       "ssim_mean": round(float(ss.mean()), 4), "ssim_min": round(float(ss.min()), 4),
                       "worst_frame": f0 + int(np.argmin(ss)),
                       "epe_mean": round(float(ee.mean()), 3) if len(ee) else 0.0,
+                      "flow_mag_mean": round(float(mm.mean()), 3) if len(mm) else 0.0,
+                      "rel_epe": round(rel, 4),
                       "epe_moving_mean": round(float(np.nanmean(P["epe_moving"][f0:f1 + 1])), 3)
                       if np.isfinite(P["epe_moving"][f0:f1 + 1]).any() else 0.0})
     for s in shots:
-        s["pass"] = s["ssim_mean"] >= a.ssim_shot_min and s["epe_mean"] <= a.epe_shot_max
+        s["pass"] = s["ssim_mean"] >= a.ssim_shot_min and s["rel_epe"] <= a.rel_epe_shot_max
     worst_s = min(shots, key=lambda s: s["ssim_mean"])
     bad_s = sorted([s for s in shots if s["ssim_mean"] < a.ssim_shot_min], key=lambda s: s["ssim_mean"])
     shot_name = lambda s: f"shot {s['shot']} (frames {s['f0']}-{s['f1']}, {s['t0']:.2f}-{s['t1']:.2f}s)"
@@ -1646,14 +1693,21 @@ def exact_block(R, S, a, out):
           + "; open the flip sheets for those frames",
           why=f"lowest per-shot mean SSIM on luma at 960 wide ({len(bad_s)} of {len(shots)} shots under the bar)",
           detail={"failing_shots": [s["shot"] for s in bad_s]})
-    worst_e = max(shots, key=lambda s: s["epe_mean"])
-    bad_e = sorted([s for s in shots if s["epe_mean"] > a.epe_shot_max], key=lambda s: -s["epe_mean"])
-    R.add("exact.flow_epe_shot_max", "exact", worst_e["epe_mean"], None, a.epe_shot_max,
-          lambda d, dist: "; ".join(f"{shot_name(s)} flow differs by {s['epe_mean']:.2f} px per frame on average"
-                                    for s in bad_e[:4])
-          + "; a move there travels on the wrong curve or at the wrong speed (see the move timing rows)",
-          why=f"highest per-shot mean optical-flow endpoint error, px at 1920 ({len(bad_e)} of {len(shots)} shots over)",
-          detail={"failing_shots": [s["shot"] for s in bad_e]})
+    worst_e = max(shots, key=lambda s: s["rel_epe"])
+    bad_e = sorted([s for s in shots if s["rel_epe"] > a.rel_epe_shot_max], key=lambda s: -s["rel_epe"])
+
+    def worst_flow_frames(s):
+        r = P["rel_epe"][s["f0"]:s["f1"] + 1]
+        ks = [s["f0"] + int(k) for k in np.argsort(-np.nan_to_num(r))[:3] if np.isfinite(r[k]) and r[k] > EXACT["rel_epe_frame_max"]]
+        return ", ".join(str(k) for k in sorted(ks)) or "none over the frame bar"
+    R.add("exact.flow_rel_epe_shot_max", "exact", worst_e["rel_epe"], None, a.rel_epe_shot_max,
+          lambda d, dist: "; ".join(f"{shot_name(s)} flow differs by {s['epe_mean']:.2f} px per frame against "
+                                    f"{s['flow_mag_mean']:.2f} px of motion ({s['rel_epe'] * 100:.0f}%), worst frames "
+                                    f"{worst_flow_frames(s)}" for s in bad_e[:4])
+          + "; a move there travels on the wrong curve or at the wrong speed even where it lands right",
+          why=f"highest per-shot optical-flow endpoint error relative to the motion, px at 1920 over (flow px + "
+              f"{EXACT['rel_epe_floor']}) ({len(bad_e)} of {len(shots)} shots over)",
+          detail={"failing_shots": [s["shot"] for s in bad_e], "worst_shot_epe_px": worst_e["epe_mean"]})
     # cuts
     bad_c = [r for r in cut_rows if not r["pass"]]
     if cut_rows:
@@ -1664,7 +1718,7 @@ def exact_block(R, S, a, out):
                   f"{len(cut_rows)} cuts)")
     # moves
     t_m = time.time()
-    move_rows = exact_moves(S, P, fps, bounds, a.move_band)
+    move_rows = exact_moves(S, P, fps, bounds, a.move_band, cut_rows)
     gated = [r for r in move_rows if r["status"] in ("pass", "fail")]
     bad_m = sorted([r for r in gated if r["status"] == "fail"],
                    key=lambda r: -max([abs(v) for v in r.get("offsets", {}).values()] or [99]))
@@ -1672,7 +1726,8 @@ def exact_block(R, S, a, out):
         R.add("exact.moves_off", "exact", float(len(bad_m)), None, 0.0,
               lambda d, dist: "; ".join(r["fix"] for r in bad_m[:5]) + (f"; and {len(bad_m) - 5} more"
                                                                          if len(bad_m) > 5 else ""),
-              why=f"source moves whose start, peak or settle is more than {a.move_band} frame off in the render "
+              why=f"source moves whose start, half-travel, peak or settle is more than {a.move_band} frame off "
+                  f"in the render "
                   f"({len(gated)} measurable of {len(move_rows)})")
     # sound
     snd = exact_sound(S, a.source_video, a.render_video, fps, a.sfx_band, a.sfx_level_db)
@@ -1708,9 +1763,12 @@ def exact_block(R, S, a, out):
                global_offset={"frames": goff, "mae_by_shift": errs},
                per_frame={"ssim": [round(float(v), 4) for v in P["ssim"]],
                           "epe": [None if not np.isfinite(v) else round(float(v), 3) for v in epe],
-                          "epe_moving": [None if not np.isfinite(v) else round(float(v), 3) for v in P["epe_moving"]]},
-               thresholds={"ssim_shot_min": a.ssim_shot_min, "epe_shot_max": a.epe_shot_max,
-                           "ssim_frame_min": EXACT["ssim_frame_min"], "epe_frame_max": EXACT["epe_frame_max"],
+                          "epe_moving": [None if not np.isfinite(v) else round(float(v), 3) for v in P["epe_moving"]],
+                          "flow_mag": [None if not np.isfinite(v) else round(float(v), 3) for v in P["mag"]],
+                          "rel_epe": [None if not np.isfinite(v) else round(float(v), 4) for v in P["rel_epe"]]},
+               thresholds={"ssim_shot_min": a.ssim_shot_min, "rel_epe_shot_max": a.rel_epe_shot_max,
+                           "ssim_frame_min": EXACT["ssim_frame_min"], "rel_epe_frame_max": EXACT["rel_epe_frame_max"],
+                           "rel_epe_floor_px": EXACT["rel_epe_floor"],
                            "cut_band": a.cut_band, "move_band": a.move_band, "sfx_band": a.sfx_band,
                            "sfx_level_db": a.sfx_level_db},
                runtime_s={"frame_pass": round(t_pass, 1), "moves_and_sound": round(t_moves, 1),
@@ -1724,24 +1782,25 @@ def exact_md(sec, fps):
     L.append(f"{fr['compared']} frames compared at {fps:g} fps (source {fr['source']}, render {fr['render']}"
              f"{', render resampled from ' + format(sec['render_fps'], 'g') + ' fps' if sec['resampled'] else ''}). "
              f"Per-frame curves: {sec['curves_png']}; values in report.json under exact.per_frame. "
-             f"Bars: shot mean SSIM at least {sec['thresholds']['ssim_shot_min']}, shot mean flow EPE at most "
-             f"{sec['thresholds']['epe_shot_max']} px; a frame diverges under SSIM {sec['thresholds']['ssim_frame_min']} "
-             f"or over EPE {sec['thresholds']['epe_frame_max']} px.")
+             f"Bars: shot mean SSIM at least {sec['thresholds']['ssim_shot_min']}, shot relative flow EPE at most "
+             f"{sec['thresholds']['rel_epe_shot_max']}; a frame diverges under SSIM {sec['thresholds']['ssim_frame_min']} "
+             f"or over relative EPE {sec['thresholds']['rel_epe_frame_max']}.")
     L.append("")
     L.append("### Worst frame ranges")
     L.append("")
     for r in sec["ranges"]:
         L.append(f"- {r['id']} frames {r['f0']}-{r['f1']} ({r['t0']:.3f}-{r['t1']:.3f}s, shot {r['shot']}): "
                  f"{'diverges' if r['diverges'] else 'within the frame bar'}, min SSIM {r['min_ssim']}, max EPE "
-                 f"{r['max_epe']} px, worst frame {r['worst_frame']}" + (f"; flip: {r['flip_dir']}" if r.get('flip_dir') else ""))
+                 f"{r['max_epe']} px (relative {r['max_rel_epe']}), worst frame {r['worst_frame']}" + (f"; flip: {r['flip_dir']}" if r.get('flip_dir') else ""))
     L.append("")
     L.append("### Shots")
     L.append("")
-    L.append("| shot | frames | seconds | mean SSIM | min SSIM (frame) | mean EPE px | |")
-    L.append("|---|---|---|---|---|---|---|")
+    L.append("| shot | frames | seconds | mean SSIM | min SSIM (frame) | mean EPE px | motion px | rel EPE | |")
+    L.append("|---|---|---|---|---|---|---|---|---|")
     for s in sec["shots"]:
         L.append(f"| {s['shot']} | {s['f0']}-{s['f1']} | {s['t0']:.2f}-{s['t1']:.2f} | {s['ssim_mean']:.4f} | "
-                 f"{s['ssim_min']:.3f} ({s['worst_frame']}) | {s['epe_mean']:.2f} | {'pass' if s['pass'] else 'FAIL'} |")
+                 f"{s['ssim_min']:.3f} ({s['worst_frame']}) | {s['epe_mean']:.2f} | {s['flow_mag_mean']:.2f} | "
+                 f"{s['rel_epe']:.3f} | {'pass' if s['pass'] else 'FAIL'} |")
     L.append("")
     bad = [r for r in sec["cuts"] if not r["pass"]]
     L.append(f"### Cuts: {len(sec['cuts']) - len(bad)} of {len(sec['cuts'])} on the source's frame")
@@ -1891,8 +1950,8 @@ def main():
     ex = ap.add_argument_group("replica (frame-exact)")
     ex.add_argument("--ssim-shot-min", type=float, default=EXACT["ssim_shot_min"],
                     help="every shot's mean luma SSIM must reach this (default calibrated, see loop.md)")
-    ex.add_argument("--epe-shot-max", type=float, default=EXACT["epe_shot_max"],
-                    help="every shot's mean flow endpoint error, px at 1920, must stay under this")
+    ex.add_argument("--rel-epe-shot-max", type=float, default=EXACT["rel_epe_shot_max"],
+                    help="every shot's flow endpoint error relative to its motion must stay under this")
     ex.add_argument("--cut-band", type=int, default=EXACT["cut_band"], help="frames a cut may be off (default 0)")
     ex.add_argument("--move-band", type=int, default=EXACT["move_band"],
                     help="frames a move's start, peak or settle may be off (default 1)")

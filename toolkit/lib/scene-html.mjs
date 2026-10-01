@@ -150,10 +150,15 @@ export function runtimeScript() {
 }
 
 // Element files for the given scenes, each once, in first-use order.
-export function elementBlocks(scenes, notes = []) {
+// transform(source, file), when given, rewrites each element's source before it
+// is inlined (the builders point its media url()s at assets/plates/).
+export function elementBlocks(scenes, notes = [], transform = null) {
   const seen = new Map();
   for (const s of scenes) for (const m of s.moves) if (m.file && !seen.has(m.file)) seen.set(m.file, m.name);
-  return [...seen].map(([file, name]) => inlineElement(readFileSync(file, "utf8").trim(), name, notes));
+  return [...seen].map(([file, name]) => {
+    const src = readFileSync(file, "utf8").trim();
+    return inlineElement(transform ? transform(src, file) : src, name, notes);
+  });
 }
 
 // What the runtime needs to build a scene, and nothing that only review uses.
@@ -200,6 +205,7 @@ export function buildFrame({ scene, plan, style, css, elements, runtime, sfx = [
     feeling: scene.feeling,
     vo_line: scene.vo_line,
     words: scene.words,
+    beats: scene.beats ?? [],
     sfx: sfx.map((e) => ({ local: e.local, class: e.class, clipName: e.clipName, gain_db: e.gain_db, move: e.moveName, target: e.target })),
   };
   const overlayCss = readFileSync(resolve(HERE, "overlay.css"), "utf8");

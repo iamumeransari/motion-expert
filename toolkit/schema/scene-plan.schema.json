@@ -2,11 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://motion-expert.local/scene-plan.schema.json",
   "title": "Motion expert scene plan",
-  "description": "One piece in a captured style. The agent writes it against the style's grammar after the voice-over has been generated, toolkit/validate-plan.mjs enforces what a shape cannot (moves resolve, times land inside their scene, word references exist), toolkit/storyboard.mjs turns it into a board for the canvas, and toolkit/build-composition.mjs turns the approved plan into a HyperFrames project from the same scene code.",
+  "description": "One piece in a captured style. The agent writes it against the style's grammar after the voice-over has been generated (or, for a music-only style, against the music's beat grid), toolkit/validate-plan.mjs enforces what a shape cannot (moves resolve, times land inside their scene, word and beat references exist, media resolves, calibration-only files stay out of pieces), toolkit/storyboard.mjs turns it into a board for the canvas, and toolkit/build-composition.mjs turns the approved plan into a HyperFrames project from the same scene code.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["style", "title", "format", "duration", "vo", "scenes"],
+  "required": ["style", "title", "format", "duration", "scenes"],
   "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["replica", "piece"],
+      "description": "piece (the default) is a new video about a new subject and may not reference any file marked calibration-only (a name or folder starting calibration-only-, or a folder under a CALIBRATION-ONLY.json marker). replica rebuilds the source itself to prove the moves match, and is the only mode allowed to use the source's own frames as plates."
+    },
     "style": {
       "type": "string",
       "description": "Slug of the style skill, resolving to ~/motion-expert/skills/<slug>-motion. The CLIs take --style-dir to point at a style anywhere else, which is how throwaway test styles under work/ are exercised.",
@@ -26,11 +31,12 @@
     "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Length of the piece in seconds. The scenes must tile it." },
     "vo": {
       "type": "object",
+      "description": "The voice-over. Optional: a music-only style leaves it out (or sets audio to null and words to []), times its moves in seconds or on the beat grid, and the build renders without a voice and without ducking.",
       "additionalProperties": false,
       "required": ["script", "words"],
       "properties": {
         "script": { "type": "string", "description": "The script as voiced, audio tags included." },
-        "audio": { "type": ["string", "null"], "description": "Voice-over file, absolute or relative to the plan file. Null only while the plan is a sketch; build-composition refuses a plan without it." },
+        "audio": { "type": ["string", "null"], "description": "Voice-over file, absolute or relative to the plan file. Null or absent for a music-only piece, which renders with no voice clip." },
         "words": {
           "type": "array",
           "description": "Word timings from tts.py, in seconds from the start of the piece. Moves reference them as word:<index>.",
@@ -43,6 +49,23 @@
               "start": { "type": "number", "minimum": 0 },
               "end": { "type": "number", "minimum": 0 }
             }
+          }
+        }
+      }
+    },
+    "music": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The music bed and its beat grid. When the sfx plan carries music, that clip and level win and this clip is only checked; without one this clip is the bed. With no voice-over the bed is the timing spine.",
+      "properties": {
+        "clip": { "type": "string", "minLength": 1, "description": "Music file, absolute or relative to the plan file." },
+        "gain_db": { "type": "number", "maximum": 12, "description": "Bed level when this clip is the bed (default 0 dB, played as mastered)." },
+        "beats": {
+          "type": ["string", "object"],
+          "description": "Beat grid as a JSON file path (relative to the plan file) or inline, {\"beats\": [t...], \"downbeats\": [t...]} in seconds from the start of the piece. Moves reference it as beat:<index> or downbeat:<index>. The --beats flag overrides it.",
+          "properties": {
+            "beats": { "type": "array", "items": { "type": "number", "minimum": 0 } },
+            "downbeats": { "type": "array", "items": { "type": "number", "minimum": 0 } }
           }
         }
       }
@@ -75,8 +98,8 @@
       "properties": {
         "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "A library element in the style's library/<name>.html, or a novel move: either an element written beside the plan in library/<name>.html, or a grammar-composed move whose props.tweens are built from the style's primitives." },
         "target": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "The node this move drives. The first move on a target renders it; a later move on the same target in the same scene animates the existing node." },
-        "t": { "type": ["number", "string"], "pattern": "^word:[0-9]+([+-][0-9]*\\.?[0-9]+)?$", "description": "When the move starts: absolute seconds into the piece, or word:<index> for that word's onset, optionally offset (word:12-0.08 leads the word by 80ms)." },
-        "props": { "type": "object", "description": "Parameters for the element. A grammar-composed move carries props.tweens." },
+        "t": { "type": ["number", "string"], "pattern": "^(word|beat|downbeat):[0-9]+([+-][0-9]*\\.?[0-9]+)?$", "description": "When the move starts: absolute seconds into the piece, word:<index> for that voice-over word's onset, or beat:<index> or downbeat:<index> on the music's beat grid, each optionally offset (word:12-0.08 leads the word by 80ms, beat:8+0.04 trails the beat by 40ms). word references need vo.words; beat references need a grid from --beats or music.beats." },
+        "props": { "type": "object", "description": "Parameters for the element. A grammar-composed move carries props.tweens. Media props (keys src, plate, bg, fg, image, bgClean, poster, video, still, mask, or any string ending in an image or video extension) are paths relative to the plan file, then the style folder; the board and the build copy each file into assets/plates/ under a content-hashed name and rewrite the prop to that path." },
         "novel": { "type": "boolean", "description": "True for a move the source never showed. It then needs a grammar_note and is checked against envelopes rather than against a source move." },
         "grammar_note": { "type": "string", "description": "One line naming the primitives the novel move is built from and the envelopes it stays inside." },
         "sfx": {

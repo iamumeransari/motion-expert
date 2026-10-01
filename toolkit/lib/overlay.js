@@ -57,8 +57,25 @@
     axis.appendChild(tick);
   }
 
-  // voice-over words
+  // the music's beat grid, when the plan has one (downbeats drawn taller)
+  var beats = R.beats || [];
+  if (beats.length) {
+    var bt = lane("beats", beats.length + "", "sfx");
+    for (var b = 0; b < beats.length; b++) {
+      var bm = h("span", "mr-beat" + (beats[b].down ? " is-down" : ""));
+      bm.setAttribute("data-beat-index", beats[b].i);
+      bm.title = "beat:" + beats[b].i;
+      bm.style.left = pct(beats[b].t);
+      bt.appendChild(bm);
+    }
+  }
+
+  // voice-over words (a music-only piece has none and skips the lane)
   var vo = lane("vo", null);
+  if (!R.words.length && beats.length) {
+    grid.removeChild(vo.previousSibling);
+    grid.removeChild(vo);
+  }
   for (var i = 0; i < R.words.length; i++) {
     var w = R.words[i];
     var chip = h("span", "mr-word", w.w);

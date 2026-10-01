@@ -44,6 +44,8 @@
   padding: 0 0.2em; overflow: hidden; white-space: nowrap; font-size: 0.72em; line-height: 1.9em;
   background: rgba(255, 255, 255, 0.12); border-left: 2px solid rgba(255, 255, 255, 0.5); border-radius: 0.2em;
 }
+.me-review .mr-beat { position: absolute; top: 35%; bottom: 35%; width: 2px; background: rgba(255, 255, 255, 0.45); transform: translateX(-1px); }
+.me-review .mr-beat.is-down { top: 0.1em; bottom: 0.1em; width: 3px; background: #ffd166; }
 .me-review .mr-word.is-now { background: #ffd166; color: #111; }
 .me-review .mr-bar { position: absolute; top: 0.2em; bottom: 0.2em; border-radius: 0.2em; }
 .me-review .mr-bar.mr-sig { background: #2b6cff; }

@@ -2,7 +2,7 @@
 // Scene plan -> storyboard board for the review canvas.
 //
 //   node toolkit/storyboard.mjs <plan.json> --out <board-folder> [--name <board>]
-//        [--style-dir <dir>] [--sfx <sfx-plan.json>] [--register] [--force]
+//        [--style-dir <dir>] [--sfx <sfx-plan.json>] [--beats <json>] [--register] [--force]
 //
 // Writes one standalone HTML per scene (01-<id>.html, 02-<id>.html, ...) under
 // the storyboard-canvas contract, plus board.json and a local gsap.min.js. Each
@@ -11,7 +11,10 @@
 // it as window.__timelines = { main: tl } for the canvas scrubber, and carries a
 // toggleable review overlay that never reaches a render. Re-running into the
 // same folder rewrites only frames whose content changed and keeps the
-// canvas's .canvas/ comment state.
+// canvas's .canvas/ comment state. Images and video the moves' props or the
+// style's assets reference are copied into <board>/assets/plates/ under
+// content-hashed names and the props rewritten to that relative path. A plan
+// with no voice-over boards the same way, with the beat grid on the ruler.
 
 import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { resolve, isAbsolute } from "node:path";
@@ -21,6 +24,7 @@ import { pathToFileURL } from "node:url";
 import { loadPlan, validatePlan, printReport, parseArgs } from "./validate-plan.mjs";
 import { loadSfx } from "./lib/sfx.mjs";
 import { styleCss, elementBlocks, runtimeScript, buildFrame, copyGsap, writeIfChanged, frameLabel, rel } from "./lib/scene-html.mjs";
+import { stageMedia, copyMedia } from "./lib/media.mjs";
 
 const CANVAS = resolve(homedir(), "storyboard-canvas", "bin", "canvas");
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -31,13 +35,13 @@ export function frameFile(scene) {
 
 function moveNote(m) {
   const tag = m.kind === "signature" ? "signature" : m.kind === "composed" ? "novel, composed" : m.kind === "placeholder" ? "novel, not built" : "novel";
-  const at = m.word ? `on "${m.word.w}" (${m.tRef})` : `at ${m.t.toFixed(2)}s`;
+  const at = m.word ? `on "${m.word.w}" (${m.tRef})` : m.beat ? `on ${m.beat.kind} ${m.beat.index} (${m.tRef})` : `at ${m.t.toFixed(2)}s`;
   return `${m.name} -> ${m.target} ${at} [${tag}]`;
 }
 
-export async function buildBoard(planPath, { out, name = null, styleDir = null, sfxPath = null, force = false, log = console.log } = {}) {
+export async function buildBoard(planPath, { out, name = null, styleDir = null, sfxPath = null, beats = null, force = false, log = console.log } = {}) {
   const { plan, path, dir: planDir } = loadPlan(planPath);
-  const result = validatePlan(plan, { planDir, styleDir });
+  const result = validatePlan(plan, { planDir, styleDir, beats, sfxPath: sfxPath ? resolve(process.cwd(), sfxPath) : null });
   if (!result.ok) {
     printReport(result, path, log);
     if (!force) throw new Error("plan gate is closed; fix the plan or pass --force to draw the board anyway");
@@ -45,9 +49,9 @@ export async function buildBoard(planPath, { out, name = null, styleDir = null, 
   } else {
     for (const w of result.warnings) log(`! ${w.scene ? `[${w.scene}] ` : ""}${w.message}`);
   }
-  const { style, resolved: scenes } = result;
+  for (const h of result.calibration ?? []) if (result.mode !== "replica") log(`x calibration-only file on the board of a piece: ${h.file}`);
 
-  const sfx = loadSfx(sfxPath ? resolve(process.cwd(), sfxPath) : null, plan, scenes, planDir);
+  const sfx = loadSfx(sfxPath ? resolve(process.cwd(), sfxPath) : null, plan, result.resolved, planDir);
   for (const w of sfx.warnings) log(`! sfx: ${w}`);
   for (const e of sfx.errors) log(`x sfx: ${e}`);
 
@@ -55,8 +59,14 @@ export async function buildBoard(planPath, { out, name = null, styleDir = null, 
   mkdirSync(outDir, { recursive: true });
   copyGsap(outDir);
 
+  // Media into <board>/assets/plates, props and url()s pointed at the copies.
+  const media = stageMedia({ scenes: result.resolved, style: result.style, planDir });
+  const { scenes, style } = media;
+  const plates = copyMedia(media.files, outDir);
+  for (const f of plates.removed) log(`removed assets/plates/${f}: no longer referenced`);
+
   const notes = [];
-  const css = styleCss(style, notes);
+  const css = media.rewriteStyleCss(styleCss(style, notes));
   const runtime = runtimeScript();
   const planRel = rel(outDir, path);
 
@@ -66,7 +76,7 @@ export async function buildBoard(planPath, { out, name = null, styleDir = null, 
   for (const scene of scenes) {
     const file = frameFile(scene);
     wanted.add(file);
-    const elements = elementBlocks([scene], notes);
+    const elements = elementBlocks([scene], notes, media.rewriteElement);
     const events = sfx.events.filter((e) => e.sceneId === scene.id);
     const html = buildFrame({ scene, plan, style, css, elements, runtime, sfx: events, planRel });
     if (writeIfChanged(resolve(outDir, file), html)) changed++;
@@ -74,6 +84,7 @@ export async function buildBoard(planPath, { out, name = null, styleDir = null, 
     const lines = [
       `Feeling: ${scene.feeling}`,
       `VO: ${scene.vo_line ? `"${scene.vo_line}"` : "(silent)"}`,
+      ...(scene.beats?.length ? [`Beats: ${scene.beats.map((b) => `${b.i}${b.down ? "*" : ""}@${b.t.toFixed(2)}s`).join(" ")}`] : []),
       `Moves: ${scene.moves.length ? scene.moves.map(moveNote).join("; ") : "none"}`,
     ];
     if (events.length) lines.push(`SFX: ${events.map((e) => `${e.class} ${e.clipName} at ${e.local.toFixed(2)}s${e.gain_db ? ` ${e.gain_db}dB` : ""}${e.moveName ? ` on ${e.moveName}` : ""}`).join("; ")}`);
@@ -97,14 +108,20 @@ export async function buildBoard(planPath, { out, name = null, styleDir = null, 
     styleDir: result.stats.styleDir,
     duration: plan.duration,
     sfx: sfx.source,
-    music: sfx.music ? `${sfx.music.clipName} at ${sfx.music.gain_db}dB, ducking ${sfx.music.duck_db_under_vo}dB under the VO` : null,
+    mode: result.mode,
+    vo: plan.vo?.audio ?? null,
+    music: sfx.music
+      ? `${sfx.music.clipName} at ${sfx.music.gain_db}dB, ${plan.vo?.audio ? `ducking ${sfx.music.duck_db_under_vo}dB under the VO` : "no VO, so no ducking"}`
+      : plan.music?.clip ? `${plan.music.clip} at ${plan.music.gain_db ?? 0}dB from plan.music, no ducking` : null,
+    beats: result.beats ? { source: result.beats.source, beats: result.beats.beats.length, downbeats: result.beats.downbeats.length } : null,
+    plates: Object.fromEntries([...media.files].map(([abs, n]) => [`assets/plates/${n}`, abs])),
     frames,
   };
   writeIfChanged(resolve(outDir, "board.json"), JSON.stringify(board, null, 2) + "\n");
   for (const n of notes) log(`! ${n}`);
 
   const boardName = name ?? slug(plan.title);
-  return { outDir, boardName, frames, changed, result, sfx };
+  return { outDir, boardName, frames, changed, result, sfx, plates: media.files };
 }
 
 export function registerBoard(outDir, boardName, log = console.log) {
@@ -119,15 +136,15 @@ export function registerBoard(outDir, boardName, log = console.log) {
 }
 
 async function main(argv) {
-  const args = parseArgs(argv, ["out", "name", "style-dir", "sfx"]);
+  const args = parseArgs(argv, ["out", "name", "style-dir", "sfx", "beats"]);
   const planPath = args._[0];
   if (!planPath || !args.out) {
-    console.error("usage: node toolkit/storyboard.mjs <plan.json> --out <board-folder> [--name <board>] [--style-dir <dir>] [--sfx <sfx-plan.json>] [--register] [--force]");
+    console.error("usage: node toolkit/storyboard.mjs <plan.json> --out <board-folder> [--name <board>] [--style-dir <dir>] [--sfx <sfx-plan.json>] [--beats <json>] [--register] [--force]");
     process.exit(2);
   }
   try {
     const { outDir, boardName, frames, changed } = await buildBoard(planPath, {
-      out: args.out, name: args.name ?? null, styleDir: args["style-dir"] ?? null, sfxPath: args.sfx ?? null, force: !!args.force,
+      out: args.out, name: args.name ?? null, styleDir: args["style-dir"] ?? null, sfxPath: args.sfx ?? null, beats: args.beats ?? null, force: !!args.force,
     });
     console.log(`${frames.length} frame(s) in ${outDir} (${changed} written, the rest unchanged)`);
     for (const f of frames) console.log(`  ${f.file}  ${f.duration}s  ${f.title}`);

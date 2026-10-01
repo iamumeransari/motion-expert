@@ -5,7 +5,13 @@
 // word reference exists, the scenes tile the piece, and grammar-composed tweens
 // stay inside the style's primitive envelopes.
 //
-//   node toolkit/validate-plan.mjs <plan.json> [--style-dir <dir>] [--json]
+//   node toolkit/validate-plan.mjs <plan.json> [--style-dir <dir>] [--beats <json>]
+//        [--sfx <sfx-plan.json>] [--json]
+//
+// The voice-over is optional: a music-only piece times its moves in seconds or
+// on the music's beat grid (beat:<n>, downbeat:<n>) from --beats or
+// plan.music.beats. Media in move props and style assets must resolve, and a
+// plan that is not "mode": "replica" may not reference a calibration-only file.
 //
 // Adapted from ~/motion-ui/pipeline/validate-plan.mjs. Exits non-zero on any
 // error. Warnings never fail the run; they are what the planning agent reads
@@ -14,6 +20,8 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { resolve, dirname, isAbsolute, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { mediaRefs, calibrationHits, planMode } from "./lib/media.mjs";
+import { loadSfx } from "./lib/sfx.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const TOOLKIT = HERE;
@@ -182,16 +190,50 @@ export function loadStyle(styleDir) {
 // and the render read the plan the same way.
 // ---------------------------------------------------------------------------
 
-const WORD_REF = /^word:(\d+)([+-]\d*\.?\d+)?$/;
+const TIME_REF = /^(word|beat|downbeat):(\d+)([+-]\d*\.?\d+)?$/;
 
-export function resolveTime(t, words) {
+// The music's beat grid, {"beats": [t...], "downbeats": [t...]} in seconds from
+// the start of the piece. src is a path (absolute, or relative to base) or the
+// object itself. Returns { beats, downbeats, source } or { error }.
+export function loadBeats(src, base = process.cwd()) {
+  if (src === null || src === undefined) return null;
+  let grid = src;
+  let source = "plan.music.beats (inline)";
+  if (typeof src === "string") {
+    const p = isAbsolute(src) ? src : resolve(base, src);
+    if (!existsSync(p)) return { error: `beat grid ${p} is not on disk`, source: p };
+    try { grid = JSON.parse(readFileSync(p, "utf8")); } catch (e) { return { error: `beat grid ${p} is not valid JSON: ${e.message}`, source: p }; }
+    source = p;
+  }
+  if (!grid || typeof grid !== "object" || !Array.isArray(grid.beats)) return { error: `beat grid ${source} needs a "beats" array of seconds`, source };
+  const downbeats = Array.isArray(grid.downbeats) ? grid.downbeats : [];
+  for (const [name, list] of [["beats", grid.beats], ["downbeats", downbeats]]) {
+    for (let i = 0; i < list.length; i++) {
+      if (typeof list[i] !== "number" || !isFinite(list[i]) || list[i] < 0) return { error: `beat grid ${source} ${name}[${i}] is not a time in seconds`, source };
+      if (i && list[i] < list[i - 1]) return { error: `beat grid ${source} ${name}[${i}] comes before ${name}[${i - 1}]`, source };
+    }
+  }
+  return { beats: grid.beats, downbeats, source };
+}
+
+// t is seconds, word:<i> (a voice-over word's onset), beat:<i> or
+// downbeat:<i> (the music's grid), each with an optional offset in seconds.
+export function resolveTime(t, words, beats = null) {
   if (typeof t === "number") return { at: t };
-  const m = WORD_REF.exec(String(t));
-  if (!m) return { error: `t "${t}" is neither seconds nor word:<index>` };
-  const index = Number(m[1]);
-  const word = words?.[index];
-  if (!word) return { error: `t "${t}" references word ${index}, but vo.words has ${words?.length ?? 0}` };
-  return { at: word.start + (m[2] ? Number(m[2]) : 0), word: { index, w: word.w } };
+  const m = TIME_REF.exec(String(t));
+  if (!m) return { error: `t "${t}" is neither seconds, word:<index> nor beat:<index>` };
+  const index = Number(m[2]);
+  const off = m[3] ? Number(m[3]) : 0;
+  if (m[1] === "word") {
+    if (!words?.length) return { error: `t "${t}" needs voice-over words and this plan has none; time it in seconds or as beat:<n> on the music` };
+    const word = words[index];
+    if (!word) return { error: `t "${t}" references word ${index}, but vo.words has ${words.length}` };
+    return { at: word.start + off, word: { index, w: word.w } };
+  }
+  if (!beats || beats.error) return { error: `t "${t}" needs a beat grid; pass --beats <json> or set plan.music.beats${beats?.error ? ` (${beats.error})` : ""}` };
+  const list = m[1] === "beat" ? beats.beats : beats.downbeats;
+  if (index >= list.length) return { error: `t "${t}" references ${m[1]} ${index}, but the grid has ${list.length}` };
+  return { at: list[index] + off, beat: { index, kind: m[1] } };
 }
 
 // kind: signature (style library), novel (element written beside the plan),
@@ -209,11 +251,11 @@ export function resolveMove(move, style, planDir) {
   return { kind: "placeholder", file: null, key: "__placeholder" };
 }
 
-export function resolvePlan(plan, style, planDir) {
+export function resolvePlan(plan, style, planDir, beats = null) {
   const words = plan.vo?.words ?? [];
   return (plan.scenes ?? []).map((scene, index) => {
     const moves = (scene.moves ?? []).map((move) => {
-      const time = resolveTime(move.t, words);
+      const time = resolveTime(move.t, words, beats);
       const res = resolveMove(move, style, planDir);
       const at = time.at ?? scene.start;
       return {
@@ -228,6 +270,7 @@ export function resolvePlan(plan, style, planDir) {
         tAbs: Number(at.toFixed(4)),
         t: Number((at - scene.start).toFixed(4)),
         word: time.word ?? null,
+        beat: time.beat ?? null,
         timeError: time.error ?? null,
         props: move.props ?? {},
         sfx: move.sfx ?? null,
@@ -237,7 +280,12 @@ export function resolvePlan(plan, style, planDir) {
       .map((w, i) => ({ ...w, i }))
       .filter((w) => w.end > scene.start + EPS && w.start < scene.start + scene.duration - EPS)
       .map((w) => ({ i: w.i, w: w.w, start: Number((w.start - scene.start).toFixed(4)), end: Number((w.end - scene.start).toFixed(4)) }));
-    return { index, id: scene.id, title: scene.title, start: scene.start, duration: scene.duration, feeling: scene.feeling, vo_line: scene.vo_line, layout: scene.layout, background: scene.background ?? null, notes: scene.notes ?? "", moves, words: sceneWords };
+    const down = new Set(beats?.downbeats ?? []);
+    const sceneBeats = (beats?.beats ?? [])
+      .map((t, i) => ({ i, t }))
+      .filter((b) => b.t >= scene.start - EPS && b.t < scene.start + scene.duration - EPS)
+      .map((b) => ({ i: b.i, t: Number((b.t - scene.start).toFixed(4)), down: down.has(b.t) }));
+    return { index, id: scene.id, title: scene.title, start: scene.start, duration: scene.duration, feeling: scene.feeling, vo_line: scene.vo_line, layout: scene.layout, background: scene.background ?? null, notes: scene.notes ?? "", moves, words: sceneWords, beats: sceneBeats };
   });
 }
 
@@ -292,7 +340,10 @@ export function checkEnvelopes(move, style, format) {
 
 // ---------------------------------------------------------------------------
 
-export function validatePlan(plan, { planDir = process.cwd(), styleDir = null } = {}) {
+// beats: a beat grid path (relative to the working directory) or object that
+// overrides plan.music.beats. sfxPath: an sfx plan whose clips the
+// calibration guard also checks.
+export function validatePlan(plan, { planDir = process.cwd(), styleDir = null, beats: beatsFlag = null, sfxPath = null } = {}) {
   const errors = [];
   const warnings = [];
   const err = (rule, message, scene) => errors.push({ rule, scene, message });
@@ -316,11 +367,26 @@ export function validatePlan(plan, { planDir = process.cwd(), styleDir = null } 
     if (i && w.start < words[i - 1].start - EPS) err("vo", `word ${i} "${w.w}" starts before word ${i - 1}`);
     if (typeof plan.duration === "number" && w.end > plan.duration + EPS) err("vo", `word ${i} "${w.w}" ends at ${w.end}s, past the piece's ${plan.duration}s`);
   }
-  if (plan?.vo && (plan.vo.audio === null || plan.vo.audio === undefined)) {
-    warn("vo", "vo.audio is not set: the board works, but build-composition will refuse the plan");
-  } else if (typeof plan?.vo?.audio === "string") {
+  const hasVoAudio = typeof plan?.vo?.audio === "string" && plan.vo.audio.trim() !== "";
+  const musicClip = typeof plan?.music?.clip === "string" ? (isAbsolute(plan.music.clip) ? plan.music.clip : resolve(planDir, plan.music.clip)) : null;
+  if (hasVoAudio) {
     const a = isAbsolute(plan.vo.audio) ? plan.vo.audio : resolve(planDir, plan.vo.audio);
     if (!existsSync(a)) err("vo", `vo.audio ${a} is not on disk`);
+  } else if (words.length) {
+    warn("vo", "vo.words are set but vo.audio is not, so the render carries no voice while moves still follow the words");
+  } else if (!musicClip) {
+    warn("vo", "no voice-over and no plan.music.clip: a music-only piece needs its bed from plan.music or the sfx plan's music, or it renders without a timing spine");
+  }
+  if (musicClip && !existsSync(musicClip)) err("music", `music.clip ${musicClip} is not on disk`);
+
+  // the beat grid: --beats wins over plan.music.beats
+  const beats = beatsFlag !== null && beatsFlag !== undefined
+    ? loadBeats(beatsFlag, process.cwd())
+    : loadBeats(plan?.music?.beats ?? null, planDir);
+  if (beats?.error) err("beats", beats.error);
+  else if (beats && typeof plan?.duration === "number") {
+    const past = beats.beats.filter((t) => t > plan.duration + EPS).length;
+    if (past) warn("beats", `${past} beat(s) in the grid fall after the piece's ${plan.duration}s`);
   }
 
   // scenes tile the piece: unique ids, no overlap, no gap, nothing past the end
@@ -355,7 +421,7 @@ export function validatePlan(plan, { planDir = process.cwd(), styleDir = null } 
   }
 
   // moves
-  const resolved = resolvePlan(plan, style, planDir);
+  const resolved = resolvePlan(plan, style, planDir, beats && !beats.error ? beats : null);
   let signature = 0, novel = 0;
   for (const scene of resolved) {
     const raw = scenes[scene.index] ?? {};
@@ -391,15 +457,48 @@ export function validatePlan(plan, { planDir = process.cwd(), styleDir = null } 
     });
   }
 
+  // media in move props and style assets
+  const media = mediaRefs({ scenes: resolved, style, planDir });
+  for (const r of media) {
+    if (!r.abs) warn("media", `${r.where}: "${r.value}" is not beside the plan or in the style folder, so it is left as written and only resolves if the file sits at that path beside the board or project`, r.scene);
+  }
+
+  // The calibration guard. Source frames rebuild a replica and never enter a
+  // piece, so a piece refuses any referenced file marked calibration-only.
+  const mode = planMode(plan);
+  const referenced = [];
+  if (hasVoAudio) referenced.push({ file: isAbsolute(plan.vo.audio) ? plan.vo.audio : resolve(planDir, plan.vo.audio), what: "vo.audio" });
+  if (musicClip) referenced.push({ file: musicClip, what: "music.clip" });
+  if (beats?.source && !beats.source.includes("(inline)")) referenced.push({ file: beats.source, what: "beat grid" });
+  for (const r of media) if (r.abs) referenced.push({ file: r.abs, what: r.where, scene: r.scene });
+  for (const scene of resolved) for (const m of scene.moves) {
+    if (m.file) referenced.push({ file: m.file, what: `${m.name} element`, scene: scene.id });
+    const sfx = m.sfx;
+    if (sfx && typeof sfx === "object" && typeof sfx.clip === "string") referenced.push({ file: isAbsolute(sfx.clip) ? sfx.clip : resolve(planDir, sfx.clip), what: `${m.name} -> ${m.target} sfx clip`, scene: scene.id });
+  }
+  if (sfxPath) {
+    const sp = loadSfx(sfxPath, plan, resolved, planDir);
+    for (const e of sp.events) referenced.push({ file: e.clip, what: `sfx ${e.id} (${e.class})` });
+    if (sp.music) referenced.push({ file: sp.music.clip, what: "sfx plan music" });
+  }
+  const calibration = calibrationHits(referenced);
+  for (const h of calibration) {
+    if (mode === "replica") warn("calibration", `${h.what}: ${h.file} is calibration-only (${h.why}); allowed because the plan is a replica`, h.scene);
+    else err("calibration", `${h.what}: ${h.file} is calibration-only (${h.why}). Source frames rebuild a replica and never enter a piece; build this piece's plates with imagery.py generate, score, grade and matte, or set "mode": "replica" if this plan is the replica.`, h.scene);
+  }
+
   const stats = {
     scenes: scenes.length,
     moves: signature + novel,
     signature,
     novel,
     words: words.length,
+    beats: beats && !beats.error ? beats.beats.length : 0,
+    media: media.filter((r) => r.abs).length,
+    mode,
     styleDir: dir,
   };
-  return { ok: errors.length === 0, errors, warnings, stats, style, resolved };
+  return { ok: errors.length === 0, errors, warnings, stats, style, resolved, beats: beats && !beats.error ? beats : null, media, calibration, mode };
 }
 
 // ---------------------------------------------------------------------------
@@ -422,7 +521,8 @@ export function printReport(result, planPath, log = console.log) {
   const line = (mark, e) => `  ${mark} ${e.scene ? `[${e.scene}] ` : ""}${e.message}`;
   log(`Scene plan  ${planPath}`);
   log(`  style ${result.stats.styleDir}`);
-  log(`  ${result.stats.scenes} scene(s), ${result.stats.moves} move(s): ${result.stats.signature} signature, ${result.stats.novel} novel`);
+  log(`  ${result.stats.scenes} scene(s), ${result.stats.moves} move(s): ${result.stats.signature} signature, ${result.stats.novel} novel; mode ${result.stats.mode ?? "piece"}`);
+  if (result.stats.words || result.stats.beats || result.stats.media) log(`  ${result.stats.words ?? 0} VO word(s), ${result.stats.beats ?? 0} beat(s), ${result.stats.media ?? 0} media reference(s)`);
   if (result.errors.length) {
     log(`Errors (${result.errors.length})`);
     for (const e of result.errors) log(line("x", e));
@@ -435,10 +535,10 @@ export function printReport(result, planPath, log = console.log) {
 }
 
 function main(argv) {
-  const args = parseArgs(argv, ["style-dir"]);
+  const args = parseArgs(argv, ["style-dir", "beats", "sfx"]);
   const planPath = args._[0];
   if (!planPath) {
-    console.error("usage: node toolkit/validate-plan.mjs <plan.json> [--style-dir <dir>] [--json]");
+    console.error("usage: node toolkit/validate-plan.mjs <plan.json> [--style-dir <dir>] [--beats <json>] [--sfx <sfx-plan.json>] [--json]");
     process.exit(2);
   }
   let loaded;
@@ -448,7 +548,12 @@ function main(argv) {
     console.error(e.message);
     process.exit(2);
   }
-  const result = validatePlan(loaded.plan, { planDir: loaded.dir, styleDir: args["style-dir"] ?? null });
+  const result = validatePlan(loaded.plan, {
+    planDir: loaded.dir,
+    styleDir: args["style-dir"] ?? null,
+    beats: args.beats ?? null,
+    sfxPath: args.sfx ? resolve(process.cwd(), args.sfx) : null,
+  });
   if (args.json) {
     const { style, resolved, ...rest } = result;
     console.log(JSON.stringify({ plan: loaded.path, ...rest }, null, 2));
