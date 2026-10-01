@@ -38,6 +38,60 @@ first and a concrete fix beside each, and writes the beat-matched sheets. Then j
 sheets on `toolkit/judge.md` and save the judgement beside them. The pass is clean when
 the exit code is 0 and every judge criterion is 8 or above, and the piece ships.
 
+## The replica bar
+
+A replica is a frame-exact rebuild of its source, so in `--mode replica` the
+distribution metrics are not enough and `compare.py` also compares the two videos
+frame by frame (it needs `--source-video` and `--render-video` at the same duration;
+a render at another frame rate is resampled to the source's). The render fingerprint
+is optional in this mode, and leaving it out runs the frame-exact checks alone in
+about 22 seconds for a 47-second 1080p source. A replica ships only when all of these hold:
+
+- every shot (bounded by the source fingerprint's cuts and dissolve midpoints) has a
+  mean luma SSIM at 960 wide of at least **0.975** (`exact.ssim_shot_min`);
+- every shot's optical-flow error relative to its motion, mean endpoint error in px at
+  1920 divided by (flow px + 0.5), stays at or under **0.15**
+  (`exact.flow_rel_epe_shot_max`), which catches a move that lands in the right place
+  but travels on the wrong curve;
+- no source hard cut is off by a frame in the render (`exact.cuts_off` is 0, band
+  `--cut-band 0`);
+- no source move's start, half-travel, peak or settle is more than 1 frame off
+  (`exact.moves_off` is 0, `--move-band 1`);
+- every source SFX onset is matched within 1 frame (42 ms at 24 fps) and 2 dB
+  (`exact.sfx_off` is 0), and the bed's onset and the overall audio lag sit within a
+  frame (`exact.bed_onset_ms`, `exact.audio_lag_ms`);
+- frame count matches within a frame and the best global shift of the render is zero.
+
+The report names the worst ten frame ranges, and `compare/flip/` holds a
+source | render | difference triptych for every frame of each divergent range, which is
+the first thing to open when a shot fails. `exact-curves.png` plots SSIM and flow error
+per frame with the cuts marked.
+
+The two flow bars were calibrated on `inbox/ideogram-4-5.mp4` (1136 frames, 42 shots),
+rendered against copies of itself, and SSIM was set between the same two copies. A crf
+23 x264 re-encode gives the codec ceiling: worst shot mean SSIM 0.986 (median shot
+0.9945, worst single frame 0.965), worst shot relative EPE 0.069. A copy shifted one
+frame late gives the cost of a single frame: median shot SSIM drops to 0.926 (worst
+0.638, best 0.986 on the near-static opening), the per-shot SSIM cost of the shift is
+0.009 to 0.36 with a median of 0.070, and the best shot's relative EPE rises to 0.183.
+0.975 sits between the ceiling and 38 of the 42 shifted shots. The four that survive it
+are near-static, which is why cut and move timing are separate gates. 0.15 sits between
+0.069 and 0.183 on flow. A divergent frame, which starts a named range, is one under SSIM
+0.95 or over relative EPE 0.25 (the re-encode's worst frames are 0.965 and 0.151).
+Raw EPE in px is reported but not gated, because fast transitions carry several px of
+error even on a clean re-encode (4.1 px at frame 911).
+
+Expected results, all on that source. The re-encode passes every check. The one-frame
+shift fails all 35 cuts by +1 frame, 38 shots on SSIM, flow on all 42 shots and the global
+offset, while every move stays within a frame. A copy with frames 342-352 (14.25-14.71s)
+retimed at 0.8x fails shot 16 on SSIM (0.958, worst frame 352 at 0.807) and on flow
+(0.47, worst frames 342, 352 and 353), and names frames 342-353 as range r01. A copy
+with the mix delayed 83 ms fails every SFX at 2.0 frames late, the bed onset and the
+audio lag. A real rebuild will sit below the codec ceiling because its type and edges
+are rasterised by a different renderer, so a shot that misses by under 0.005 SSIM with
+clean flip sheets is a rendering difference to note in the log. It is never a reason to
+lower the bar for the piece.
+
 ## Fixing a pass
 
 Work the blocking list from the top, because it is sorted by how far outside its band

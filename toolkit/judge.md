@@ -122,7 +122,17 @@ The one change: <two sentences>.
 ## When it ships and when it stops
 
 A piece ships when every `compare.py` metric passes and every criterion here scores 8
-or above, and the one change you would still make is taste rather than a defect. The
+or above, and the one change you would still make is taste rather than a defect.
+
+A replica is held to a frame-exact bar on top of that, measured by `compare.py` and
+set out in `toolkit/loop.md` under "The replica bar". Every shot must have a mean SSIM
+of at least 0.975 and a relative flow error of at most 0.15. No cut may be off by a
+frame, and no move's start, half-travel, peak or settle may be more than one frame off.
+Every SFX must land within one frame and 2 dB. In replica mode you also open
+`compare/flip/` for each range the report names and judge from the triptychs, frame by
+frame. Any failing `exact.*` metric caps Signature moves, Curve and timing feel and
+Sequencing and rhythm at 7, and a failing `exact.sfx_off` caps Sound design at 7. A
+replica that is not frame-exact does not ship however well it reads as a viewer. The
 loop runs at most five passes. If the fifth pass still has a criterion under 8 or a
 failing metric, stop and hand Umer the latest `report.md`, the sheets and this
 judgement, naming the blocking metric or criterion and what each pass changed, rather

@@ -17,10 +17,22 @@ cut-to-VO offset, and the sound layer (density, sync per class, level, class mix
 timbre, music bed).
 
 Replica mode is frame-time aligned and tight: cuts, moves and sound events are matched
-one to one against the source's own. Novel mode is distributional only, since subject
-and length differ, and skips every length-dependent count.
+one to one against the source's own. On top of that it proves a frame-exact rebuild
+from the two videos themselves (it needs --source-video and --render-video, and the
+render fingerprint becomes optional). It scores per-frame luma SSIM at 960 wide and
+per-frame optical-flow endpoint error at 1920 with per-shot gates, cuts on the same
+frame, each source move's start, half-travel, peak and settle within a frame, and
+every SFX onset within a frame and 2 dB with the bed aligned. It also writes
+source|render|difference flip sheets for the worst frame ranges. Bars and their
+calibration are in toolkit/loop.md ("The replica bar"). Novel mode is distributional
+only, since subject and length differ, and skips every length-dependent count.
 
-Writes DIR/report.json, DIR/report.md, DIR/frames/*.png and DIR/sheets/sheet-NN.png.
+    compare.py SOURCE_FP [RENDER_FP] --out DIR --mode replica --source-video S --render-video R
+               [--ssim-shot-min 0.975] [--rel-epe-shot-max 0.15] [--cut-band 0] [--move-band 1]
+               [--sfx-band 1] [--sfx-level-db 2] [--flip-ranges 10]
+
+Writes DIR/report.json, DIR/report.md, DIR/frames/*.png and DIR/sheets/sheet-NN.png;
+replica mode adds DIR/exact-curves.png and DIR/flip/<range>/fNNNN.png.
 Exit 0 when every scored metric passes, 1 otherwise.
 """
 from __future__ import annotations
@@ -1121,7 +1133,7 @@ EXACT = {
     "moving_px": 1.0,           # px per frame at 1920 counted as moving, for epe_moving
     "cut_band": 0, "move_band": 1, "sfx_band": 1, "sfx_level_db": 2.0, "bed_band": 1,
     "frame_count_band": 1,
-    "move_pad": 4, "move_frac": 0.2, "move_floor_flow": 0.5, "move_floor_diff": 0.8,
+    "move_pad": 4, "move_frac": 0.2, "move_floor_flow": 1.0, "move_floor_diff": 0.8,
     "ranges": 10, "flip_ranges": 10, "flip_pad": 2, "flip_max": 24, "flip_width": 640,
 }
 FARNEBACK = dict(pyr_scale=0.5, levels=4, winsize=21, iterations=3, poly_n=7, poly_sigma=1.5, flags=0)
@@ -1266,7 +1278,7 @@ def exact_cuts(S, P, fps, band):
     return rows
 
 
-def activity_events(a, frac, floor):
+def activity_events(a, frac, floor, thr=None):
     """Start, peak and settle (fractional frame offsets into a) of an activity curve:
     start and settle are the first and last threshold crossings at frac of the peak,
     interpolated between frames; peak is the parabola-refined maximum. A crossing that
@@ -1274,8 +1286,10 @@ def activity_events(a, frac, floor):
     p = float(a.max()) if len(a) else 0.0
     if p < floor:
         return None
-    thr = frac * p
+    thr = frac * p if thr is None else thr
     above = np.nonzero(a >= thr)[0]
+    if not len(above):
+        return None
     i0, i1 = int(above[0]), int(above[-1])
     start = None if i0 == 0 else (i0 - 1 + (thr - a[i0 - 1]) / max(a[i0] - a[i0 - 1], 1e-9))
     settle = None if i1 == len(a) - 1 else (i1 + (a[i1] - thr) / max(a[i1] - a[i1 + 1], 1e-9))
@@ -1286,7 +1300,7 @@ def activity_events(a, frac, floor):
         if abs(den) > 1e-9:
             peak = k + 0.5 * (a[k - 1] - a[k + 1]) / den
     far = np.concatenate([a[:max(0, k - 2)], a[k + 3:]])
-    distinct = not len(far) or float(far.max()) < 0.85 * p
+    distinct = (not len(far) or float(far.max()) < 0.85 * p) and 0 < k < len(a) - 1
     # half travel: where the cumulative activity over the window reaches half its total
     c = np.cumsum(a)
     j = int(np.searchsorted(c, c[-1] / 2))
@@ -1304,12 +1318,25 @@ def exact_moves(S, P, fps, bounds, band, cut_rows):
     n = len(P["ssim"])
     cuts_s = {r["frame_source"] for r in cut_rows}
     cuts_r = {r["frame_render"] for r in cut_rows if r["frame_render"] is not None}
+    # soft transitions are not moves: blank them (two frames either side, so a render
+    # running a frame or two off does not leak the transition into the window)
+    soft = set()
+    for d in get(S, "timing.dissolves") or []:
+        if isinstance(d, dict) and num(d.get("t0")) and num(d.get("t1")):
+            soft.update(range(int(math.floor(d["t0"] * fps)) - 2, int(math.ceil(d["t1"] * fps)) + 3))
 
     def masked(A, lo, hi, cuts, sl):
         c = A[lo:hi + 1][:, sl[0], sl[1]].astype(np.float32).mean(axis=(1, 2))
         for k in sorted(cuts, reverse=True):
             if lo <= k <= hi:
                 c[k - lo] = c[k - lo + 1] if k < hi else (c[k - lo - 1] if k > lo else 0.0)
+        for k in soft:
+            if lo <= k <= hi:
+                c[k - lo] = 0.0
+        # three-frame mean: held frames make the activity pulse (high, high, zero), and
+        # a threshold crossing on a pulsing curve jumps between pulses
+        if len(c) >= 3:
+            c = np.convolve(np.pad(c, 1, mode="edge"), np.ones(3) / 3, mode="valid").astype(np.float32)
         return c
     GH, GW = P["MS"].shape[1:]
     rows = []
@@ -1337,7 +1364,9 @@ def exact_moves(S, P, fps, bounds, band, cut_rows):
         if es is None:
             rows.append({**row, "status": "unmeasurable", "reason": "source motion under the noise floor"})
             continue
-        er = activity_events(cr, EXACT["move_frac"], floor * 0.5)
+        # one crossing level for both, set by the source, so a window that truncates the
+        # two curves differently cannot move the render's threshold
+        er = activity_events(cr, EXACT["move_frac"], floor * 0.5, thr=EXACT["move_frac"] * es["peak_value"])
         if er is None:
             rows.append({**row, "status": "fail", "pass": False, "offsets": {},
                          "fix": f"{move_label(mv)} at {mv['t0']:.3f}s does not move in the render "
@@ -1572,9 +1601,10 @@ def flip_sheets(ranges, P, src, ren, fps, out, n_ranges):
             dr = ImageDraw.Draw(canvas)
             inside = r["f0"] <= k <= r["f1"]
             e = P["epe"][k]
+            rel_k = float(P["rel_epe"][k]) if np.isfinite(P["rel_epe"][k]) else float("nan")
             col = (255, 120, 90) if inside and r["diverges"] else (235, 235, 235)
             dr.text((8, 6), f"{r['id']}  frame {k}  {k / fps:.3f}s  SSIM {P['ssim'][k]:.4f}  "
-                            f"EPE {'n/a' if not np.isfinite(e) else f'{e:.2f}px'}"
+                            f"EPE {'n/a' if not np.isfinite(e) else f'{e:.2f}px, relative {rel_k:.2f}'}"
                             f"{'  in range' if inside else '  context'}", fill=col, font=f_big)
             for c, lab in enumerate(("source", "render", "|source - render| x4")):
                 dr.text((c * (w + gap) + 8, 30), lab, fill=(160, 160, 165), font=f_small)
