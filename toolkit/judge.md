@@ -128,7 +128,8 @@ A replica is held to a frame-exact bar on top of that, measured by `compare.py` 
 set out in `toolkit/loop.md` under "The replica bar". Every shot must have a mean SSIM
 of at least 0.975 and a relative flow error of at most 0.15. No cut may be off by a
 frame, and no move's start, half-travel, peak or settle may be more than one frame off.
-Every SFX must land within one frame and 2 dB. In replica mode you also open
+Every SFX must land within one frame and 2 dB. Metrics under "Advisory" in a replica's
+`report.md` are evidence only and never cap a score. In replica mode you also open
 `compare/flip/` for each range the report names and judge from the triptychs, frame by
 frame. Any failing `exact.*` metric caps Signature moves, Curve and timing feel and
 Sequencing and rhythm at 7, and a failing `exact.sfx_off` caps Sound design at 7. A

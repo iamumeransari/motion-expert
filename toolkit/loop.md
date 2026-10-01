@@ -62,6 +62,14 @@ about 22 seconds for a 47-second 1080p source. A replica ships only when all of 
   frame (`exact.bed_onset_ms`, `exact.audio_lag_ms`);
 - frame count matches within a frame and the best global shift of the render is zero.
 
+In replica mode these gates supersede the fingerprint-distribution metrics they
+duplicate. `curve_match_share` and every `sound.*` metric (sync by class, centroid,
+density, event matching, class mix, envelopes, levels and the bed) are still measured
+and listed under "Advisory" in `report.md`. They never block and never count toward
+pass or fail, because two separate measurements of near-identical audio and motion
+disagree by more than those bands allow: a crf 23 re-encode failed 11 of them while
+passing every frame-exact gate. Novel mode is unchanged and still gates on all of them.
+
 The report names the worst ten frame ranges, and `compare/flip/` holds a
 source | render | difference triptych for every frame of each divergent range, which is
 the first thing to open when a shot fails. `exact-curves.png` plots SSIM and flow error

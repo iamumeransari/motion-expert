@@ -1866,13 +1866,26 @@ def exact_md(sec, fps):
 
 # ---------------------------------------------------------------- report
 
+def is_advisory(mid, mode):
+    """In replica mode the frame-exact gates supersede the fingerprint-distribution
+    metrics they duplicate: curve fits (exact.moves_off, exact.flow_rel_epe_shot_max) and
+    every distributional sound metric (exact.sfx_off, exact.bed_onset_ms,
+    exact.audio_lag_ms compare the two mixes directly). Those are still reported, in an
+    advisory section, but never block and never count toward pass or fail."""
+    return mode == "replica" and (mid == "curve_match_share" or mid.startswith("sound"))
+
+
 def write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out, exact=None):
-    scored = [m for m in R.metrics if m["status"] != "skipped"]
+    for m in R.metrics:
+        if m["status"] in ("pass", "fail") and is_advisory(m["id"], a.mode):
+            m["advisory_status"], m["status"] = m["status"], "advisory"
+    scored = [m for m in R.metrics if m["status"] in ("pass", "fail")]
+    advisory = [m for m in R.metrics if m["status"] == "advisory"]
     fails = sorted([m for m in scored if m["status"] == "fail"], key=lambda m: -(m.get("norm_distance") or 0))
     ok = not fails
     data = {"verdict": "pass" if ok else "fail", "mode": a.mode, "source": a.source_fp, "render": a.render_fp,
             "durations": {"source": ds, "render": dr}, "counts": {"scored": len(scored), "failed": len(fails),
-            "skipped": len(R.metrics) - len(scored)}, "blocking": [m["id"] for m in fails],
+            "advisory": len(advisory), "skipped": len(R.metrics) - len(scored) - len(advisory)}, "blocking": [m["id"] for m in fails],
             "metrics": R.metrics, "beats": beats, "sheets": sheet_paths}
     if exact:
         data["exact"] = exact
@@ -1927,7 +1940,7 @@ def write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out, exact=None):
                          f"{f2(r['match_t0'])}s: bezier distance {r['bezier_dist']}, duration ratio {r['duration_ratio']}, "
                          f"overshoot delta {r['overshoot_delta']}" + (f". {r['fix']}" if r.get("fix") else ""))
         L.append("")
-    snd = [m for m in R.metrics if m["layer"] == "sound"]
+    snd = [m for m in R.metrics if m["layer"] == "sound" and m["status"] != "advisory"]
     if snd:
         L.append("## Sound")
         L.append("")
@@ -1945,6 +1958,12 @@ def write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out, exact=None):
         L.append("")
         for p in sheet_paths:
             L.append(f"- {p}")
+        L.append("")
+    if advisory:
+        L.append("## Advisory (replica mode: superseded by the frame-exact gates, never blocking)")
+        L.append("")
+        for m in advisory:
+            L.append(f"- {m['advisory_status']} {line(m)}" + (f". {m['fix']}" if m.get("fix") else ""))
         L.append("")
     L.append("## Passing")
     L.append("")
