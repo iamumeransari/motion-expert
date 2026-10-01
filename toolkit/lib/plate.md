@@ -17,6 +17,6 @@ Selection handles, cursors and spotlight boxes are separate elements layered ove
 
 A smoke test of the element (one locked scene, one with parallax) lives in `work/imagery-test/plate-smoke/` and passes `hyperframes lint` with no errors.
 
-## What the builders need
+## Getting the images into the board and the render
 
-`storyboard.mjs` and `build-composition.mjs` copy audio into the project but not images, so a plate's paths only resolve when the files sit beside the board or the project under the same relative path. Until the builders copy any prop value that is an existing image file into `assets/plates/` and rewrite the prop (the change is described in the imagery report rather than made here, since other work owns those files), put the plate folders under the board and project folders by hand or pass data URIs.
+The plan names the matte files by path, relative to the plan file or the style folder (`"bg": "../imagery-test/matte-05/bg.png"`), and `storyboard.mjs` and `build-composition.mjs` copy each one into `assets/plates/` beside the frames or the composition under a content-hashed name, rewriting the prop to that relative path, so nothing needs placing by hand. With `order` behind (the default) the element marks the word `data-layout-allow-occlusion`, because the cutout covering the type is the move and `hyperframes check` would otherwise fail it as hidden text. A piece refuses plates that came from `imagery.py plates-from-source`, which only a plan in `"mode": "replica"` may use.

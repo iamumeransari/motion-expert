@@ -63,6 +63,9 @@
         var word = document.createElement("span");
         word.className = "pl-word";
         word.textContent = String(props.text);
+        /* Behind the subject the cutout covers the type by design, so the
+           layering is declared to hyperframes check rather than flagged. */
+        if (props.order !== "front") word.setAttribute("data-layout-allow-occlusion", "");
         word.style.fontSize = Math.round((props.size || 0.3) * M.frame.h / 0.7) + "px";
         if (props.color) word.style.color = props.color;
         if (props.weight) word.style.fontWeight = props.weight;
