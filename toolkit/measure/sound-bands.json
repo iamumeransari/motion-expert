@@ -1,0 +1,26 @@
+{
+ "version": 1,
+ "about": "Same-hand bands for the sound layer, merged into the fingerprint's tolerance block by fingerprint.py (same shape as bands.json: rel is a share of the source value never narrower than abs_min, abs is a fixed +- width). Only scalar paths live here. Per-class comparisons (class mix, per-class level, centroid, duration, attack and decay, bound property share) depend on which classes a source has, so compare.py scores them with its SOUND constants, which match the per_class block below. Widths sit above what sound.py can measure (onset within 10 ms, level within 1 dB, pan within 0.05 on the synthetic fixture) and below what a listener hears as a different hand.",
+ "bands": {
+  "sound.density_per_10s": {"rel": 0.25, "abs_min": 0.5, "why": "how often a sound lands is the first thing that reads as over- or under-scored"},
+  "sound.sync.median_offset_s": {"abs": 0.03, "why": "whether sounds lead or trail the move they answer; 30 ms is about a frame either side at 30 fps, under the ~45 ms where audio-visual sync starts to feel loose"},
+  "sound.sync.p10": {"abs": 0.05, "why": "the earliest-leading sounds: anticipation is a deliberate choice in some hands"},
+  "sound.sync.p90": {"abs": 0.05, "why": "the latest-trailing sounds: a hand that lets sounds land after the move feels heavier"},
+  "sound.sync.median_abs_offset_s": {"abs": 0.03, "why": "how tight the binding is overall, regardless of direction"},
+  "sound.music.lufs": {"abs": 2.0, "why": "bed loudness; 2 LU is about the smallest change a listener reliably notices in a bed"},
+  "sound.music.tempo_bpm": {"rel": 0.04, "abs_min": 2.0, "why": "tempo sets the pulse the cuts and moves ride; 4% is where a groove starts to feel different"},
+  "sound.music.duck_db_under_vo": {"abs": 3.0, "why": "how far the bed gets out of the voice's way; measured at pause boundaries, which is noisy to about 2 dB, so the band is 3"},
+  "sound.music.cuts_beat_lock": {"abs": 0.2, "why": "whether cuts sit at a consistent place in the beat (1 locked, about 0.15 random for 35 cuts); phase-free, so a tracker locked half a beat off still reads right"},
+  "sound.music.cuts_on_beat_share": {"abs": 0.15, "why": "share of cuts within 70 ms of a tracked beat; compare with music.cuts_on_beat_chance, since at 136 BPM 0.32 is chance"}
+ },
+ "per_class": {
+  "class_mix_total_variation": {"novel": 0.25, "replica": 0.15, "why": "share of events per class; a hand that is all clicks is not a hand that is all whooshes"},
+  "level_db_rel_vo": {"abs": 3.0, "why": "per-class level against the voice (or the bed when level_ref is music); 3 dB is a clearly audible step"},
+  "centroid_oct": {"abs": 0.3, "why": "per-class brightness in octaves of the amplitude-weighted centroid"},
+  "duration_ratio": {"ratio": 1.33, "why": "per-class length, measured to -20 dB"},
+  "attack_decay_ratio": {"ratio": 1.5, "why": "per-class envelope; looser than duration because attack is a few ms on hits"},
+  "bound_property_share": {"abs": 0.25, "why": "which move properties a class is tied to"},
+  "min_events": 3,
+  "min_events_why": "a class with fewer events than this in the source is reported, not scored"
+ }
+}
