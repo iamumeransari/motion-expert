@@ -1,0 +1,11 @@
+# Grammar
+
+A style's grammar answers the question every new piece raises: how would this hand animate something the source never showed. It is written from the move inventory in two levels, and both are measured rather than described.
+
+The primitive level gives, for each property the style animates, the curve families it uses with their bezier control points, the duration range expressed in the style's timing unit (the shortest recurring interval, often a beat at the voice-over's pace or a multiple of frames), the offset range from the voice-over word a move answers, the stagger range and direction, and the travel range as a share of the frame. Ranges are the observed minimum to maximum widened by the measurement error, never a designer's guess at what would look fine. Properties the source never animates are listed as absent, because restraint is part of a hand and a style that never rotates must not start rotating.
+
+The composition level gives the rules above single moves. How a scene enters and exits and whether the transition is a cut, a carry-over of one element or a wipe; what a cut lands on (a stressed word, a pause, a musical hit); how many elements move at once and how many are on screen at most; how energy is shaped across the whole piece, read from the energy curve (a cold open at full energy, a mid-piece breath, a final hold); where the eye is led within a frame; and which feeling each kind of beat carries, such as tension built by stacked fast cuts and released by a long hold.
+
+A novel move is composed by choosing primitives inside their envelopes and checking it against the composition rules. It is written as a library element like any other and marked `novel` in the plan with a grammar note naming its primitives, so the compare loop knows to check it against envelopes rather than against a source move. A novel move that passes three pieces is promoted into the style's library and `moves.md`, which is how a style grows past its source.
+
+New formats follow the same logic. A vertical cut of a horizontal style keeps the timing unit, curves and energy shape and re-derives layout from the margins and density measures as shares of the frame, and a longer piece repeats the source's beat structure rather than stretching any single beat, since stretched beats break the measured hold durations.

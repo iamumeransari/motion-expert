@@ -1,0 +1,9 @@
+# Storyboard
+
+The storyboard is the approval gate, and it lives on Umer's review canvas so his comments land on the exact element he means. Load the `storyboard-canvas` skill before building one; it is the contract, and `toolkit/STORYBOARD.md` documents the generator.
+
+`toolkit/storyboard.mjs <plan.json> --out work/<piece>/board --name <piece> --register` writes one standalone HTML per scene in filename order, each with its frame-size meta, a title naming the scene, `data-scene` on the scene root and `data-move` on every element carrying a move, the style's tokens and library elements inlined, and a paused GSAP timeline registered on `window.__timelines.main` that the canvas scrubs. `board.json` carries each frame's duration and a note giving the feeling the beat must land, its voice-over line and its moves marked signature or novel. A review overlay showing the timing ruler, the voice-over words and the move bars can be toggled in each frame and never renders.
+
+After registering, arm the monitor the script prints (`~/storyboard-canvas/bin/canvas watch <board>`, thirty-minute timeout, re-armed on expiry while review continues). Each comment names the frame, the element's `data-move` and the paused time; read the frame's timeline at that time before changing anything, fix the frame in place so the canvas hot-reloads, and close it with `canvas resolve <board>#<n>` stating the change in his terms. Ambiguous comments get `canvas reply` with a question rather than a guess.
+
+Approval means Umer says so. Then `toolkit/build-composition.mjs` builds the HyperFrames project from the same scene code, which is why the board is built from real elements and real timings rather than sketches: what he approves is what renders.
