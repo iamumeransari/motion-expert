@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="frame-size" content="1920x1080">
+<title>{{TITLE}}</title>
+<style>
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0b0b0e; }
+  #frame { position: relative; width: 1920px; height: 1080px; color: #e9e9ee; font: 500 18px/1.3 ui-monospace, "SF Mono", Menlo, monospace; }
+  .vid { position: absolute; left: 0; top: 0; width: 960px; height: 540px; background: #000; }
+  .vid video { width: 100%; height: 100%; display: block; }
+  .info { position: absolute; left: 960px; top: 0; width: 960px; height: 540px; box-sizing: border-box; padding: 28px 40px; background: #111116; border-left: 2px solid rgba(255,255,255,.14); }
+  .info h1 { margin: 0 0 4px; font-size: 30px; color: #fff; font-weight: 600; }
+  .info .sub { color: #ffd166; margin-bottom: 14px; font-size: 17px; }
+  .info p { margin: 0 0 10px; font-size: 15px; line-height: 1.4; opacity: .9; }
+  .info b { color: #fff; }
+  .info .bl { columns: 2; column-gap: 28px; margin: 4px 0 14px; padding: 0; list-style: none; font-size: 13px; line-height: 1.5; }
+  .info .bl li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .info .bl b { color: #ffd166; display: inline-block; width: 1.6em; }
+  .lanes { position: absolute; left: 0; top: 540px; width: 1920px; height: 540px; box-sizing: border-box; padding: 14px 24px 10px; background: #0d0d11; border-top: 2px solid rgba(255,255,255,.14); }
+  .row { position: relative; display: grid; grid-template-columns: 150px 1fr; column-gap: 12px; margin-bottom: 6px; }
+  .row .lbl { font-size: 13px; opacity: .8; align-self: center; }
+  .tr { position: relative; background: rgba(255,255,255,.04); border-radius: 3px; }
+  .beat { position: absolute; top: 0; bottom: 0; box-sizing: border-box; border-left: 2px solid #0d0d11; background-size: cover; background-position: center; overflow: hidden; }
+  .beat .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 5px; background: rgba(0,0,0,.72); font-size: 11px; line-height: 1.2; }
+  .beat .cap b { color: #ffd166; }
+  .beat .en { position: absolute; left: 0; right: 0; top: 0; height: 5px; }
+  .beat.is-now { outline: 3px solid #ff4d6d; outline-offset: -3px; }
+  svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .cut { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; transform: translateX(-1px); }
+  .cut.missed { background: repeating-linear-gradient(180deg, #ff9f1c 0 4px, transparent 4px 7px); width: 3px; }
+  .soft { position: absolute; top: 2px; bottom: 2px; background: rgba(200,120,255,.4); border: 1px solid #c878ff; box-sizing: border-box; border-radius: 2px; }
+  .bar { position: absolute; bottom: 0; background: rgba(255,255,255,.55); }
+  .bar.sfx { background: #39d98a; }
+  .sd { position: absolute; width: 8px; height: 8px; transform: translate(-4px,0) rotate(45deg); }
+  .tick { position: absolute; bottom: 0; font-size: 12px; transform: translateX(-50%); opacity: .7; }
+  .ph { position: absolute; top: 0; bottom: 0; width: 2px; background: #ff4d6d; z-index: 4; pointer-events: none; }
+  .legend { font-size: 12px; opacity: .8; display: flex; gap: 18px; margin: 2px 0 0 162px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 9px; margin-right: 5px; }
+</style>
+</head>
+<body>
+<div id="frame" data-scene="overview">
+  <div class="vid"><video id="src" src="clips/full.mp4" playsinline preload="auto"></video></div>
+  <div class="info" id="info"></div>
+  <div class="lanes" id="lanes"></div>
+</div>
+<script>window.__ov = {{DATA}};</script>
+<script>
+(function () {
+  var O = window.__ov, END = O.end, FPS = O.fps;
+  var v = document.getElementById("src"), lanes = document.getElementById("lanes");
+  function h(t, c, x) { var e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; }
+  function pct(t) { return (t / END * 100) + "%"; }
+  function tc(t) { var f = Math.round(t * FPS); return Math.floor(f / FPS) + ":" + ("0" + (f % FPS)).slice(-2); }
+
+  var S = O.stats, info = document.getElementById("info");
+  var F = O.film;
+  function esc(x) { return String(x).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  var html = "<h1>" + esc(F.title) + "</h1><div class='sub'>" + END.toFixed(1) + "s, " + F.size + " at " + F.fps + "fps, " + esc(F.audio) + ", read as " + O.beats.length + " beats</div>";
+  html += "<p><b>" + S.cuts + "</b> hard cuts in the fingerprint" + (S.missed ? " plus <b>" + S.missed + "</b> a frame-difference pass found that it missed" : "") +
+    ", and <b>" + S.soft + "</b> soft transitions. Median shot " + S.median_shot.toFixed(3) + "s (" + Math.round(S.median_shot * FPS) + " frames)" +
+    (S.on_beat != null ? "; " + Math.round(S.on_beat * 100) + "% of cuts land on a beat." : ".") + "</p>";
+  html += "<p><b>" + S.moves + "</b> tracked moves, <b>" + S.verified + "</b> of them verified against the picture (" + S.high + " high confidence)" +
+    (S.sfx ? ", and <b>" + S.sfx + "</b> sound events, " + S.top_n + " of them " + esc(S.top_cls) + "s; " + S.near + " sit within a quarter second of a cut or a move landing." : ", and no sound events measured.") + "</p>";
+  html += "<ol class='bl'>" + O.beats.map(function (b) { return "<li><b>" + b.n + "</b> " + tc(b.a) + " to " + tc(b.b) + "  " + esc(b.title) + "</li>"; }).join("") + "</ol>";
+  if (O.summary) html += "<p>" + esc(O.summary) + "</p>";
+  if (!O.spec) html += "<p style='color:#ff9f1c'>No beats.json yet, so each beat is one cluster of shots. The capturing agent writes work/&lt;slug&gt;/beats.json with beat titles, shot names and notes, then rebuilds.</p>";
+  html += "<p style='opacity:.65;font-size:14px'>Energy is the fingerprint's motion energy at 10Hz, normalised to the film's peak and drawn to scale. Each beat frame plays its exact source frames with the full overlay; press O on any frame to see the clean picture.</p>";
+  info.innerHTML = html;
+
+  function row(label, px) { var r = h("div", "row"); r.appendChild(h("div", "lbl", label)); var t = h("div", "tr"); t.style.height = px + "px"; r.appendChild(t); lanes.appendChild(r); return t; }
+
+  var ax = row("time", 18); ax.style.background = "none";
+  var step = Math.max(2, 2 * Math.ceil(END / 50));
+  for (var s = 0; s <= Math.floor(END); s += step) { var tk = h("span", "tick", s + "s"); tk.style.left = pct(s); ax.appendChild(tk); }
+
+  var strip = row("beats", 150), beatEls = [];
+  O.beats.forEach(function (b) {
+    var el = h("div", "beat"); el.setAttribute("data-move", "beat " + b.n + " " + b.title);
+    el.style.left = pct(b.a); el.style.width = ((b.b - b.a) / END * 100) + "%";
+    el.style.backgroundImage = "url(thumbs/b" + ("0" + b.n).slice(-2) + ".jpg)";
+    var en = h("div", "en"); en.style.background = b.color; el.appendChild(en);
+    var cap = h("div", "cap"); var wide = (b.b - b.a) / END * 1700 > 170;
+    cap.innerHTML = wide ? "<b>" + b.n + "</b> " + b.title + "<br>" + tc(b.a) + " · " + (b.b - b.a).toFixed(2) + "s · " + b.shots + " shots" : "<b>" + b.n + "</b><br>" + (b.b - b.a).toFixed(2) + "s";
+    el.appendChild(cap); strip.appendChild(el); beatEls.push([el, b]);
+  });
+
+  var NS = "http://www.w3.org/2000/svg";
+  var en = row("energy (to scale)", 120);
+  var svg = document.createElementNS(NS, "svg"); svg.setAttribute("viewBox", "0 0 1000 100"); svg.setAttribute("preserveAspectRatio", "none");
+  var d = ""; O.energy.forEach(function (p, i) { d += (i ? "L" : "M") + (p.t / END * 1000).toFixed(2) + " " + (100 - p.v * 98).toFixed(2); });
+  var area = document.createElementNS(NS, "path"); area.setAttribute("d", d + "L1000 100L0 100Z"); area.setAttribute("fill", "rgba(255,209,102,.22)"); svg.appendChild(area);
+  var ln = document.createElementNS(NS, "path"); ln.setAttribute("d", d); ln.setAttribute("fill", "none"); ln.setAttribute("stroke", "#ffd166"); ln.setAttribute("stroke-width", "2"); ln.setAttribute("vector-effect", "non-scaling-stroke"); svg.appendChild(ln);
+  O.beats.forEach(function (b) { var l = document.createElementNS(NS, "line"); var x = (b.a / END * 1000).toFixed(2); l.setAttribute("x1", x); l.setAttribute("x2", x); l.setAttribute("y1", 0); l.setAttribute("y2", 100); l.setAttribute("stroke", "rgba(255,255,255,.25)"); l.setAttribute("vector-effect", "non-scaling-stroke"); svg.appendChild(l); });
+  en.appendChild(svg);
+  O.peaks.forEach(function (t, i) { var m = h("span", "tick", "peak " + tc(t)); m.style.left = pct(t); m.style.bottom = "auto"; m.style.top = (i % 2 ? 18 : 2) + "px"; m.style.color = "#ff8fa3"; en.appendChild(m); });
+
+  var cl = row("cuts · transitions", 30);
+  O.soft.forEach(function (o) { var e = h("span", "soft"); e.title = o.kind; e.style.left = pct(o.t0); e.style.width = ((o.t1 - o.t0) / END * 100) + "%"; cl.appendChild(e); });
+  O.cuts.forEach(function (t) { var e = h("span", "cut"); e.title = "cut " + tc(t); e.style.left = pct(t); cl.appendChild(e); });
+  O.missed.forEach(function (o) { var e = h("span", "cut missed"); e.title = "missed cut " + tc(o.t) + ": " + o.why; e.style.left = pct(o.t); cl.appendChild(e); });
+
+  function hist(label, times, cls, px) {
+    var t = row(label, px), bins = new Array(Math.ceil(END)).fill(0);
+    times.forEach(function (x) { bins[Math.min(bins.length - 1, Math.floor(x))]++; });
+    var mx = Math.max.apply(null, bins);
+    bins.forEach(function (n, i) { if (!n) return; var b = h("span", "bar " + cls); b.style.left = "calc(" + pct(i) + " + 1px)"; b.style.width = "calc(" + (100 / END) + "% - 2px)"; b.style.height = (n / mx * 100) + "%"; b.title = n + " in second " + i; t.appendChild(b); });
+    var lab = h("span", "tick", "max " + mx + "/s"); lab.style.left = "auto"; lab.style.right = "4px"; lab.style.transform = "none"; lab.style.top = "0"; lab.style.bottom = "auto"; t.appendChild(lab);
+    return t;
+  }
+  hist("cuts per second", O.cuts.concat(O.missed.map(function (m) { return m.t; })), "", 46);
+  var sf = hist("sound fx per second", O.sfx.map(function (s) { return s.t; }), "sfx", 46);
+  var colors = O.sfxColors;
+  var sm = row("sound fx by class", 26);
+  O.sfx.forEach(function (s, k) { var e = h("span", "sd"); e.style.left = pct(s.t); e.style.top = (k % 2 ? 13 : 3) + "px"; e.style.background = colors[s.cls] || "#fff"; e.title = s.cls + " " + tc(s.t); sm.appendChild(e); });
+
+  var lg = h("div", "legend");
+  lg.innerHTML = "<span><i style='background:#fff;width:2px'></i>hard cut</span>" + (O.missed.length ? "<span><i style='background:#ff9f1c;width:3px'></i>cut missing from fingerprint</span>" : "") + "<span><i style='background:rgba(200,120,255,.5)'></i>soft transition</span>" +
+    Object.keys(colors).map(function (k) { return "<span><i style='background:" + colors[k] + "'></i>" + k + "</span>"; }).join("") +
+    "<span><i style='background:#8fb0ff'></i>calm</span><span><i style='background:#39d98a'></i>medium</span><span><i style='background:#ffd166'></i>high</span><span><i style='background:#ff4d6d'></i>peak beat energy</span>";
+  lanes.appendChild(lg);
+
+  var ph = h("div", "ph"); lanes.appendChild(ph);
+  var last = 0, playing = false, shown = null;
+  // follow the presented frame (requestVideoFrameCallback), not currentTime, which runs ahead
+  if (v.requestVideoFrameCallback) { var onFrame = function (n, m) { shown = m.mediaTime; v.requestVideoFrameCallback(onFrame); }; v.requestVideoFrameCallback(onFrame); }
+  function seek(s) { s = Math.max(0, Math.min(END, s)); last = s; var f = Math.min(Math.round(END * FPS) - 1, Math.floor(s * FPS + 1e-6)); try { v.currentTime = (f + .5) / FPS; } catch (e) {} }
+  window.__storyboard = { duration: END, time: function () { return playing ? (shown != null ? shown : v.currentTime) : last; }, seek: seek,
+    play: function () { playing = true; var p = v.play(); if (p && p.catch) p.catch(function () { v.muted = true; v.play(); }); },
+    pause: function () { playing = false; v.pause(); last = shown != null ? shown : v.currentTime; } };
+  v.addEventListener("loadedmetadata", function () { seek(last); });
+  v.addEventListener("ended", function () { playing = false; last = END; });
+  function tick() {
+    var now = window.__storyboard.time(), tr = strip;
+    ph.style.left = (24 + tr.offsetLeft + tr.offsetWidth * (now / END)) + "px";
+    beatEls.forEach(function (p) { p[0].classList.toggle("is-now", now >= p[1].a && now < p[1].b); });
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

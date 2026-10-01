@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="frame-size" content="1920x1080">
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="lib/overlay.css">
+<link rel="stylesheet" href="lib/sb.css">
+</head>
+<body>
+<div id="frame" data-scene="{{SCENE}}">
+  <div class="sb-stage" data-move="source clip">
+    <video id="src" src="{{CLIP}}" muted playsinline preload="auto"></video>
+  </div>
+</div>
+<script>window.__beat = {{DATA}};</script>
+<script src="lib/sb.js"></script>
+</body>
+</html>
