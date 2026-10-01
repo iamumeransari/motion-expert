@@ -1,0 +1,202 @@
+<style>
+  /* select-title. Word-per-cut serif titles inside the selection: each card
+     cuts in a new word (and optionally a new plate) while the four chips glide
+     from the last word's box to this one's with a segmented streak and the
+     word's letter-spacing snaps open or shut onto its set width; a step makes
+     the word jump up in size with a second selection while the old chips
+     linger three frames; an exit slides the word sideways.
+     Source strips: assets/frames/titles-dense.jpg (frames 0 to 65),
+     assets/frames/select-title-design-dense.jpg (frames 10 to 18) and
+     assets/frames/select-title-step-dense.jpg (frames 64 to 80).
+     Measured at 1920 x 1080: cap height 102 px, baseline y 591, centred on
+     x 960; chip centres 34 px outside the word's ink and 59 px above the cap
+     line and below the baseline (box 526 x 220 px for a 458 px word); tracking
+     enters at 78 percent (word 2), 83 percent (word 3), 127 percent (word 4),
+     100 percent (word 5) and 70 percent (word 6) of the set width and lands on
+     the snap curve in five frames; word cuts on frames 10, 24, 37, 52 and 64;
+     the step on frame 72 scales the word 1.29 about the box centre with new
+     chips at once and the old ones for three frames; tiles invade from frame
+     75 while the word slides about 30 px left. Type is warm white #F4F1EC
+     with a letterpress speckle from an SVG noise filter. */
+  .el-select-title { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+  .el-select-title .st-plate { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0; }
+  .el-select-title .st-word { position: absolute; left: 0; width: 100%; text-align: center; white-space: nowrap; line-height: 1; opacity: 0; transform-origin: 50% 50%; }
+  .el-select-title .st-ch { display: inline-block; }
+  .el-select-title .st-chips { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+</style>
+<script>
+  window.__esMetrics = window.__esMetrics || { serif: { upm: 1000, cap: 670, x: 475, stroke: 20, adv: {" ":233,"!":289,"\"":356,"#":526,"$":500,"%":880,"&":720,"'":183,"(":339,")":339,"*":439,"+":530,",":300,"-":312,".":300,"/":330,"0":500,"1":500,"2":500,"3":500,"4":500,"5":500,"6":500,"7":500,"8":500,"9":500,":":300,";":300,"<":530,"=":530,">":530,"?":416,"@":835,"A":664,"B":629,"C":631,"D":710,"E":603,"F":579,"G":682,"H":788,"I":371,"J":374,"K":667,"L":596,"M":902,"N":735,"O":707,"P":589,"Q":707,"R":651,"S":512,"T":604,"U":727,"V":674,"W":962,"X":648,"Y":633,"Z":551,"[":320,"\\":330,"]":320,"^":531,"_":512,"`":400,"a":509,"b":577,"c":488,"d":567,"e":510,"f":354,"g":518,"h":601,"i":298,"j":277,"k":547,"l":298,"m":901,"n":606,"o":549,"p":583,"q":557,"r":423,"s":434,"t":325,"u":583,"v":505,"w":764,"x":526,"y":512,"z":456,"{":344,"|":291,"}":344,"~":530,"’":212,"…":820,"é":510,"è":510} }, width: function (text, size, track) { var a = this.serif.adv, w = 0, n = 0; for (var i = 0; i < text.length; i++) { var c = text[i]; w += (a[c] != null ? a[c] : 500); n++; } return (w + this.serif.stroke) / 1000 * size + Math.max(0, n - 1) * (track || 0) * size; } };
+
+  window.__esHandles = window.__esHandles || (function () {
+    var LAGS = [0, 0.5, 1, 1.5];
+    var FR = 1 / 24;
+    function scaleOf(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
+    function corners(box) { return [[box[0], box[1]], [box[2], box[1]], [box[0], box[3]], [box[2], box[3]]]; }
+    function colorOf(k, i) { var c = k.colors || k.color || "#ffffff"; return Array.isArray(c) ? c[i % c.length] : c; }
+    return {
+      /* Append the chips for every key to layer (a full-frame node). */
+      build: function (layer, keys, props) {
+        var s = scaleOf(props);
+        for (var k = 0; k < keys.length; k++) {
+          var copies = (k === 0 || keys[k].mode === "jump" || keys[k].mode === "pop") ? 1 : LAGS.length;
+          for (var i = 0; i < 4; i++) for (var j = 0; j < copies; j++) {
+            var c = document.createElement("div");
+            c.className = "sh-chip";
+            c.setAttribute("data-key", k); c.setAttribute("data-corner", i); c.setAttribute("data-copy", j);
+            var w = (keys[k].chip_w || keys[k].chip || 24) * s, h = (keys[k].chip_h || keys[k].chip || 24) * s;
+            c.style.cssText = "position:absolute;left:0;top:0;opacity:0;width:" + w + "px;height:" + h + "px;background:" + colorOf(keys[k], i);
+            layer.appendChild(c);
+          }
+        }
+      },
+      /* Tween them. keys[].t are seconds after t0. Returns the settle time. */
+      animate: function (tl, layer, t0, keys, props) {
+        var M = window.__motionExpert, s = scaleOf(props), snap = M.ease("snap"), end = t0;
+        var exitAt = props.exitAt != null ? t0 + props.exitAt : null;
+        for (var k = 0; k < keys.length; k++) {
+          var key = keys[k];
+          var mode = k === 0 ? "pop" : (key.mode || "glide");
+          var w = (key.chip_w || key.chip || 24) * s, h = (key.chip_h || key.chip || 24) * s;
+          var from = key.chip_from ? (key.chip_from * s) / w : 1;
+          var at = t0 + key.t;
+          var nextT = k + 1 < keys.length ? t0 + keys[k + 1].t : exitAt;
+          var dur = (key.dur_frames || 5) * FR;
+          var lead = (key.lead_frames == null ? 1 : key.lead_frames) * FR;
+          var tc = corners(key.box), pc = k > 0 ? corners(keys[k - 1].box) : tc;
+          var hide = nextT;
+          if (k + 1 < keys.length && keys[k + 1].mode === "jump") hide = nextT + (keys[k + 1].linger_frames == null ? 3 : keys[k + 1].linger_frames) * FR;
+          var chips = layer.querySelectorAll('.sh-chip[data-key="' + k + '"]');
+          for (var n = 0; n < chips.length; n++) {
+            var ch = chips[n], i = Number(ch.getAttribute("data-corner")), j = Number(ch.getAttribute("data-copy"));
+            var tx = tc[i][0] * s - w / 2, ty = tc[i][1] * s - h / 2;
+            tl.fromTo(ch, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, at);
+            if (mode === "glide") {
+              var start = at - lead, lag = LAGS[j] * FR;
+              tl.fromTo(ch, { x: pc[i][0] * s - w / 2, y: pc[i][1] * s - h / 2, scale: from }, { x: tx, y: ty, scale: 1, duration: dur, ease: snap, immediateRender: false }, start + lag);
+              if (j > 0) tl.fromTo(ch, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, start + dur + lag);
+            } else {
+              tl.fromTo(ch, { x: tx, y: ty, scale: from }, { x: tx, y: ty, scale: 1, duration: from === 1 ? 0.0001 : (key.settle_frames || 3) * FR, ease: snap, immediateRender: false }, at);
+            }
+            if (hide != null) {
+              var fade = (k === keys.length - 1 && props.fade_frames) ? props.fade_frames * FR : 0.0001;
+              tl.fromTo(ch, { opacity: 1 }, { opacity: 0, duration: fade, ease: "none", immediateRender: false }, hide);
+            }
+          }
+          end = Math.max(end, at + dur + FR);
+        }
+        return end;
+      }
+    };
+  })();
+
+
+  window.__elements = window.__elements || {};
+  window.__elements["select-title"] = (function () {
+    var FR = 1 / 24;
+    var BASE = 0.8505; /* baseline below the line box top, in em, at line-height 1 */
+    function S(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
+    function geom(card) {
+      var cap = card.cap || 102, size = cap / 0.69, cx = card.cx == null ? 960 : card.cx, base = card.baseline == null ? 591 : card.baseline;
+      var w = window.__esMetrics.width(card.text || "", size) - 0.06 * size;
+      var k = cap / 102;
+      var box = card.box || [cx - w / 2 - 34 * k, base - cap - 59 * k, cx + w / 2 + 34 * k, base + 59 * k];
+      return { cap: cap, size: size, cx: cx, base: base, w: w, box: box };
+    }
+    function keysFor(props) {
+      var cards = props.cards || [], keys = [];
+      for (var i = 0; i < cards.length; i++) {
+        var g = geom(cards[i]);
+        keys.push({ t: cards[i].t || 0, box: g.box, colors: cards[i].chips || props.chips || "#F4F1EC", chip: props.chip || 24 });
+      }
+      if (props.step) {
+        var last = keys[keys.length - 1], sc = props.step.scale || 1.29;
+        var cxb = (last.box[0] + last.box[2]) / 2, cyb = (last.box[1] + last.box[3]) / 2;
+        keys.push({ t: props.step.t, mode: "jump", box: props.step.box || [cxb + (last.box[0] - cxb) * sc, cyb + (last.box[1] - cyb) * sc, cxb + (last.box[2] - cxb) * sc, cyb + (last.box[3] - cyb) * sc], colors: props.step.chips || last.colors, chip: last.chip });
+      }
+      return keys;
+    }
+    return {
+      /* props:
+           cards: [{ text, t (s after t0), track_px (per-gap offset on entry,
+                     negative crowds the letters, positive spreads them),
+                     chips: [tl, tr, bl, br] colours, plate (CSS background for
+                     this card, optional), cap (102), cx (960), baseline (591),
+                     box (override the computed chip box), track_frames (5),
+                     track_delay_frames (1, frames after the cut before the
+                     letters start to move) }]
+           color: type colour (#F4F1EC), grain: true
+           step: { t, scale (1.29), box, chips }   exit: { t, dx (-30), frames (3) }
+           exitAt: seconds after t0 when everything goes. */
+      render: function (props) {
+        var s = S(props), el = document.createElement("div");
+        el.className = "el-select-title";
+        var cards = props.cards || [];
+        var fid = "st-grain-" + (props.target || "x");
+        if (props.grain !== false) {
+          el.insertAdjacentHTML("beforeend", '<svg width="0" height="0" style="position:absolute"><filter id="' + fid + '" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.42" numOctaves="2" seed="7" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -9 0 0 0 7.1" result="m"/><feComposite in="SourceGraphic" in2="m" operator="in"/></filter></svg>');
+        }
+        for (var i = 0; i < cards.length; i++) {
+          if (cards[i].plate) {
+            var p = document.createElement("div");
+            p.className = "st-plate"; p.setAttribute("data-card", i);
+            p.style.background = cards[i].plate; p.style.backgroundSize = "cover"; p.style.backgroundPosition = "center";
+            el.appendChild(p);
+          }
+        }
+        for (var c = 0; c < cards.length; c++) {
+          var g = geom(cards[c]);
+          var wd = document.createElement("div");
+          wd.className = "st-word es-serif"; wd.setAttribute("data-card", c);
+          wd.style.fontSize = g.size * s + "px";
+          wd.style.top = (g.base - BASE * g.size) * s + "px";
+          wd.style.left = (g.cx - 960) * s + "px";
+          wd.style.color = props.color || "#F4F1EC";
+          if (props.grain !== false) wd.style.filter = "url(#" + fid + ")";
+          var txt = cards[c].text || "";
+          for (var j = 0; j < txt.length; j++) {
+            var sp = document.createElement("span");
+            sp.className = "st-ch"; sp.textContent = txt[j] === " " ? "\u00a0" : txt[j];
+            wd.appendChild(sp);
+          }
+          el.appendChild(wd);
+        }
+        var chips = document.createElement("div");
+        chips.className = "st-chips";
+        window.__esHandles.build(chips, keysFor(props), props);
+        el.appendChild(chips);
+        return el;
+      },
+      animate: function (tl, el, t0, props) {
+        var M = window.__motionExpert, s = S(props), snap = M.ease("snap");
+        var cards = props.cards || [];
+        var exitAt = props.exitAt != null ? t0 + props.exitAt : null;
+        for (var c = 0; c < cards.length; c++) {
+          var at = t0 + (cards[c].t || 0);
+          var next = c + 1 < cards.length ? t0 + cards[c + 1].t : exitAt;
+          var wd = el.querySelector('.st-word[data-card="' + c + '"]');
+          var plate = el.querySelector('.st-plate[data-card="' + c + '"]');
+          var on = [wd]; if (plate) on.push(plate);
+          tl.fromTo(on, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, at);
+          if (next != null) tl.fromTo(on, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, next);
+          var d = (cards[c].track_px || 0) * s;
+          if (d) {
+            var chs = wd.querySelectorAll(".st-ch"), n = chs.length;
+            for (var j = 0; j < n; j++) {
+              var off = (j - (n - 1) / 2) * d;
+              tl.fromTo(chs[j], { x: off }, { x: 0, duration: (cards[c].track_frames || 5) * FR, ease: snap, immediateRender: false }, at + (cards[c].track_delay_frames == null ? 1 : cards[c].track_delay_frames) * FR);
+            }
+          }
+        }
+        var lastWord = el.querySelector('.st-word[data-card="' + (cards.length - 1) + '"]');
+        if (props.step && lastWord) {
+          tl.fromTo(lastWord, { scale: 1 }, { scale: props.step.scale || 1.29, duration: 0.0001, ease: "none", immediateRender: false }, t0 + props.step.t);
+        }
+        if (props.exit && lastWord) {
+          tl.fromTo(lastWord, { x: 0 }, { x: (props.exit.dx == null ? -30 : props.exit.dx) * s, duration: (props.exit.frames || 3) * FR, ease: snap, immediateRender: false }, t0 + props.exit.t);
+        }
+        var end = window.__esHandles.animate(tl, el.querySelector(".st-chips"), t0, keysFor(props), props);
+        return end;
+      }
+    };
+  })();
+</script>

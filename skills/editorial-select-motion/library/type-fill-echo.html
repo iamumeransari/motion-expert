@@ -1,0 +1,199 @@
+<style>
+  /* type-fill-echo. A dark grey serif line on paper glides in from the right
+     and settles dead centre, holds, then creeps larger on a slow ease-in,
+     punches up on a hard ease-out, fills its letters with a photograph, and
+     throws two image-filled echoes at 1.66 times its size above and below,
+     cropped by the frame. A cut then puts the same line in white over a new
+     plate, where it steps down to two thirds in one frame and disappears.
+     Source strip: assets/frames/type-fill-echo-dense.jpg (frames 637 to
+     701). Measured at 1920 x 1080: ink #343434, cap height 186 px at rest
+     (font-size 270 px), baseline 645 px, centred on x 960.
+     Glide: centre offset 365 px to the right, cubic-bezier 0, 0.6, 0, 1 over
+     18 frames starting one frame before the cut, so the first visible frame
+     is already at plus 142 px, then 94, 63, 43, 28, 18, 11, 6, 3, 1 on the
+     following real frames (fit rms 0.012 of the travel).
+     Ramp: scale 1 to 1.063 about the frame centre from 0.79 s after the cut
+     for 21.3 frames on cubic-bezier 0.5, 0, 1, 1.1 (fit rms 0.017).
+     Punch: scale 1.063 to 1.25 starting 1.68 s after the cut, 10 frames on
+     cubic-bezier 0, 0.8, 0.1, 1 (1.182 on the first frame, 1.213, 1.235,
+     1.244, 1.248, fit rms 0.005).
+     Fill: the letters take a photograph from 1.75 s (frame 679).
+     Echoes: bottom copy on frame 681, top copy on frame 682, both at 1.66
+     times the line's settled size; the top copy sits almost centred (stand-in centre
+     x 949) with its baseline at 258 px, the bottom copy is shifted left
+     (stand-in centre x 512) with its baseline about 1191 px, so it is
+     cropped by the bottom edge; the defaults carry the stand-in's offsets.
+     White phase: on the cut the line is white at the same size (1.25) over a
+     new plate, steps to 0.666 of that about the frame centre on frame 693
+     (six frames in) and is gone on frame 697. */
+  .el-type-fill-echo { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+  .el-type-fill-echo .tf-copy { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 50% 50%; }
+  .el-type-fill-echo .tf-line { position: absolute; left: 0; text-align: center; white-space: nowrap; line-height: 1; }
+  .el-type-fill-echo .tf-filled { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; -webkit-text-stroke-color: transparent; background-repeat: no-repeat; }
+  .el-type-fill-echo .tf-plate { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0; }
+</style>
+<script>
+  window.__elements = window.__elements || {};
+  window.__elements["type-fill-echo"] = (function () {
+    var FR = 1 / 24, EPS = 0.0001;
+    var BASE = 0.8505;
+    function S(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
+    function bez(x1, y1, x2, y2) {
+      var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+      var cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+      return function (p) {
+        if (p <= 0) return 0; if (p >= 1) return 1;
+        var lo = 0, hi = 1, t = p, x, i;
+        for (i = 0; i < 30; i++) { x = ((ax * t + bx) * t + cx) * t; if (Math.abs(x - p) < 1e-7) break; if (x < p) lo = t; else hi = t; t = (lo + hi) / 2; }
+        return ((ay * t + by) * t + cy) * t;
+      };
+    }
+    /* A copy is a full-frame layer holding one line, so a fill image sits in
+       frame coordinates and scales with the copy. */
+    var TRACK = 0, CX = 953, WIDE = 6000; /* line boxes are 6000 px wide so a fill clipped to the text is never cut by the box */
+    function copy(cls, text, size, baseline, cx, color, s) {
+      var c = document.createElement("div");
+      c.className = "tf-copy " + cls;
+      var l = document.createElement("div");
+      l.className = "tf-line es-serif";
+      l.style.fontSize = size * s + "px";
+      l.style.top = (baseline - BASE * size) * s + "px";
+      l.style.left = (cx - WIDE / 2) * s + "px";
+      l.style.width = WIDE * s + "px";
+      l.style.color = color;
+      if (TRACK) l.style.letterSpacing = TRACK + "em";
+      l.textContent = text;
+      c.appendChild(l);
+      return c;
+    }
+    return {
+      /* props:
+           text, cap (186), baseline (639, which puts the stand-in serif's
+             baseline on the source's 645), color (#343434), tracking (em, 0;
+             the stand-in sets this line 2.2 percent wide, so a replica of a
+             source line passes about minus 0.012), cx (953, which puts
+             the stand-in's ink centre on the source's 960)
+           glide: { dx (365), frames (18), lead_frames (1), ease ([0, 0.6, 0, 1]) } or false
+           ramp: { t (0.79), frames (21.33), to (1.063), ease ([0.5, 0, 1, 1.1]) } or false
+           punch: { t (1.68), frames (10), to (1.25), ease ([0, 0.8, 0.1, 1]) } or false
+           fill: { t (1.75), plate: CSS background } or false
+           echo: { scale (1.66), top: { t (1.875), cx (949), baseline (254) },
+                   bottom: { t (1.833), cx (512), baseline (1186) } } or false
+           white: { t (cut time), color (#F7F5F2), plate (CSS background for the
+                    new picture), steps: [{ t, scale }] ([0.25 s, 0.666]), exitAt }
+           exitAt: seconds after t0 when everything goes (also ends the dark phase). */
+      render: function (props) {
+        var s = S(props), el = document.createElement("div");
+        el.className = "el-type-fill-echo";
+        var cap = props.cap || 186, size = cap / 0.69, base = props.baseline || 639;
+        var text = props.text || "";
+        TRACK = props.tracking || 0; CX = props.cx == null ? 953 : props.cx;
+        if (props.white) {
+          var pl = document.createElement("div");
+          pl.className = "tf-plate";
+          if (props.white.plate) { pl.style.background = props.white.plate; pl.style.backgroundSize = "cover"; pl.style.backgroundPosition = "center"; }
+          el.appendChild(pl);
+        }
+        var main = copy("tf-main", text, size, base, CX, props.color || "#343434", s);
+        el.appendChild(main);
+        if (props.fill !== false && props.fill) {
+          var fm = copy("tf-main-fill", text, size, base, CX, "#000", s);
+          fm.style.opacity = 0;
+          var fl = fm.firstChild; fl.className += " tf-filled";
+          fl.style.background = props.fill.plate || "#777";
+          fl.style.backgroundSize = 1920 * s + "px " + 1080 * s + "px";
+          fl.style.backgroundPosition = (WIDE / 2 - CX) * s + "px " + (-(base - BASE * size) * s) + "px";
+          fl.style.webkitBackgroundClip = "text"; fl.style.backgroundClip = "text";
+          el.appendChild(fm);
+          var ec = props.echo === false ? null : (props.echo || {});
+          if (ec) {
+            var k = (ec.scale || 1.66) * ((props.punch && props.punch.to) || 1.25);
+            var parts = [["top", ec.top || {}, 949, 254], ["bottom", ec.bottom || {}, 512, 1186]];
+            for (var i = 0; i < parts.length; i++) {
+              var bl = parts[i][1].baseline == null ? parts[i][3] : parts[i][1].baseline;
+              var cx = parts[i][1].cx == null ? parts[i][2] : parts[i][1].cx;
+              var e = copy("tf-echo tf-echo-" + parts[i][0], text, size * k, bl, cx, "#000", s);
+              e.style.opacity = 0;
+              var ln = e.firstChild; ln.className += " tf-filled";
+              ln.style.background = parts[i][1].plate || props.fill.plate || "#777";
+              ln.style.backgroundSize = 1920 * s + "px " + 1080 * s + "px";
+              ln.style.backgroundPosition = (WIDE / 2 - cx) * s + "px " + (-(bl - BASE * size * k) * s) + "px";
+              ln.style.webkitBackgroundClip = "text"; ln.style.backgroundClip = "text";
+              el.appendChild(e);
+            }
+          }
+        }
+        if (props.white) {
+          var w = copy("tf-white", text, size, base, CX, props.white.color || "#F7F5F2", s);
+          w.style.opacity = 0;
+          el.appendChild(w);
+        }
+        return el;
+      },
+      animate: function (tl, el, t0, props) {
+        var s = S(props), end = t0;
+        var mainCopies = [el.querySelector(".tf-main")];
+        var fm = el.querySelector(".tf-main-fill"); if (fm) mainCopies.push(fm);
+        var g = props.glide === false ? null : (props.glide || {});
+        var first = true;
+        function ft(target, from, to, at) {
+          to.immediateRender = first; first = false;
+          tl.fromTo(target, from, to, at);
+        }
+        if (g) {
+          var D = (g.frames || 18) * FR, lead = (g.lead_frames == null ? 1 : g.lead_frames) * FR, e = g.ease || [0, 0.6, 0, 1];
+          var f = bez(e[0], e[1], e[2], e[3]), p0 = lead / D, f0 = f(p0);
+          var remap = function (p) { return (f(p0 + p * (1 - p0)) - f0) / (1 - f0); };
+          var dx = (g.dx == null ? 365 : g.dx) * (1 - f0) * s;
+          ft(mainCopies, { x: dx }, { x: 0, duration: D - lead, ease: remap }, t0);
+          end = t0 + D - lead;
+        }
+        var cur = 1;
+        var r = props.ramp === false ? null : (props.ramp || {});
+        if (r) {
+          var re = r.ease || [0.5, 0, 1, 1.1], rto = r.to || 1.063;
+          ft(mainCopies, { scale: cur }, { scale: rto, duration: (r.frames || 21.33) * FR, ease: bez(re[0], re[1], re[2], re[3]) }, t0 + (r.t == null ? 0.79 : r.t));
+          cur = rto;
+        }
+        var pu = props.punch === false ? null : (props.punch || {});
+        if (pu) {
+          var pe = pu.ease || [0, 0.8, 0.1, 1], pto = pu.to || 1.25;
+          ft(mainCopies, { scale: cur }, { scale: pto, duration: (pu.frames || 10) * FR, ease: bez(pe[0], pe[1], pe[2], pe[3]) }, t0 + (pu.t == null ? 1.68 : pu.t));
+          cur = pto;
+          end = Math.max(end, t0 + (pu.t == null ? 1.68 : pu.t) + (pu.frames || 10) * FR);
+        }
+        var darkEnd = props.white ? t0 + props.white.t : (props.exitAt != null ? t0 + props.exitAt : null);
+        if (fm) {
+          var tfill = t0 + (props.fill.t == null ? 1.75 : props.fill.t);
+          tl.fromTo(fm, { opacity: 0 }, { opacity: 1, duration: EPS, ease: "none", immediateRender: false }, tfill);
+          tl.fromTo(mainCopies[0], { opacity: 1 }, { opacity: 0, duration: EPS, ease: "none", immediateRender: false }, tfill);
+          var ec = props.echo === false ? null : (props.echo || {});
+          if (ec) {
+            var tops = [[".tf-echo-top", (ec.top && ec.top.t != null) ? ec.top.t : 1.875], [".tf-echo-bottom", (ec.bottom && ec.bottom.t != null) ? ec.bottom.t : 1.833]];
+            for (var i = 0; i < tops.length; i++) {
+              var n = el.querySelector(tops[i][0]);
+              tl.fromTo(n, { opacity: 0 }, { opacity: 1, duration: EPS, ease: "none", immediateRender: false }, t0 + tops[i][1]);
+              if (darkEnd != null) tl.fromTo(n, { opacity: 1 }, { opacity: 0, duration: EPS, ease: "none", immediateRender: false }, darkEnd);
+            }
+          }
+          if (darkEnd != null) tl.fromTo(fm, { opacity: 1 }, { opacity: 0, duration: EPS, ease: "none", immediateRender: false }, darkEnd);
+        } else if (darkEnd != null) {
+          tl.fromTo(mainCopies[0], { opacity: 1 }, { opacity: 0, duration: EPS, ease: "none", immediateRender: false }, darkEnd);
+        }
+        if (props.white) {
+          var wt = t0 + props.white.t, w = el.querySelector(".tf-white"), pl = el.querySelector(".tf-plate");
+          tl.fromTo([w, pl], { opacity: 0 }, { opacity: 1, duration: EPS, ease: "none", immediateRender: false }, wt);
+          var steps = props.white.steps || [{ t: 0.25, scale: 0.666 }], prev = cur;
+          tl.fromTo(w, { scale: cur }, { scale: cur, duration: EPS, ease: "none", immediateRender: false }, wt);
+          for (var j = 0; j < steps.length; j++) {
+            var sc = cur * steps[j].scale;
+            tl.fromTo(w, { scale: prev }, { scale: sc, duration: EPS, ease: "none", immediateRender: false }, wt + steps[j].t);
+            prev = sc;
+          }
+          if (props.white.exitAt != null) tl.fromTo(w, { opacity: 1 }, { opacity: 0, duration: EPS, ease: "none", immediateRender: false }, wt + props.white.exitAt);
+        }
+        return end;
+      }
+    };
+  })();
+</script>

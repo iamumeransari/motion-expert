@@ -1,0 +1,160 @@
+<style>
+  /* icon-tile. A flat violet tile carrying a mark, built in steps on paper:
+     it arrives with the mark printed faintly into it and a slow push in, its
+     corners notch out, the mark turns white and then black, the tile steps up
+     to about twice its size and keeps pushing in, selection chips arrive one
+     corner at a time, glide outward, are pressed black one after another and
+     pulled back in, then glide out again; the tile fades to lavender and the
+     whole group is carried off left by the accelerating camera pan of the
+     giant pass.
+     Source strips: assets/frames/icon-tile-dense.jpg (frames 179 to 192) and
+     assets/frames/lockup-icon-dense.jpg (frames 180 to 221), with
+     assets/frames/giant-word-pass-dense.jpg for the pan (frames 212 to 245).
+     Measured at 1920 x 1080, frames counted from the move's start (source
+     frame 180), tile centred on (960, 540): side 163 px on frame 0 growing to
+     178 px by frame 6 (cubic ease-out over 7 frames); notches 7 percent of
+     the side, pale on frame 3 and paper coloured from frame 4; mark faint
+     (about 12 percent ink) to frame 3, white frames 4 to 6, black from frame
+     7, half the tile's side; a one-frame step to 328 px on frame 10, then
+     growing to 384 px over 22 frames on the same curve; chips 0.088 of the
+     side, appearing 10 px out from each corner (diagonally) on frames 13, 16,
+     18 and 19 (top left, top right, bottom left, bottom right), gliding out to
+     43 px from frames 18, 19.5, 20.5 and 21, pulled back in to about 11 px from frames 27, 27.5, 29.5 and 30 while
+     pressed black on frames 27 to 29, 28 to 30, 28 to 30 and 30 to 32, and gliding out to 45 px from frames 32, 33, 33 and 34; tile colour
+     #A27AE7 stepping to lavender #C4ADE4 on frame 40; the pan starts on frame
+     32.5 and follows x = -37.7 (e^(0.128 t) - 1) px with t in frames, which
+     reaches -2089 px at the cut 31.5 frames later (fitted on the tile and the
+     giant word together, rms 15 px) (written here as an
+     exponential ease). The group (tile, mark, chips) scales as one, so chip
+     offsets are in px at the 384 px side. */
+  .el-icon-tile { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+  .el-icon-tile .it-pan { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .el-icon-tile .it-group { position: absolute; left: 0; top: 0; width: 384px; height: 384px; transform-origin: 50% 50%; opacity: 0; }
+  .el-icon-tile .it-tile { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #A27AE7; }
+  .el-icon-tile .it-notch { position: absolute; width: 14px; height: 14px; background: #EEEEEE; opacity: 0; }
+  .el-icon-tile .it-mark { position: absolute; left: 25%; top: 25%; width: 50%; height: 50%; }
+  .el-icon-tile .it-mark svg, .el-icon-tile .it-mark img { width: 100%; height: 100%; display: block; }
+  .el-icon-tile .it-mk { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; }
+  .el-icon-tile .it-chip { position: absolute; left: 0; top: 0; width: 34px; height: 34px; opacity: 0; }
+</style>
+<script>
+  window.__elements = window.__elements || {};
+  window.__elements["icon-tile"] = (function () {
+    var FR = 1 / 24;
+    function S(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
+    /* A neutral four-lobed placeholder mark, used when props.mark is absent. */
+    var MARK = '<svg viewBox="0 0 100 100"><g fill="currentColor"><circle cx="50" cy="28" r="17"/><circle cx="50" cy="72" r="17"/><circle cx="28" cy="50" r="17"/><circle cx="72" cy="50" r="17"/></g><circle cx="50" cy="50" r="9" fill="var(--it-bg, #A27AE7)"/></svg>';
+    /* Per corner (tl, tr, bl, br): appear frame, distance on arrival, glides
+       as [start frame, distance px, frames], and the frames it is pressed
+       black [from, until]. */
+    var CHIPS = [
+      { at: 13, d0: 10, glides: [[18, 43, 6], [27, 11, 7], [32, 45, 6]], black: [27, 30] },
+      { at: 16, d0: 10, glides: [[19.5, 43, 6], [27.5, 13, 6], [33, 45, 6]], black: [28, 31] },
+      { at: 18, d0: 10, glides: [[20.5, 43, 6], [29.5, 14, 6], [33, 45, 7]], black: [28, 31] },
+      { at: 19, d0: 9, glides: [[21, 42, 8], [30, 10, 5], [34, 44, 7]], black: [30, 33] }
+    ];
+    var DIRS = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+    function panEase(K) { var d = Math.exp(K) - 1; return function (u) { return (Math.exp(K * u) - 1) / d; }; }
+    return {
+      /* props: mark (inline SVG markup or an image url; default a neutral
+           placeholder), color (#A27AE7), fade_to (#C4ADE4), cx, cy (960, 540),
+           sizes { a: 163, b: 178, c: 328, d: 384 }, step_frame (10),
+           fade_frame (40), chips (override CHIPS), chips_on (true),
+           pan { frame: 32.5, frames: 31.5, dx: -2089, K: 4.032 } or false,
+           exitAt (seconds after t0). Frames count from t0 at 24 fps. */
+      render: function (props) {
+        var s = S(props), el = document.createElement("div");
+        el.className = "el-icon-tile";
+        var pan = document.createElement("div"); pan.className = "it-pan";
+        var g = document.createElement("div"); g.className = "it-group";
+        var cx = props.cx == null ? 960 : props.cx, cy = props.cy == null ? 540 : props.cy;
+        g.style.left = (cx - 192) * s + "px"; g.style.top = (cy - 192) * s + "px";
+        g.style.width = 384 * s + "px"; g.style.height = 384 * s + "px";
+        g.style.setProperty("--it-bg", props.color || "#A27AE7");
+        var tile = document.createElement("div"); tile.className = "it-tile";
+        tile.style.background = props.color || "#A27AE7";
+        g.appendChild(tile);
+        var n = 27 * s, pos = [[0, 0], [384 * s - n, 0], [0, 384 * s - n], [384 * s - n, 384 * s - n]];
+        for (var i = 0; i < 4; i++) {
+          var no = document.createElement("div"); no.className = "it-notch";
+          no.style.left = pos[i][0] + "px"; no.style.top = pos[i][1] + "px"; no.style.width = n + "px"; no.style.height = n + "px";
+          g.appendChild(no);
+        }
+        var mark = document.createElement("div"); mark.className = "it-mark";
+        var src = props.mark || MARK;
+        var inner = /^\s*</.test(src) ? src : '<img src="' + src + '" alt="">';
+        var looks = [["faint", "rgba(70, 30, 120, 0.13)"], ["white", "#F6F3FA"], ["black", "#0A0A0A"]];
+        for (var k = 0; k < looks.length; k++) {
+          var mk = document.createElement("div"); mk.className = "it-mk"; mk.setAttribute("data-look", looks[k][0]);
+          mk.style.color = looks[k][1]; mk.innerHTML = inner;
+          mark.appendChild(mk);
+        }
+        g.appendChild(mark);
+        if (props.chips_on !== false) {
+          var cs = 34 * s;
+          for (var c = 0; c < 4; c++) for (var col = 0; col < 2; col++) {
+            var ch = document.createElement("div"); ch.className = "it-chip";
+            ch.setAttribute("data-corner", c); ch.setAttribute("data-col", col ? "k" : "v");
+            ch.style.width = cs + "px"; ch.style.height = cs + "px";
+            ch.style.background = col ? "#0A0A0A" : (props.color || "#A27AE7");
+            g.appendChild(ch);
+          }
+        }
+        pan.appendChild(g); el.appendChild(pan);
+        return el;
+      },
+      animate: function (tl, el, t0, props) {
+        var M = window.__motionExpert, s = S(props), snap = M.ease("snap");
+        var g = el.querySelector(".it-group"), tile = el.querySelector(".it-tile");
+        var sz = props.sizes || { a: 163, b: 178, c: 328, d: 384 };
+        var step = props.step_frame == null ? 10 : props.step_frame;
+        var T = function (f) { return t0 + f * FR; };
+        tl.fromTo(g, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, t0);
+        tl.fromTo(g, { scale: sz.a / 384 }, { scale: sz.b / 384, duration: 7 * FR, ease: snap, immediateRender: false }, t0);
+        tl.fromTo(g, { scale: sz.c / 384 }, { scale: sz.d / 384, duration: 22 * FR, ease: snap, immediateRender: false }, T(step));
+        var notches = el.querySelectorAll(".it-notch");
+        tl.fromTo(notches, { opacity: 0, backgroundColor: "#C9B3EE" }, { opacity: 1, backgroundColor: "#C9B3EE", duration: 0.0001, ease: "none", immediateRender: false }, T(3));
+        tl.fromTo(notches, { backgroundColor: "#C9B3EE" }, { backgroundColor: "#EEEEEE", duration: 0.0001, ease: "none", immediateRender: false }, T(4));
+        var mk = function (k) { return el.querySelector('.it-mk[data-look="' + k + '"]'); };
+        tl.fromTo(mk("faint"), { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, t0);
+        tl.fromTo(mk("faint"), { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, T(4));
+        tl.fromTo(mk("white"), { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, T(4));
+        tl.fromTo(mk("white"), { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, T(7));
+        tl.fromTo(mk("black"), { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, T(7));
+        var fadeF = props.fade_frame == null ? 40 : props.fade_frame;
+        tl.fromTo(tile, { backgroundColor: props.color || "#A27AE7" }, { backgroundColor: props.fade_to || "#C4ADE4", duration: 0.0001, ease: "none", immediateRender: false }, T(fadeF));
+        if (props.chips_on !== false) {
+          var plan = props.chips || CHIPS, cs = 34;
+          for (var c = 0; c < 4; c++) {
+            var cfg = plan[c], dir = DIRS[c];
+            var cxl = (dir[0] < 0 ? 0 : 384), cyl = (dir[1] < 0 ? 0 : 384);
+            var at = function (d) { return { x: (cxl + dir[0] * d - cs / 2) * s, y: (cyl + dir[1] * d - cs / 2) * s }; };
+            var v = el.querySelector('.it-chip[data-corner="' + c + '"][data-col="v"]');
+            var k = el.querySelector('.it-chip[data-corner="' + c + '"][data-col="k"]');
+            var p0 = at(cfg.d0);
+            tl.fromTo([v, k], { x: p0.x, y: p0.y }, { x: p0.x, y: p0.y, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.at));
+            tl.fromTo(v, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.at));
+            var d = cfg.d0;
+            for (var j = 0; j < cfg.glides.length; j++) {
+              var gl = cfg.glides[j], a = at(d), b = at(gl[1]);
+              tl.fromTo([v, k], { x: a.x, y: a.y }, { x: b.x, y: b.y, duration: gl[2] * FR, ease: snap, immediateRender: false }, T(gl[0]));
+              d = gl[1];
+            }
+            if (cfg.black) {
+              tl.fromTo(k, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.black[0]));
+              tl.fromTo(v, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.black[0]));
+              tl.fromTo(k, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.black[1]));
+              tl.fromTo(v, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.black[1]));
+            }
+          }
+        }
+        var pan = props.pan === false ? null : (props.pan || { frame: 32.5, frames: 31.5, dx: -2089, K: 4.032 });
+        if (pan) {
+          tl.fromTo(el.querySelector(".it-pan"), { x: 0 }, { x: pan.dx * s, duration: pan.frames * FR, ease: panEase(pan.K), immediateRender: false }, T(pan.frame));
+        }
+        if (props.exitAt != null) tl.fromTo(g, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, t0 + props.exitAt);
+        return T(32);
+      }
+    };
+  })();
+</script>

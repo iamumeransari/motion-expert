@@ -1,0 +1,108 @@
+<style>
+  /* select-handles. The selection frame: four flat chips at the corners of a
+     box, tinted per chip, that glide from one box to the next on the snap
+     curve with a segmented motion streak, jump to a new box while the old
+     chips linger, burst out diagonally from a smaller box, or collapse onto a
+     point. Source strips: assets/frames/select-title-design-dense.jpg (frames 10
+     to 18), assets/frames/select-title-step-dense.jpg (frames 64 to 80) and
+     assets/frames/select-grow-dense.jpg (frames 758 to 818).
+     Measured: chip 24 px on the title cards and 26 px settled (38 px on
+     landing) on the select-grow tile; a glide runs five source frames (0.21 s)
+     on a cubic ease-out starting one frame before the cut, progress 0.42 to
+     0.49 on the first frame after the cut, 0.92 two frames later, 1.0 on the
+     sixth; the streak is the chip drawn again at 0.5, 1 and 1.5 frames of lag
+     (pieces 746 to 769 and 772 to 826 px on frame 10); the chips keep the
+     old colour until the cut and take the new one on it. On a jump (frame 72)
+     the new chips appear at once and the old ones stay three frames.
+     The root is a full-frame layer; every chip is positioned by transform
+     from the frame's top left, so nothing here reads layout. */
+  .el-select-handles { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+  .el-select-handles .sh-chip { position: absolute; left: 0; top: 0; width: 24px; height: 24px; opacity: 0; }
+</style>
+<script>
+  /* Shared handle builder. Copied verbatim into every element that draws a
+     selection (select-title, select-grow, type-on-select, icon-tile); the
+     first copy in a document wins. Change it here and re-copy. */
+  window.__esHandles = window.__esHandles || (function () {
+    var LAGS = [0, 0.5, 1, 1.5];
+    var FR = 1 / 24;
+    function scaleOf(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
+    function corners(box) { return [[box[0], box[1]], [box[2], box[1]], [box[0], box[3]], [box[2], box[3]]]; }
+    function colorOf(k, i) { var c = k.colors || k.color || "#ffffff"; return Array.isArray(c) ? c[i % c.length] : c; }
+    return {
+      /* Append the chips for every key to layer (a full-frame node). */
+      build: function (layer, keys, props) {
+        var s = scaleOf(props);
+        for (var k = 0; k < keys.length; k++) {
+          var copies = (k === 0 || keys[k].mode === "jump" || keys[k].mode === "pop") ? 1 : LAGS.length;
+          for (var i = 0; i < 4; i++) for (var j = 0; j < copies; j++) {
+            var c = document.createElement("div");
+            c.className = "sh-chip";
+            c.setAttribute("data-key", k); c.setAttribute("data-corner", i); c.setAttribute("data-copy", j);
+            var w = (keys[k].chip_w || keys[k].chip || 24) * s, h = (keys[k].chip_h || keys[k].chip || 24) * s;
+            c.style.cssText = "position:absolute;left:0;top:0;opacity:0;width:" + w + "px;height:" + h + "px;background:" + colorOf(keys[k], i);
+            layer.appendChild(c);
+          }
+        }
+      },
+      /* Tween them. keys[].t are seconds after t0. Returns the settle time. */
+      animate: function (tl, layer, t0, keys, props) {
+        var M = window.__motionExpert, s = scaleOf(props), snap = M.ease("snap"), end = t0;
+        var exitAt = props.exitAt != null ? t0 + props.exitAt : null;
+        for (var k = 0; k < keys.length; k++) {
+          var key = keys[k];
+          var mode = k === 0 ? "pop" : (key.mode || "glide");
+          var w = (key.chip_w || key.chip || 24) * s, h = (key.chip_h || key.chip || 24) * s;
+          var from = key.chip_from ? (key.chip_from * s) / w : 1;
+          var at = t0 + key.t;
+          var nextT = k + 1 < keys.length ? t0 + keys[k + 1].t : exitAt;
+          var dur = (key.dur_frames || 5) * FR;
+          var lead = (key.lead_frames == null ? 1 : key.lead_frames) * FR;
+          var tc = corners(key.box), pc = k > 0 ? corners(keys[k - 1].box) : tc;
+          var hide = nextT;
+          if (k + 1 < keys.length && keys[k + 1].mode === "jump") hide = nextT + (keys[k + 1].linger_frames == null ? 3 : keys[k + 1].linger_frames) * FR;
+          var chips = layer.querySelectorAll('.sh-chip[data-key="' + k + '"]');
+          for (var n = 0; n < chips.length; n++) {
+            var ch = chips[n], i = Number(ch.getAttribute("data-corner")), j = Number(ch.getAttribute("data-copy"));
+            var tx = tc[i][0] * s - w / 2, ty = tc[i][1] * s - h / 2;
+            tl.fromTo(ch, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, at);
+            if (mode === "glide") {
+              var start = at - lead, lag = LAGS[j] * FR;
+              tl.fromTo(ch, { x: pc[i][0] * s - w / 2, y: pc[i][1] * s - h / 2, scale: from }, { x: tx, y: ty, scale: 1, duration: dur, ease: snap, immediateRender: false }, start + lag);
+              if (j > 0) tl.fromTo(ch, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, start + dur + lag);
+            } else {
+              tl.fromTo(ch, { x: tx, y: ty, scale: from }, { x: tx, y: ty, scale: 1, duration: from === 1 ? 0.0001 : (key.settle_frames || 3) * FR, ease: snap, immediateRender: false }, at);
+            }
+            if (hide != null) {
+              var fade = (k === keys.length - 1 && props.fade_frames) ? props.fade_frames * FR : 0.0001;
+              tl.fromTo(ch, { opacity: 1 }, { opacity: 0, duration: fade, ease: "none", immediateRender: false }, hide);
+            }
+          }
+          end = Math.max(end, at + dur + FR);
+        }
+        return end;
+      }
+    };
+  })();
+
+  window.__elements = window.__elements || {};
+  window.__elements["select-handles"] = {
+    /* props:
+         keys: [{ t, box: [x0, y0, x1, y1] (chip centres, px at 1920 wide),
+                  chip (px, default 24) or chip_w and chip_h, chip_from (px on landing),
+                  colors: [tl, tr, bl, br] or color (any CSS background),
+                  mode: "glide" (default) | "jump" | "pop",
+                  dur_frames (5), lead_frames (1), linger_frames (3 on a jump),
+                  settle_frames (3, size settle on a jump or pop) }]
+         exitAt: seconds after t0 when the chips disappear; fade_frames to fade instead. */
+    render: function (props) {
+      var el = document.createElement("div");
+      el.className = "el-select-handles";
+      window.__esHandles.build(el, props.keys || [], props);
+      return el;
+    },
+    animate: function (tl, el, t0, props) {
+      return window.__esHandles.animate(tl, el, t0, props.keys || [], props);
+    }
+  };
+</script>

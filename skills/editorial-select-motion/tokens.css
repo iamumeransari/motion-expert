@@ -1,0 +1,90 @@
+@font-face { font-family: "ES Serif"; src: url("assets/fonts/SourceSerif4-Variable.woff2") format("woff2"); font-weight: 200 900; font-display: block; }
+@font-face { font-family: "ES Mono"; src: url("assets/fonts/IBMPlexMono-Regular.woff2") format("woff2"); font-weight: 400; font-display: block; }
+@font-face { font-family: "ES Mono Light"; src: url("assets/fonts/IBMPlexMono-Light.woff2") format("woff2"); font-weight: 300; font-display: block; }
+@font-face { font-family: "ES Pixel"; src: url("assets/fonts/GeistPixel-Square.woff2") format("woff2"); font-display: block; }
+@font-face { font-family: "ES Humanist"; src: url("assets/fonts/SourceSans3-Variable.woff2") format("woff2"); font-weight: 200 900; font-display: block; }
+@font-face { font-family: "ES Bitmap"; src: url("assets/fonts/VT323-Regular.woff2") format("woff2"); font-display: block; }
+@font-face { font-family: "ES Grotesk"; src: url("assets/fonts/CabinetGrotesk-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: block; }
+
+/* editorial-select motion tokens, mirrored from tokens.json. Faces load from
+   assets/fonts through the @font-face rules below (the toolkit embeds them as
+   base64 when it inlines this file). */
+:root {
+  --color-bg: #EEEEEE;
+  --color-fg: #0A0A0A;
+  --color-paper: #EEEEEE;
+  --color-paper-grid: #E8E9E9;
+  --color-grid-rule: #D2D2D2;
+  --color-ink: #0A0A0A;
+  --color-ink-soft: #1B1917;
+  --color-ink-grey: #343434;
+  --color-ghost: #E1E1E1;
+  --color-type-light: #F4F1EC;
+  --color-violet: #A27AE7;
+  --color-lavender: #C4ADE4;
+  --color-rose: #755753;
+  --color-clay: #A7887C;
+  --color-mist: #BEB9BB;
+  --color-night: #1F1C1B;
+  --color-steel-blue: #395B7F;
+  --color-orchid: #CF83B5;
+  --color-moss: #475E31;
+
+  /* The serif stands in for Exposure at about -20 on its axis: Source Serif 4
+     at opsz 20 and weight 400 with a 0.02em stroke in its own colour, which
+     spreads the ink the way the negative axis does (sources.md, Gaps). Cap
+     height is 0.69 of the font size with the stroke, so a cap height of C px
+     is a font-size of C / 0.69. */
+  --font-serif: "ES Serif", Georgia, serif;
+  --serif-opsz: "opsz" 20;
+  --serif-stroke: 0.02em;
+  --cap-ratio: 0.69;
+  --font-mono: "ES Mono", ui-monospace, monospace;
+  --font-pixel: "ES Pixel", monospace;
+  --font-humanist: "ES Humanist", Helvetica, Arial, sans-serif;
+  --font-bitmap: "ES Bitmap", monospace;
+  --font-grotesk: "ES Grotesk", Helvetica, Arial, sans-serif;
+
+  /* font-size per role = measured cap height / 0.69 */
+  --type-ghost: 928px;
+  --type-rise: 478px;
+  --type-behind: 348px;
+  --type-launch: 268px;
+  --type-oops: 159px;
+  --type-title: 148px;
+  --type-line: 116px;
+  --type-word: 116px;
+  --type-statement: 58px;
+  --type-lockup: 43px;
+  --type-end: 38px;
+  --type-fine: 17px;
+
+  --space-margin: 64px;
+  --space-gap: 32px;
+  --chip: 24px;
+  --chip-grow: 26px;
+  --chip-fine: 8px;
+  --grid-x: 120px;
+  --grid-y: 121.5px;
+  --print-border: 30px;
+
+  --unit: 62.5ms;
+  --ease-snap: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-drift: cubic-bezier(0.15, 0.11, 0.614, 0.796);
+  --ease-drift-linear: cubic-bezier(0.385, 0.326, 0.732, 0.781);
+  --ease-push: cubic-bezier(0.336, -0.065, 0, 0.821);
+  --ease-push-hard: cubic-bezier(0.772, 0.446, 0.15, 0.453);
+  --ease-pull: cubic-bezier(0.924, 0.668, 0.604, 0.958);
+  --ease-glide: cubic-bezier(0.034, 0.665, 0.702, 1.023);
+  --ease-reveal: cubic-bezier(0.081, -0.525, 0, 0.951);
+  --ease-rise: cubic-bezier(0.15, 0.85, 0.3, 1);
+  --ease-pass: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  --ease-settle: cubic-bezier(0.42, 0.543, 1, 1.076);
+}
+/* Full-frame stage for plate stacks: every child is placed absolutely. */
+.me-stage.layout-plate { display: block; padding: 0; }
+.me-stage.layout-plate > * { position: absolute; }
+
+/* The serif as the source sets it: ink spread by a stroke in the fill colour. */
+.es-serif { font-family: var(--font-serif); font-weight: 400; font-variation-settings: "opsz" 20; -webkit-text-stroke: 0.02em currentColor; paint-order: stroke fill; font-kerning: none; }
+.es-serif-thin { font-family: var(--font-serif); font-weight: 400; font-variation-settings: "opsz" 20; font-kerning: none; }

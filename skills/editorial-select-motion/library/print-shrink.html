@@ -1,0 +1,103 @@
+<style>
+  /* print-shrink. The picture becomes a print: the whole frame shrinks onto
+     pale paper in single steps with no tween, and optionally the next picture
+     arrives as a card that opens behind the object as a narrow window, then
+     jumps in front of the shrunken print and grows in steps until it fills
+     the frame.
+     Source strips: assets/frames/giant-rise-print-dense.jpg (frames 556 to
+     565) and assets/frames/print-shrink-billboard-dense.jpg (frames 842 to
+     847). Measured at 1920 x 1080, paper #EFEFEF (sampled 237 to 241):
+     the card wipe runs a window of the next picture at 755, 96 to 1168, 975 px
+     on frame 559 and 721, 73 to 1220, 985 on frame 561, while the current
+     picture shrinks to 0.939 about the frame centre on frame 561 (card 59, 33
+     to 1861, 1047) and to 0.795 on frame 562 (195, 110 to 1724, 970); the
+     next card jumps to 462, 23 to 1629, 931 on frame 562, to 26, minus 30 to
+     1915, 1110 on frame 564 and fills the frame on 565. The print shrink
+     before a cut steps to a 10 px white sliver on the right and 7 px at the
+     bottom on frame 843, to 0.945 on frame 844 (55, 29 to 1866, 1053) and to
+     0.855 on frame 846 (141, 78 to 1780, 1005), then the next shot cuts in
+     on frame 847. Every step is a single frame change on the cadence. */
+  .el-print-shrink { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+  .el-print-shrink .ps-paper { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; }
+  .el-print-shrink .ps-cur { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; background-size: cover; background-position: center; }
+  .el-print-shrink .ps-next { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; }
+  .el-print-shrink .ps-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; background-size: cover; background-position: center; }
+</style>
+<script>
+  window.__elements = window.__elements || {};
+  window.__elements["print-shrink"] = (function () {
+    var EPS = 0.0001;
+    function S(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
+    function rectOf(step) {
+      if (step.rect) return step.rect;
+      var k = step.scale == null ? 1 : step.scale;
+      return [960 - 960 * k, 540 - 540 * k, 960 + 960 * k, 540 + 540 * k];
+    }
+    return {
+      /* props:
+           plate: CSS background of the current picture (omit to shrink nothing visible)
+           paper: margin colour (#EFEFEF)
+           shrink: [{ t, scale } or { t, rect: [x0, y0, x1, y1] }] single steps
+           next: { plate: CSS background, position (center),
+                   keys: [{ t, rect: [x0, y0, x1, y1], scale, dx, dy }] } single
+                   steps, drawn over; rect is the window in frame px, and the
+                   picture inside is scaled about the frame's top left and then
+                   shifted by dx, dy (frame px)
+           exitAt: seconds after t0 when everything goes (a hard cut). */
+      render: function (props) {
+        var el = document.createElement("div");
+        el.className = "el-print-shrink";
+        var paper = document.createElement("div");
+        paper.className = "ps-paper";
+        paper.style.background = props.paper || "#EFEFEF";
+        el.appendChild(paper);
+        var cur = document.createElement("div");
+        cur.className = "ps-cur";
+        if (props.plate) cur.style.background = props.plate;
+        cur.style.backgroundSize = "cover"; cur.style.backgroundPosition = "center";
+        el.appendChild(cur);
+        if (props.next) {
+          var nx = document.createElement("div");
+          nx.className = "ps-next";
+          var img = document.createElement("div");
+          img.className = "ps-img";
+          img.style.background = props.next.plate || "#777";
+          img.style.backgroundSize = "cover";
+          img.style.backgroundPosition = props.next.position || "center";
+          nx.appendChild(img);
+          el.appendChild(nx);
+        }
+        return el;
+      },
+      animate: function (tl, el, t0, props) {
+        var s = S(props), end = t0;
+        var paper = el.querySelector(".ps-paper"), cur = el.querySelector(".ps-cur"), nx = el.querySelector(".ps-next");
+        var sh = props.shrink || [];
+        var prev = { x: 0, y: 0, scaleX: 1, scaleY: 1 };
+        if (sh.length) tl.fromTo(paper, { opacity: 0 }, { opacity: 1, duration: EPS, ease: "none" }, t0 + sh[0].t);
+        for (var i = 0; i < sh.length; i++) {
+          var r = rectOf(sh[i]);
+          var to = { x: r[0] * s, y: r[1] * s, scaleX: (r[2] - r[0]) / 1920, scaleY: (r[3] - r[1]) / 1080 };
+          tl.fromTo(cur, prev, { x: to.x, y: to.y, scaleX: to.scaleX, scaleY: to.scaleY, duration: EPS, ease: "none", immediateRender: false }, t0 + sh[i].t);
+          prev = to;
+          end = Math.max(end, t0 + sh[i].t);
+        }
+        if (nx) {
+          var keys = props.next.keys || [];
+          for (var k = 0; k < keys.length; k++) {
+            var q = keys[k].rect || [0, 0, 1920, 1080];
+            var at = t0 + keys[k].t;
+            if (k === 0) tl.fromTo(nx, { opacity: 0 }, { opacity: 1, duration: EPS, ease: "none", immediateRender: false }, at);
+            var pk = k === 0 ? keys[k] : keys[k - 1], p = pk.rect || [0, 0, 1920, 1080];
+            var ins = function (r) { return "inset(" + r[1] * s + "px " + (1920 - r[2]) * s + "px " + (1080 - r[3]) * s + "px " + r[0] * s + "px)"; };
+            tl.fromTo(nx, { clipPath: ins(p) }, { clipPath: ins(q), duration: EPS, ease: "none", immediateRender: k === 0 }, at);
+            tl.fromTo(nx.firstChild, { x: (pk.dx || 0) * s, y: (pk.dy || 0) * s, scale: pk.scale || 1 }, { x: (keys[k].dx || 0) * s, y: (keys[k].dy || 0) * s, scale: keys[k].scale || 1, duration: EPS, ease: "none", immediateRender: k === 0 }, at);
+            end = Math.max(end, at);
+          }
+        }
+        if (props.exitAt != null) tl.fromTo(el, { opacity: 1 }, { opacity: 0, duration: EPS, ease: "none", immediateRender: false }, t0 + props.exitAt);
+        return end;
+      }
+    };
+  })();
+</script>

@@ -1,0 +1,196 @@
+<style>
+  /* tile-scatter. Photo tiles and loose words on grid paper. Tiles land on
+     whole frames with no entrance tween and then glide a short way on the
+     snap curve, their pictures swapping in place; words sit under the tiles on
+     small paper cards that hide the grid and glide in the same steps; then
+     the words collapse into one centred line, the line and the tiles grow,
+     and the tiles clear a few per frame until only the line is left. The
+     ground is optional, so the first tiles can land over the previous scene
+     before the paper cuts in under them.
+     Source strips: assets/frames/tile-scatter-dense.jpg (frames 79 to 139)
+     and assets/frames/select-title-step-dense.jpg (frames 72 to 79).
+     Measured at 1920 x 1080: paper #ECECEC with 1.5 px rules (#D2D2D2 on a
+     #E1E1E1 half pixel) every 120 px across through x 960 and every 121.5 px
+     down through y 540; tiles 240 x 245, 242 x 365, 483 x 318 and 363 x 242
+     px, first two tiles landing on frames 75 and 76 over the previous scene
+     and the paper cutting in on frame 79; tiles glide 15 to 50 px per step,
+     each step two or three frames, settling by frame 100; words set at
+     84.5 px (cap 58 px) on #F1F1F1 cards 120 px tall and 122 px wider than
+     the ink; collapse on frame 112 into one line at 95 px, baseline y 566,
+     centred, which then grows 1.156 by frame 126; tiles grow about 1.12
+     about the frame centre over frames 113 to 127 on an accelerating curve
+     while the grid only grows 1.018; tiles clear on frames 123, 124, 127
+     and 129 and the grid goes with the last one. */
+  .el-tile-scatter { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+  .el-tile-scatter .ts-ground { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; transform-origin: 50% 50%; }
+  .el-tile-scatter .ts-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 50% 50%; }
+  .el-tile-scatter .ts-tile { position: absolute; left: 0; top: 0; opacity: 0; overflow: hidden; transform-origin: 0 0; }
+  .el-tile-scatter .ts-pic { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0; }
+  .el-tile-scatter .ts-word { position: absolute; left: 0; top: 0; opacity: 0; white-space: nowrap; line-height: 1; color: #0A0A0A; }
+  .el-tile-scatter .ts-card { position: absolute; background: #F1F1F1; }
+  .el-tile-scatter .ts-text { position: absolute; left: 0; top: 0; }
+  .el-tile-scatter .ts-line { position: absolute; left: 0; width: 100%; text-align: center; white-space: nowrap; line-height: 1; color: #0A0A0A; opacity: 0; transform-origin: 50% 50%; }
+</style>
+<script>
+  window.__esMetrics = window.__esMetrics || { serif: { upm: 1000, cap: 670, x: 475, stroke: 20, adv: {" ":225,"!":280,"\"":420,"#":530,"$":530,"%":826,"&":722,"'":231,"(":331,")":331,"*":443,"+":530,",":242,"-":330,".":242,"/":385,"0":530,"1":530,"2":530,"3":530,"4":530,"5":530,"6":530,"7":530,"8":530,"9":530,":":242,";":242,"<":530,"=":530,">":530,"?":409,"@":914,"A":662,"B":632,"C":641,"D":706,"E":580,"F":553,"G":698,"H":786,"I":379,"J":365,"K":667,"L":556,"M":898,"N":729,"O":735,"P":592,"Q":735,"R":653,"S":532,"T":602,"U":727,"V":650,"W":991,"X":647,"Y":604,"Z":589,"[":331,"\\":385,"]":331,"^":530,"_":500,"`":500,"a":498,"b":556,"c":454,"d":561,"e":487,"f":326,"g":508,"h":574,"i":289,"j":281,"k":527,"l":283,"m":857,"n":577,"o":540,"p":558,"q":549,"r":407,"s":426,"t":328,"u":567,"v":499,"w":774,"x":499,"y":500,"z":456,"{":331,"|":256,"}":331,"~":530,"’":231,"…":726,"é":487,"è":487} }, width: function (text, size, track) { var a = this.serif.adv, w = 0, n = 0; for (var i = 0; i < text.length; i++) { var c = text[i]; w += (a[c] != null ? a[c] : 500); n++; } return (w + this.serif.stroke) / 1000 * size + Math.max(0, n - 1) * (track || 0) * size; } };
+
+  window.__elements = window.__elements || {};
+  window.__elements["tile-scatter"] = (function () {
+    var FR = 1 / 24;
+    var BASE = 0.8505; /* baseline below the line box top at line-height 1, in em */
+    var LSB = 0.03;    /* average left side bearing of the serif, in em */
+    function S(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
+    function grid(g) {
+      var rule = g.rule || "#D2D2D2", half = g.half || "#E1E1E1", gx = g.gx || 120, gy = g.gy || 121.5;
+      var ox = (g.cx == null ? 960 : g.cx) % gx, oy = (g.cy == null ? 540 : g.cy) % gy;
+      return { css: "background-color:" + (g.color || "#ECECEC") + ";background-image:" +
+        "linear-gradient(to right," + half + " 0," + half + " 1px," + rule + " 1px," + rule + " 2px,transparent 2px)," +
+        "linear-gradient(to bottom," + half + " 0," + half + " 1px," + rule + " 1px," + rule + " 2px,transparent 2px);" +
+        "background-size:" + gx + "px " + gy + "px;", ox: ox - 1, oy: oy - 1 };
+    }
+    /* Each track key is [t, x, y] or [t, x, y, w, h] with t in seconds after t0.
+       Between keys a tile or word moves on props.ease (snap by default), or in
+       a step when the key says so with a fifth or sixth entry "step". */
+    return {
+      /* props:
+           ground: { t, out_t, color, rule, half, gx, gy, grow: { t, dur, to, ease } }
+           tiles:  [{ t, out_t, w, h, src (url or CSS background), swaps: [{ t, src }],
+                      keys: [[t, x, y, w?, h?], ...] }]   x, y: top left in px at 1920
+           words:  [{ text, t, out_t, size (84.5), card (true), keys: [[t, x, baseline], ...] }]
+                   x is the ink's left edge
+           line:   { text, t, out_t, size (95), baseline (566), grow: { t, dur, to, ease } | keys: [[t, scale]] }
+           ease:   the tracks' curve name (snap); exitAt: everything off. */
+      render: function (props) {
+        var s = S(props), el = document.createElement("div");
+        el.className = "el-tile-scatter";
+        if (props.ground) {
+          var g = grid(props.ground), gr = document.createElement("div");
+          gr.className = "ts-ground";
+          gr.style.cssText += g.css + "background-position:" + g.ox * s + "px " + g.oy * s + "px;";
+          if (s !== 1) gr.style.backgroundSize = (props.ground.gx || 120) * s + "px " + (props.ground.gy || 121.5) * s + "px";
+          el.appendChild(gr);
+        }
+        var layer = document.createElement("div");
+        layer.className = "ts-layer";
+        el.appendChild(layer);
+        var words = props.words || [];
+        for (var w = 0; w < words.length; w++) {
+          var wd = words[w], size = (wd.size || 84.5) * s;
+          var node = document.createElement("div");
+          node.className = "ts-word"; node.setAttribute("data-i", w);
+          var ink = window.__esMetrics.width(wd.text, size) - 0.06 * size;
+          if (wd.card !== false) {
+            var card = document.createElement("div");
+            card.className = "ts-card";
+            var ch = (wd.card_h || 120) * size / (84.5 * s), padx = (wd.card_pad || 61) * size / (84.5 * s);
+            card.style.left = (-padx) + "px"; card.style.width = (ink + 2 * padx) + "px";
+            card.style.top = (-0.4 * size - ch / 2) + "px"; card.style.height = ch + "px";
+            node.appendChild(card);
+          }
+          var tx = document.createElement("div");
+          tx.className = "ts-text es-serif"; tx.textContent = wd.text;
+          tx.style.fontSize = size + "px";
+          tx.style.left = (-LSB * size) + "px"; tx.style.top = (-BASE * size) + "px";
+          node.appendChild(tx);
+          layer.appendChild(node);
+        }
+        var tiles = props.tiles || [];
+        for (var i = 0; i < tiles.length; i++) {
+          var tl0 = tiles[i], tile = document.createElement("div");
+          tile.className = "ts-tile"; tile.setAttribute("data-i", i);
+          tile.style.width = (tl0.w || 240) * s + "px"; tile.style.height = (tl0.h || 240) * s + "px";
+          var pics = [{ src: tl0.src }].concat(tl0.swaps || []);
+          for (var p = 0; p < pics.length; p++) {
+            var pic = document.createElement("div");
+            pic.className = "ts-pic"; pic.setAttribute("data-p", p);
+            var src = pics[p].src || "#999";
+            pic.style.background = /^(url|linear|radial|#|rgb|hsl)/.test(src) ? src : "url(" + src + ")";
+            pic.style.backgroundSize = "cover"; pic.style.backgroundPosition = "center";
+            tile.appendChild(pic);
+          }
+          layer.appendChild(tile);
+        }
+        if (props.line) {
+          var ln = document.createElement("div"), lsize = (props.line.size || 95) * s;
+          ln.className = "ts-line es-serif"; ln.textContent = props.line.text || "";
+          ln.style.fontSize = lsize + "px";
+          ln.style.top = ((props.line.baseline == null ? 566 : props.line.baseline) * s - BASE * lsize) + "px";
+          ln.style.transformOrigin = "50% " + (BASE * lsize - 0.3 * lsize) + "px";
+          el.appendChild(ln);
+        }
+        return el;
+      },
+      animate: function (tl, el, t0, props) {
+        var M = window.__motionExpert, s = S(props), ease = M.ease(props.ease || "snap");
+        var exitAt = props.exitAt != null ? t0 + props.exitAt : null;
+        var end = t0;
+        function onOff(node, tOn, tOff) {
+          tl.fromTo(node, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, t0 + tOn);
+          var off = tOff != null ? t0 + tOff : exitAt;
+          if (off != null) tl.fromTo(node, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, off);
+        }
+        function track(node, keys, sizeKeys) {
+          for (var k = 0; k < keys.length; k++) {
+            var a = keys[k], b = keys[k + 1];
+            var va = { x: a[1] * s, y: a[2] * s };
+            if (sizeKeys && a[3] != null) { va.width = a[3] * s; va.height = a[4] * s; }
+            if (!b) {
+              tl.fromTo(node, va, { x: va.x, y: va.y, duration: 0.0001, ease: "none", immediateRender: k === 0 ? undefined : false }, t0 + a[0]);
+              continue;
+            }
+            var vb = { x: b[1] * s, y: b[2] * s };
+            if (sizeKeys && b[3] != null) { vb.width = b[3] * s; vb.height = b[4] * s; }
+            var step = b[b.length - 1] === "step" || a[a.length - 1] === "hold";
+            vb.duration = step ? 0.0001 : Math.max(0.0001, b[0] - a[0]);
+            vb.ease = step ? "none" : (b[b.length - 1] === "linear" ? "none" : ease);
+            if (k > 0) vb.immediateRender = false;
+            tl.fromTo(node, va, vb, t0 + (step ? b[0] - 0.0001 : a[0]));
+            end = Math.max(end, t0 + b[0]);
+          }
+        }
+        var ground = el.querySelector(".ts-ground");
+        if (ground) {
+          onOff(ground, props.ground.t || 0, props.ground.out_t);
+          var gg = props.ground.grow;
+          if (gg) tl.fromTo(ground, { scale: 1 }, { scale: gg.to, duration: gg.dur, ease: M.ease(gg.ease || "none"), immediateRender: false }, t0 + gg.t);
+        }
+        var tiles = props.tiles || [];
+        for (var i = 0; i < tiles.length; i++) {
+          var tile = el.querySelector('.ts-tile[data-i="' + i + '"]');
+          onOff(tile, tiles[i].t, tiles[i].out_t);
+          track(tile, tiles[i].keys || [[tiles[i].t, tiles[i].x || 0, tiles[i].y || 0]], true);
+          var pics = tile.querySelectorAll(".ts-pic");
+          var swaps = tiles[i].swaps || [];
+          for (var p = 0; p < pics.length; p++) {
+            var on = p === 0 ? tiles[i].t : swaps[p - 1].t;
+            var off = p + 1 < pics.length ? swaps[p].t : null;
+            tl.fromTo(pics[p], { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, t0 + on);
+            if (off != null) tl.fromTo(pics[p], { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, t0 + off);
+          }
+        }
+        var words = props.words || [];
+        for (var w = 0; w < words.length; w++) {
+          var node = el.querySelector('.ts-word[data-i="' + w + '"]');
+          onOff(node, words[w].t, words[w].out_t);
+          track(node, words[w].keys || [[words[w].t, words[w].x, words[w].baseline]], false);
+        }
+        var line = el.querySelector(".ts-line");
+        if (line) {
+          onOff(line, props.line.t, props.line.out_t);
+          if (props.line.keys) {
+            var lk = props.line.keys;
+            for (var q = 0; q + 1 < lk.length; q++) {
+              var v = { scale: lk[q + 1][1], duration: Math.max(0.0001, lk[q + 1][0] - lk[q][0]), ease: "none" };
+              if (q > 0) v.immediateRender = false;
+              tl.fromTo(line, { scale: lk[q][1] }, v, t0 + lk[q][0]);
+            }
+          } else if (props.line.grow) {
+            var lg = props.line.grow;
+            tl.fromTo(line, { scale: 1 }, { scale: lg.to, duration: lg.dur, ease: M.ease(lg.ease || "none"), immediateRender: false }, t0 + lg.t);
+          }
+        }
+        return end;
+      }
+    };
+  })();
+</script>

@@ -1,0 +1,92 @@
+<style>
+  /* giant-word-rise. A giant solid black serif word rises into the frame from
+     below its bottom edge and drifts left as it climbs, cropped by the frame,
+     sitting over the plate and over any object in it; it can shrink with the
+     frame in single steps when the picture is printed into a card.
+     Source strip: assets/frames/giant-rise-print-dense.jpg (frames 550 to
+     561). Measured at 1920 x 1080: cap height 710 px (font-size 1029 px), ink
+     #0A0A0A with no grain; the baseline climbs from 1744 px to 1000 px on a
+     cubic-bezier of 0, 0.5, 0.4, 1 over twelve frames starting half a frame
+     before frame 552 (baseline 1508 on frame 552, 1355 on 553, 1205 on 555,
+     1120 on 556, 1063 on 558, 1023 on 559, 992 on 561, fit rms 8.6 px), while
+     the first letter's left edge travels linearly from 292 px to minus 6 px
+     over the same twelve frames (24.8 px a frame); those
+     defaults already carry the 20 px and 30 px offsets the stand-in serif
+     needs to put its i dot where the source's sits (within 15 px on every
+     frame from 553 to 561). The word is first visible
+     on frame 552 with its top 270 px above the bottom edge and is still
+     moving when the plate behind it shrinks to a card on frame 561; the word
+     itself does not shrink (its i dot keeps its 160 px width) and cuts away
+     on frame 562, so shrink is optional and empty for the source. */
+  .el-giant-word-rise { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; transform-origin: 50% 50%; }
+  .el-giant-word-rise .gw-word { position: absolute; left: 0; top: 0; white-space: nowrap; line-height: 1; }
+  .el-giant-word-rise .gw-cut { position: absolute; background-size: 100% 100%; }
+</style>
+<script>
+  window.__elements = window.__elements || {};
+  window.__elements["giant-word-rise"] = (function () {
+    var FR = 1 / 24;
+    var BASE = 0.8505; /* baseline below the line box top, in em, at line-height 1 */
+    function S(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
+    function bez(x1, y1, x2, y2) {
+      var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+      var cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+      return function (p) {
+        if (p <= 0) return 0; if (p >= 1) return 1;
+        var lo = 0, hi = 1, t = p, x, i;
+        for (i = 0; i < 30; i++) { x = ((ax * t + bx) * t + cx) * t; if (Math.abs(x - p) < 1e-7) break; if (x < p) lo = t; else hi = t; t = (lo + hi) / 2; }
+        return ((ay * t + by) * t + cy) * t;
+      };
+    }
+    return {
+      /* props:
+           text, cap (710), color (#0A0A0A)
+           from: { x, y } and to: { x, y }: left edge of the first letter and
+             the baseline, px at 1920 x 1080 (defaults are the source's)
+           frames (12), ease_y ([0, 0.5, 0.4, 1]), x travels linearly
+           cutout: { src, rect: [x0, y0, x1, y1] } drawn over the word when
+             over_cutout is false (the source puts the word over the object)
+           shrink: [{ t, scale }] single-step scales about the frame centre
+           exitAt: seconds after t0 when the word goes. t0 is the motion start. */
+      render: function (props) {
+        var s = S(props), el = document.createElement("div");
+        el.className = "el-giant-word-rise";
+        var cap = props.cap || 710, size = cap / 0.69, from = props.from || { x: 292, y: 1744 };
+        var w = document.createElement("div");
+        w.className = "gw-word es-serif";
+        w.style.fontSize = size * s + "px";
+        w.style.color = props.color || "#0A0A0A";
+        w.style.left = (from.x - 0.012 * size) * s + "px";
+        w.style.top = (from.y - BASE * size) * s + "px";
+        w.textContent = props.text || "";
+        var cut = null;
+        if (props.cutout && props.cutout.src) {
+          cut = document.createElement("div");
+          cut.className = "gw-cut";
+          var r = props.cutout.rect || [0, 0, 1920, 1080];
+          cut.style.left = r[0] * s + "px"; cut.style.top = r[1] * s + "px";
+          cut.style.width = (r[2] - r[0]) * s + "px"; cut.style.height = (r[3] - r[1]) * s + "px";
+          cut.style.backgroundImage = "url(" + props.cutout.src + ")";
+        }
+        if (cut && props.over_cutout === false) { el.appendChild(w); el.appendChild(cut); }
+        else { if (cut) el.appendChild(cut); el.appendChild(w); }
+        return el;
+      },
+      animate: function (tl, el, t0, props) {
+        var s = S(props), w = el.querySelector(".gw-word");
+        var from = props.from || { x: 292, y: 1744 }, to = props.to || { x: -6, y: 1000 };
+        var dur = (props.frames || 12) * FR, e = props.ease_y || [0, 0.5, 0.4, 1];
+        tl.fromTo(w, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none" }, t0);
+        tl.fromTo(w, { y: 0 }, { y: (to.y - from.y) * s, duration: dur, ease: bez(e[0], e[1], e[2], e[3]), immediateRender: false }, t0);
+        tl.fromTo(w, { x: 0 }, { x: (to.x - from.x) * s, duration: dur, ease: "none", immediateRender: false }, t0);
+        var sh = props.shrink || [], prev = 1;
+        for (var i = 0; i < sh.length; i++) {
+          tl.fromTo(el, { scale: prev }, { scale: sh[i].scale, duration: 0.0001, ease: "none", immediateRender: false }, t0 + sh[i].t);
+          prev = sh[i].scale;
+        }
+        if (props.exitAt != null) tl.fromTo(w, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, t0 + props.exitAt);
+        return t0 + dur;
+      }
+    };
+  })();
+</script>
