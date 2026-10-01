@@ -1126,6 +1126,7 @@ def sheets(beats, src_video, ren_video, out):
 EXACT = {
     "ssim_width": 960, "flow_width": 480, "thumb_width": 160, "grid_div": 4,
     "ssim_shot_min": 0.975,     # every shot's mean SSIM must reach this
+    "ssim_prefilter_sigma": 1.0,  # Gaussian sigma (px at 960w) applied to both frames before SSIM, so film grain no rebuild can reproduce frame by frame does not count as structure
     "ssim_frame_min": 0.95,     # a frame below this is a divergent frame (ranges, flip)
     "rel_epe_shot_max": 0.15,   # every shot's flow error relative to its motion must stay under this
     "rel_epe_frame_max": 0.25,  # a frame over this is a divergent frame
@@ -1151,6 +1152,9 @@ def ssim_luma(a, b):
     """Mean SSIM (Wang et al. 2004: 11x11 Gaussian, sigma 1.5) of two uint8 luma frames."""
     import cv2
     a, b = a.astype(np.float32), b.astype(np.float32)
+    sig = EXACT.get("ssim_prefilter_sigma", 0)
+    if sig:
+        a, b = cv2.GaussianBlur(a, (0, 0), sig), cv2.GaussianBlur(b, (0, 0), sig)
     C1, C2 = (0.01 * 255) ** 2, (0.03 * 255) ** 2
     bl = lambda x: cv2.GaussianBlur(x, (11, 11), 1.5)
     ma, mb = bl(a), bl(b)
@@ -1997,6 +2001,8 @@ def main():
     ap.add_argument("--source-words", help="word timings for the source's VO, if not in its fingerprint")
     ap.add_argument("--beats", type=int, default=8, help="beats on the sheets (6 to 10)")
     ex = ap.add_argument_group("replica (frame-exact)")
+    ex.add_argument("--ssim-prefilter-sigma", type=float, default=EXACT["ssim_prefilter_sigma"],
+                    help="Gaussian sigma at 960w applied to both frames before SSIM (0 turns it off)")
     ex.add_argument("--ssim-shot-min", type=float, default=EXACT["ssim_shot_min"],
                     help="every shot's mean luma SSIM must reach this (default calibrated, see loop.md)")
     ex.add_argument("--rel-epe-shot-max", type=float, default=EXACT["rel_epe_shot_max"],
@@ -2009,6 +2015,7 @@ def main():
     ex.add_argument("--flip-ranges", type=int, default=EXACT["flip_ranges"],
                     help="divergent ranges exported as flip sheets (default 10)")
     a = ap.parse_args()
+    EXACT["ssim_prefilter_sigma"] = a.ssim_prefilter_sigma
     if a.mode == "replica" and not (a.source_video and a.render_video):
         ap.error("replica mode needs --source-video and --render-video (it compares them frame by frame)")
     if a.mode == "novel" and not a.render_fp:

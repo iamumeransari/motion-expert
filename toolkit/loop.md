@@ -152,3 +152,8 @@ or its band is too loose, so add or tighten it in the fingerprint tolerance or i
 A miss that would hit every style is fixed in the toolkit or the method skill, and a
 decision Umer makes about one piece, such as cutting a scene, stays in that piece and
 never becomes a rule.
+
+
+## Grain prefilter
+
+Replica SSIM is computed after a Gaussian prefilter of sigma 1.0 at 960 wide on both frames, set by `--ssim-prefilter-sigma`. The pilot carries per-frame film grain that no rebuild can reproduce frame by frame: a clean static plate scored 0.970 against a text-free source frame without the prefilter, below the 0.975 bar, and 0.986 with it. The prefilter keeps the bar discriminating, since a one-frame shift of the lockup slide still scores about 0.93 and the one-frame-shifted test copy still fails 51 shots, while the crf 23 re-encode still passes.
