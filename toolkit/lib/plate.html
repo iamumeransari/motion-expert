@@ -1,0 +1,121 @@
+<style>
+  /* Plate. A photographic still as three stacked layers, so type can sit between
+     the subject and its background: the background plate, the type, and the
+     subject cut out with alpha on top. The camera (push-in) and any parallax are
+     tweens on the layers; the photograph itself never moves inside its layer.
+     Built from toolkit/imagery.py matte output (bg.png, fg.png, bg-clean.png).
+     See toolkit/lib/plate.md. Copy into a style's library/ to use it, and
+     specialise the type there to the style's measured type. */
+  .el-plate { position: absolute; inset: 0; overflow: hidden; }
+  .el-plate .pl-layer { position: absolute; inset: 0; will-change: transform; }
+  .el-plate img.pl-layer { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .el-plate .pl-type { pointer-events: none; }
+  .el-plate .pl-anchor { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; }
+  .el-plate .pl-word {
+    display: block;
+    font-family: var(--font-display, Georgia, "Times New Roman", serif);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    color: #fff;
+  }
+</style>
+<script>
+  window.__elements = window.__elements || {};
+  window.__elements["plate"] = {
+    /* props:
+         bg, fg          image URLs (fg is the cutout with alpha)
+         bgClean         inpainted background, used instead of bg when parallax > 0
+         text            the word or line set between the layers ("" for none)
+         order           "behind" (default, type under the subject) or "front"
+         typeX, typeY    type centre as frame shares (0.5, 0.5); not x and y, which
+                         the runtime reads as the element's own position
+         size            cap size as a share of frame height (0.3)
+         color, weight, font, tracking
+         push            camera scale gain across the scene (0.06 = 6 %)
+         origin          [x, y] frame shares the push converges on (subject centre)
+         parallax        extra gain for the fg and less for the bg (0 = locked)
+         typeAt          type entrance offset after t0, in timing units (2)
+         typeUnits       type entrance duration in timing units (4)
+         typeEase        tokens.json easing name ("out", else GSAP power2.out)
+         typeFrom        from-state of the entrance ({ opacity: 0, y: "0.03H" }) */
+    render: function (props) {
+      var M = window.__motionExpert;
+      var el = document.createElement("div");
+      el.className = "el-plate";
+      var par = Number(props.parallax || 0);
+      function img(cls, src) {
+        var i = document.createElement("img");
+        i.className = "pl-layer " + cls;
+        i.src = src;
+        i.alt = "";
+        i.setAttribute("draggable", "false");
+        return i;
+      }
+      var bg = img("pl-bg", par > 0 && props.bgClean ? props.bgClean : props.bg);
+      var type = document.createElement("div");
+      type.className = "pl-layer pl-type";
+      if (props.text) {
+        var anchor = document.createElement("div");
+        anchor.className = "pl-anchor";
+        anchor.style.left = ((props.typeX == null ? 0.5 : props.typeX) * 100) + "%";
+        anchor.style.top = ((props.typeY == null ? 0.5 : props.typeY) * 100) + "%";
+        var word = document.createElement("span");
+        word.className = "pl-word";
+        word.textContent = String(props.text);
+        word.style.fontSize = Math.round((props.size || 0.3) * M.frame.h / 0.7) + "px";
+        if (props.color) word.style.color = props.color;
+        if (props.weight) word.style.fontWeight = props.weight;
+        if (props.font) word.style.fontFamily = props.font;
+        if (props.tracking != null) word.style.letterSpacing = props.tracking + "em";
+        anchor.appendChild(word);
+        type.appendChild(anchor);
+      }
+      var fg = props.fg ? img("pl-fg", props.fg) : null;
+      el.appendChild(bg);
+      if (props.order === "front") {
+        if (fg) el.appendChild(fg);
+        el.appendChild(type);
+      } else {
+        el.appendChild(type);
+        if (fg) el.appendChild(fg);
+      }
+      return el;
+    },
+
+    animate: function (tl, el, t0, props) {
+      var M = window.__motionExpert;
+      var push = props.push == null ? 0.06 : Number(props.push);
+      var par = Number(props.parallax || 0);
+      var o = props.origin || [0.5, 0.5];
+      var origin = (o[0] * 100) + "% " + (o[1] * 100) + "%";
+      var span = Math.max(0.01, (props.sceneEnd == null ? t0 + 3 : props.sceneEnd) - t0);
+      /* One camera, three depths. Locked plates (parallax 0) scale as one so the
+         cutout stays registered on its own pixels in bg; with parallax the fg
+         grows faster than the bg, which only works over bgClean. */
+      var gains = { ".pl-bg": push * (1 - par / 2), ".pl-type": push, ".pl-fg": push * (1 + par) };
+      for (var sel in gains) {
+        var node = el.querySelector(sel);
+        if (!node || push === 0) continue;
+        node.style.transformOrigin = origin;
+        tl.fromTo(node, { scale: 1 }, { scale: 1 + gains[sel], duration: span, ease: "none" }, t0);
+      }
+      var word = el.querySelector(".pl-word");
+      var settle = t0;
+      if (word) {
+        var from = props.typeFrom || { opacity: 0, y: "0.03H" };
+        var f = {}, to = { opacity: 1, y: 0 };
+        for (var k in from) if (Object.prototype.hasOwnProperty.call(from, k)) f[k] = (k === "x" || k === "y") ? M.len(from[k]) : from[k];
+        var at = t0 + M.u(props.typeAt == null ? 2 : props.typeAt);
+        var dur = M.u(props.typeUnits == null ? 4 : props.typeUnits);
+        var ease = M.ease(props.typeEase || "out");
+        if (ease === "out") ease = "power2.out";
+        to.duration = dur;
+        to.ease = ease;
+        tl.fromTo(word, f, to, at);
+        settle = at + dur;
+      }
+      return settle;
+    }
+  };
+</script>
