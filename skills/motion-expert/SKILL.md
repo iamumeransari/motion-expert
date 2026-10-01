@@ -39,7 +39,7 @@ When a source's look depends on photoreal imagery, a new piece generates on-subj
 
 ## Content never crosses over
 
-Nothing from the source's script, product, claims, people or shots enters a style skill or a piece. Footage slots in the source are rebuilt as designed HTML and CSS scenes in the captured identity, which keeps every render self-contained. The voice is captured as delivery only: pace in words per minute, the pause profile, where emphasis lands, energy across the piece, and an example script written about an unrelated subject with eleven_v4 audio tags showing how to steer the house voice into that delivery (`references/delivery.md`, and `toolkit/DELIVERY-V4.md` for the tags). The source voice itself is never cloned or matched.
+Nothing from the source's script, product, claims, people or shots enters a style skill or a piece. Footage slots in the source are rebuilt either as designed HTML and CSS scenes in the captured identity or, when the look depends on photography, as generated on-subject stills that HyperFrames animates, so every frame's timing stays under the loop's control. The voice is captured as delivery only: pace in words per minute, the pause profile, where emphasis lands, energy across the piece, and an example script written about an unrelated subject with eleven_v4 audio tags showing how to steer the house voice into that delivery (`references/delivery.md`, and `toolkit/DELIVERY-V4.md` for the tags). The source voice itself is never cloned or matched.
 
 ## Capturing a style
 

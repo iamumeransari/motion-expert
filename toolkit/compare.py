@@ -1096,9 +1096,688 @@ def sheets(beats, src_video, ren_video, out):
     return paths
 
 
+# ---------------------------------------------------------------- frame-exact replica
+#
+# Replica mode proves a frame-exact rebuild. Both videos are decoded once, in lockstep,
+# at the source's frame rate (ffmpeg's fps filter resamples the render when its rate
+# differs), so frame k of each is the picture at k / fps. Per frame: SSIM on luma at
+# 960 wide, and Farneback flow at 480 wide on both, compared as mean endpoint error in
+# px at 1920 (a move that lands right but travels on the wrong curve shows up here
+# even when SSIM forgives it). The same pass keeps 160-wide thumbnails (cut detection
+# and global offset) and a 16 px activity grid of flow magnitude and frame difference
+# (move timing). Audio is decoded at 48 kHz mono for SFX onsets and the bed.
+#
+# Thresholds are calibrated on ideogram-4-5.mp4 against a crf 23 re-encode (the codec
+# ceiling) and a one-frame-shifted copy (the cost of one frame); the numbers and the
+# method live in toolkit/loop.md under "The replica bar".
+
+EXACT = {
+    "ssim_width": 960, "flow_width": 480, "thumb_width": 160, "grid_div": 4,
+    "ssim_shot_min": 0.97,      # every shot's mean SSIM must reach this
+    "ssim_frame_min": 0.95,     # a frame below this is a divergent frame (ranges, flip)
+    "epe_shot_max": 1.0,        # every shot's mean flow EPE (px at 1920) must stay under this
+    "epe_frame_max": 3.0,       # a frame over this is a divergent frame
+    "moving_px": 1.0,           # px per frame at 1920 counted as moving, for epe_moving
+    "cut_band": 0, "move_band": 1, "sfx_band": 1, "sfx_level_db": 2.0, "bed_band": 1,
+    "frame_count_band": 1,
+    "move_pad": 4, "move_frac": 0.2, "move_floor_flow": 0.5, "move_floor_diff": 0.8,
+    "ranges": 10, "flip_ranges": 10, "flip_pad": 2, "flip_max": 24, "flip_width": 640,
+}
+FARNEBACK = dict(pyr_scale=0.5, levels=4, winsize=21, iterations=3, poly_n=7, poly_sigma=1.5, flags=0)
+
+
+def _measure_mod():
+    here = str(Path(__file__).resolve().parent / "measure")
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import common
+    return common
+
+
+def ssim_luma(a, b):
+    """Mean SSIM (Wang et al. 2004: 11x11 Gaussian, sigma 1.5) of two uint8 luma frames."""
+    import cv2
+    a, b = a.astype(np.float32), b.astype(np.float32)
+    C1, C2 = (0.01 * 255) ** 2, (0.03 * 255) ** 2
+    bl = lambda x: cv2.GaussianBlur(x, (11, 11), 1.5)
+    ma, mb = bl(a), bl(b)
+    va, vb, cab = bl(a * a) - ma * ma, bl(b * b) - mb * mb, bl(a * b) - ma * mb
+    m = ((2 * ma * mb + C1) * (2 * cab + C2)) / ((ma * ma + mb * mb + C1) * (va + vb + C2))
+    return float(m.mean())
+
+
+def exact_pass(src, ren, fps, cut_frames):
+    """One lockstep decode of both videos. Returns per-frame SSIM and flow EPE, the
+    thumbnails and the activity grids."""
+    import cv2
+    from concurrent.futures import ThreadPoolExecutor
+    common = _measure_mod()
+    ps = common.probe(src)
+    W, H = ps["width"], ps["height"]
+    s_size = common.analysis_size(W, H, EXACT["ssim_width"])
+    f_size = common.analysis_size(W, H, EXACT["flow_width"])
+    t_size = common.analysis_size(W, H, EXACT["thumb_width"])
+    g_size = (f_size[0] // EXACT["grid_div"], f_size[1] // EXACT["grid_div"])
+    scale = 1920.0 / max(f_size)
+    gs, gr = common.iter_frames(src, fps, s_size, gray=True), common.iter_frames(ren, fps, s_size, gray=True)
+    ssim, epe, epe_mov = [], [], []
+    TS, TR, MS, MR, DS, DR = [], [], [], [], [], []
+    prev = None
+    pool = ThreadPoolExecutor(2)
+    flow = lambda p, c: cv2.calcOpticalFlowFarneback(p, c, None, **FARNEBACK)
+    n_s = n_r = 0
+    for (_, fs), (_, fr) in zip(gs, gr):
+        n_s += 1
+        n_r += 1
+        ssim.append(ssim_luma(fs, fr))
+        ss = cv2.resize(fs, f_size, interpolation=cv2.INTER_AREA)
+        sr = cv2.resize(fr, f_size, interpolation=cv2.INTER_AREA)
+        TS.append(cv2.resize(fs, t_size, interpolation=cv2.INTER_AREA))
+        TR.append(cv2.resize(fr, t_size, interpolation=cv2.INTER_AREA))
+        if prev is None:
+            epe.append(np.nan)
+            epe_mov.append(np.nan)
+            z = np.zeros(g_size[::-1], np.float16)
+            MS.append(z); MR.append(z); DS.append(z); DR.append(z)
+        else:
+            js, jr = pool.submit(flow, prev[0], ss), pool.submit(flow, prev[1], sr)
+            a, b = js.result(), jr.result()
+            ma = np.hypot(a[..., 0], a[..., 1]) * scale
+            mb = np.hypot(b[..., 0], b[..., 1]) * scale
+            e = np.hypot(a[..., 0] - b[..., 0], a[..., 1] - b[..., 1]) * scale
+            epe.append(float(e.mean()))
+            mov = (ma > EXACT["moving_px"]) | (mb > EXACT["moving_px"])
+            epe_mov.append(float(e[mov].mean()) if mov.mean() > 0.002 else 0.0)
+            MS.append(cv2.resize(ma, g_size, interpolation=cv2.INTER_AREA).astype(np.float16))
+            MR.append(cv2.resize(mb, g_size, interpolation=cv2.INTER_AREA).astype(np.float16))
+            DS.append(cv2.resize(cv2.absdiff(ss, prev[0]).astype(np.float32), g_size,
+                                 interpolation=cv2.INTER_AREA).astype(np.float16))
+            DR.append(cv2.resize(cv2.absdiff(sr, prev[1]).astype(np.float32), g_size,
+                                 interpolation=cv2.INTER_AREA).astype(np.float16))
+        prev = (ss, sr)
+    pool.shutdown()
+    # count whichever video runs on past the other
+    for _ in gs:
+        n_s += 1
+    for _ in gr:
+        n_r += 1
+    return {"ssim": np.array(ssim), "epe": np.array(epe), "epe_moving": np.array(epe_mov),
+            "TS": np.stack(TS), "TR": np.stack(TR), "MS": np.stack(MS), "MR": np.stack(MR),
+            "DS": np.stack(DS), "DR": np.stack(DR), "n_source": n_s, "n_render": n_r,
+            "size": (W, H), "render_fps": common.probe(ren)["fps"]}
+
+
+def cut_signal(T):
+    d = np.zeros(len(T))
+    d[1:] = np.abs(T[1:].astype(np.int16) - T[:-1].astype(np.int16)).mean(axis=(1, 2))
+    return d
+
+
+def fr_s(frames, fps):
+    return f"{abs(frames)} frame{'s' if abs(frames) != 1 else ''} ({abs(frames) / fps:.3f}s)"
+
+
+def exact_cuts(S, P, fps, band):
+    """Every source hard cut must exist in the render on the same frame. The cut frame
+    is the first frame of the new shot; both sides are located with the same detector
+    (largest thumbnail change), the render's within half the gap to the neighbouring
+    source cuts."""
+    sig_s, sig_r = cut_signal(P["TS"]), cut_signal(P["TR"])
+    TS, TR = P["TS"].astype(np.int16), P["TR"]
+    n = len(sig_s)
+    ks = []
+    for c in get(S, "timing.cuts", []) or []:
+        t = c if num(c) else (c.get("t") if isinstance(c, dict) else None)
+        if num(t):
+            k = int(round(t * fps))
+            lo, hi = max(1, k - 1), min(n - 1, k + 1)
+            if lo <= hi:
+                ks.append((float(t), lo + int(np.argmax(sig_s[lo:hi + 1]))))
+    rows = []
+    for i, (t, k) in enumerate(ks):
+        prev_k = ks[i - 1][1] if i else 0
+        next_k = ks[i + 1][1] if i + 1 < len(ks) else n
+        lo = max(1, k - 6, (prev_k + k) // 2 + 1)
+        hi = min(n - 1, k + 6, (k + next_k + 1) // 2 - 1)
+        if hi < lo:
+            lo = hi = k
+        # the render's cut is the frame j whose pair (j-1, j) best matches the source's
+        # (k-1, k): nearby motion or a soft transition can change more than the cut
+        # itself, but only the true cut frame matches both sides of it
+        cost = [float(np.abs(TR[j].astype(np.int16) - TS[k]).mean() + np.abs(TR[j - 1].astype(np.int16) - TS[k - 1]).mean())
+                for j in range(lo, hi + 1)]
+        j = lo + int(np.argmin(cost))
+        found = sig_r[j] >= 0.35 * max(sig_s[k], 1e-6)
+        off = j - k if found else None
+        ok = off is not None and abs(off) <= band
+        if off is None:
+            fix = (f"no cut within frames {lo}-{hi} of the source cut at frame {k} ({t:.3f}s); "
+                   f"put a scene boundary at frame {k}")
+        elif not ok:
+            fix = (f"cut at {t:.3f}s (frame {k}) lands {fr_s(off, fps)} {'late' if off > 0 else 'early'} at frame {j}; "
+                   f"move that scene boundary {abs(off) / fps:.3f}s {'earlier' if off > 0 else 'later'}")
+        else:
+            fix = None
+        rows.append({"t": round(t, 4), "frame_source": k, "frame_render": j if found else None, "offset_frames": off,
+                     "strength": round(float(sig_r[j] / max(sig_s[k], 1e-6)), 3), "pass": ok, "fix": fix})
+    return rows
+
+
+def activity_events(a, frac, floor):
+    """Start, peak and settle (fractional frame offsets into a) of an activity curve:
+    start and settle are the first and last threshold crossings at frac of the peak,
+    interpolated between frames; peak is the parabola-refined maximum. A crossing that
+    sits on the window edge is clipped (the move began or ended outside the window)."""
+    p = float(a.max()) if len(a) else 0.0
+    if p < floor:
+        return None
+    thr = frac * p
+    above = np.nonzero(a >= thr)[0]
+    i0, i1 = int(above[0]), int(above[-1])
+    start = None if i0 == 0 else (i0 - 1 + (thr - a[i0 - 1]) / max(a[i0] - a[i0 - 1], 1e-9))
+    settle = None if i1 == len(a) - 1 else (i1 + (a[i1] - thr) / max(a[i1] - a[i1 + 1], 1e-9))
+    k = int(np.argmax(a))
+    peak = float(k)
+    if 0 < k < len(a) - 1:
+        den = a[k - 1] - 2 * a[k] + a[k + 1]
+        if abs(den) > 1e-9:
+            peak = k + 0.5 * (a[k - 1] - a[k + 1]) / den
+    far = np.concatenate([a[:max(0, k - 2)], a[k + 3:]])
+    distinct = not len(far) or float(far.max()) < 0.85 * p
+    return {"start": start, "peak": peak if distinct else None, "settle": settle, "peak_value": p}
+
+
+def exact_moves(S, P, fps, bounds, band):
+    """For each source move, find the frames its motion starts, peaks and settles in
+    both videos inside the move's region and shot, and report the render's offsets."""
+    n = len(P["ssim"])
+    GH, GW = P["MS"].shape[1:]
+    rows = []
+    for i, mv in enumerate(get(S, "motion.moves") or []):
+        if not (num(mv.get("t0")) and num(mv.get("t1")) and isinstance(mv.get("region"), dict)):
+            continue
+        f0, f1 = int(round(mv["t0"] * fps)) + 1, int(round(mv["t1"] * fps))
+        sh = max(b for b in bounds if b <= max(0, f0 - 1)) if bounds else 0
+        nx = min([b for b in bounds if b > f0] + [n])
+        lo, hi = max(sh + 1, f0 - EXACT["move_pad"]), min(nx - 1, f1 + EXACT["move_pad"], n - 1)
+        r = mv["region"]
+        gx0, gy0 = int(math.floor(r["x"] * GW)), int(math.floor(r["y"] * GH))
+        gx1, gy1 = max(gx0 + 1, int(math.ceil((r["x"] + r["w"]) * GW))), max(gy0 + 1, int(math.ceil((r["y"] + r["h"]) * GH)))
+        geometric = mv.get("property") not in ("opacity", "mask-wipe")
+        As, Ar = (P["MS"], P["MR"]) if geometric else (P["DS"], P["DR"])
+        floor = EXACT["move_floor_flow"] if geometric else EXACT["move_floor_diff"]
+        row = {"move": f"m{i + 1:03d}", "property": mv.get("property"), "confidence": mv.get("confidence"),
+               "t0": mv["t0"], "t1": mv["t1"], "window": [lo, hi], "signal": "flow" if geometric else "diff"}
+        if hi - lo < 2:
+            rows.append({**row, "status": "unmeasurable", "reason": "window under three frames"})
+            continue
+        cs = As[lo:hi + 1, gy0:gy1, gx0:gx1].astype(np.float32).mean(axis=(1, 2))
+        cr = Ar[lo:hi + 1, gy0:gy1, gx0:gx1].astype(np.float32).mean(axis=(1, 2))
+        es = activity_events(cs, EXACT["move_frac"], floor)
+        if es is None:
+            rows.append({**row, "status": "unmeasurable", "reason": "source motion under the noise floor"})
+            continue
+        er = activity_events(cr, EXACT["move_frac"], floor * 0.5)
+        if er is None:
+            rows.append({**row, "status": "fail", "pass": False, "offsets": {},
+                         "fix": f"{move_label(mv)} at {mv['t0']:.3f}s does not move in the render "
+                                f"(frames {lo}-{hi}); rebuild it"})
+            continue
+        offs, src_f, ren_f, bad = {}, {}, {}, []
+        for key in ("start", "peak", "settle"):
+            if es[key] is None or er[key] is None:
+                continue
+            src_f[key], ren_f[key] = round(lo + es[key], 2), round(lo + er[key], 2)
+            o = int(round(er[key] - es[key]))
+            offs[key] = o
+            if abs(o) > band:
+                bad.append(key)
+        fixes = []
+        if "start" in bad:
+            o = offs["start"]
+            fixes.append(f"starts {fr_s(o, fps).split(' (')[0]} {'late' if o > 0 else 'early'}; move t0 "
+                         f"{'earlier' if o > 0 else 'later'} by {abs(o) / fps:.3f}s")
+        if "settle" in bad:
+            o = offs["settle"]
+            so = offs.get("start", 0)
+            what = (f"{'shorten' if o - so > 0 else 'lengthen'} the move by {abs(o - so) / fps:.3f}s"
+                    if abs(o - so) > band else "it follows the start")
+            fixes.append(f"settles {fr_s(o, fps).split(' (')[0]} {'late' if o > 0 else 'early'}; {what}")
+        if "peak" in bad:
+            o = offs["peak"]
+            if abs(offs.get("start", 0)) <= band and abs(offs.get("settle", 0)) <= band:
+                fixes.append(f"peaks {fr_s(o, fps).split(' (')[0]} {'late' if o > 0 else 'early'} with start and settle "
+                             f"right: the ease puts its speed {'late' if o > 0 else 'early'}, so move the curve's weight "
+                             f"{'earlier' if o > 0 else 'later'} ({'lower' if o > 0 else 'raise'} x1 and x2 of its "
+                             f"cubic-bezier({', '.join(f'{v:.2f}' for v in mv.get('bezier', []))}))")
+            else:
+                fixes.append(f"peaks {fr_s(o, fps).split(' (')[0]} {'late' if o > 0 else 'early'}")
+        rows.append({**row, "status": "fail" if bad else "pass", "pass": not bad, "source_frames": src_f,
+                     "render_frames": ren_f, "offsets": offs,
+                     "fix": f"{row['move']} {move_label(mv)} (frames {f0}-{f1}): " + "; ".join(fixes) if fixes else None})
+    return rows
+
+
+def load_audio(path, sr=48000):
+    out = subprocess.run([FFMPEG, "-v", "error", "-i", str(path), "-vn", "-ac", "1", "-ar", str(sr), "-f", "f32le", "-"],
+                         capture_output=True).stdout
+    return np.frombuffer(out, np.float32) if out else None
+
+
+def envelope_ms(x, sr=48000, win_ms=5):
+    """Log energy (dB) at a 1 ms hop over win_ms windows."""
+    hop, w = sr // 1000, sr * win_ms // 1000
+    c = np.concatenate([[0.0], np.cumsum(x.astype(np.float64) ** 2)])
+    starts = np.arange(0, max(1, len(x) - w), hop)
+    return 10 * np.log10((c[starts + w] - c[starts]) / w + 1e-12)
+
+
+def exact_sound(S, src, ren, fps, band_frames, level_db):
+    """Every source SFX onset matched within band_frames and level_db; the bed's onset
+    and the overall audio lag within a frame. Onsets are aligned by normalised
+    cross-correlation of the rectified log-energy rise around each event."""
+    xs, xr = load_audio(src), load_audio(ren)
+    res = {"events": [], "bed": None, "lag_ms": None}
+    if xs is None:
+        return res
+    if xr is None:
+        res["missing"] = True
+        return res
+    es, er = envelope_ms(xs), envelope_ms(xr)
+    on = lambda e: np.maximum(0, e - np.concatenate([np.full(3, e[0]), e[:-3]]))
+    os_, or_ = on(es), on(er)
+    band_ms = band_frames * 1000 / fps
+    for ev in get(S, "sound.events") or []:
+        t = ev.get("t")
+        if not num(t):
+            continue
+        i = int(round(t * 1000))
+        a = os_[max(0, i - 20):i + 60]
+        if len(a) < 40 or a.std() < 1e-6:
+            continue
+        a = (a - a.mean()) / a.std()
+        best, lag = -1.0, None
+        cc = {}
+        for L in range(-150, 151):
+            j0 = max(0, i - 20) + L
+            b = or_[j0:j0 + len(a)] if j0 >= 0 else None
+            if b is None or len(b) < len(a) or b.std() < 1e-6:
+                continue
+            cc[L] = float(((b - b.mean()) / b.std() * a).mean())
+            if cc[L] > best:
+                best, lag = cc[L], L
+        row = {"t": round(float(t), 3), "class": ev.get("class"), "ncc": round(best, 3)}
+        if lag is None or best < 0.5:
+            row.update(matched=False, offset_ms=None, pass_=False,
+                       fix=f"{ev.get('class')} at {t:.3f}s has no matching onset within 150 ms in the render")
+        else:
+            if lag - 1 in cc and lag + 1 in cc:
+                den = cc[lag - 1] - 2 * cc[lag] + cc[lag + 1]
+                lagf = lag + (0.5 * (cc[lag - 1] - cc[lag + 1]) / den if abs(den) > 1e-9 else 0.0)
+            else:
+                lagf = float(lag)
+            dur = max(float(ev.get("duration") or 0), 0.03)
+            k0, k1 = int(t * 48000), int((t + dur) * 48000)
+            m0 = k0 + int(round(lagf * 48))
+            ls = 10 * np.log10(float(np.mean(xs[k0:k1].astype(np.float64) ** 2)) + 1e-12)
+            lr = 10 * np.log10(float(np.mean(xr[max(0, m0):max(0, m0) + (k1 - k0)].astype(np.float64) ** 2)) + 1e-12)
+            dl = lr - ls
+            ok_t, ok_l = abs(lagf) <= band_ms + 0.5, abs(dl) <= level_db
+            bits = []
+            if not ok_t:
+                bits.append(f"lands {abs(lagf):.0f} ms ({abs(lagf) * fps / 1000:.1f} frames) "
+                            f"{'late' if lagf > 0 else 'early'}; move the clip {abs(lagf) / 1000:.3f}s "
+                            f"{'earlier' if lagf > 0 else 'later'}")
+            if not ok_l:
+                bits.append(f"sits {abs(dl):.1f} dB {'hot' if dl > 0 else 'low'}; {'lower' if dl > 0 else 'raise'} "
+                            f"its gain by {abs(dl):.1f} dB")
+            row.update(matched=True, offset_ms=round(lagf, 1), level_db=round(dl, 2), pass_=ok_t and ok_l,
+                       fix=f"{ev.get('class')} at {t:.3f}s " + "; ".join(bits) if bits else None)
+        row["pass"] = row.pop("pass_")
+        res["events"].append(row)
+    # overall lag on the 10 ms envelope, then the bed's onset
+    e10s = es[:len(es) // 10 * 10].reshape(-1, 10).mean(1)
+    e10r = er[:len(er) // 10 * 10].reshape(-1, 10).mean(1)
+    n = min(len(e10s), len(e10r))
+    a, b = e10s[:n] - e10s[:n].mean(), e10r[:n] - e10r[:n].mean()
+    best, lag = -2.0, 0
+    for L in range(-50, 51):
+        x, y = (a[:n - L], b[L:]) if L >= 0 else (a[-L:], b[:n + L])
+        c = float((x * y).sum() / (np.linalg.norm(x) * np.linalg.norm(y) + 1e-9))
+        if c > best:
+            best, lag = c, L
+    res["lag_ms"] = lag * 10.0
+
+    def onset(e):
+        thr = max(-60.0, float(np.percentile(e, 50)) - 25.0)
+        k = np.nonzero(e > thr)[0]
+        return float(k[0]) if len(k) else None
+    bs, br = onset(es), onset(er)
+    res["bed"] = {"source_ms": bs, "render_ms": br,
+                  "offset_ms": (br - bs) if bs is not None and br is not None else None}
+    return res
+
+
+def frame_ranges(P, bounds, fps, n_max):
+    """Worst frame ranges: runs of divergent frames (SSIM under the frame bar or flow EPE
+    over it, gaps of up to two frames bridged), ranked by summed excess; topped up with
+    the worst remaining stretches when fewer than n_max diverge."""
+    ssim, epe = P["ssim"], np.nan_to_num(P["epe"], nan=0.0)
+    score = np.maximum((1 - ssim) / (1 - EXACT["ssim_frame_min"]), epe / EXACT["epe_frame_max"])
+    n = len(score)
+    flagged = np.nonzero(score >= 1.0)[0]
+    runs = []
+    for k in flagged:
+        if runs and k - runs[-1][1] <= 3:
+            runs[-1][1] = int(k)
+        else:
+            runs.append([int(k), int(k)])
+    out = [{"f0": a, "f1": b, "diverges": True} for a, b in runs]
+    used = np.zeros(n, bool)
+    for r in out:
+        used[r["f0"]:r["f1"] + 1] = True
+    while len(out) < n_max and not used.all():
+        k = int(np.argmax(np.where(used, -1, score)))
+        p = score[k]
+        a = b = k
+        while a > 0 and not used[a - 1] and score[a - 1] >= 0.5 * p and k - a < 12:
+            a -= 1
+        while b < n - 1 and not used[b + 1] and score[b + 1] >= 0.5 * p and b - k < 12:
+            b += 1
+        used[a:b + 1] = True
+        out.append({"f0": a, "f1": b, "diverges": False})
+    for r in out:
+        sl = slice(r["f0"], r["f1"] + 1)
+        r["excess"] = round(float(np.maximum(score[sl] - 1, 0).sum()) if r["diverges"] else 0.0, 3)
+        r["peak_score"] = round(float(score[sl].max()), 3)
+        r["worst_frame"] = r["f0"] + int(np.argmax(score[sl]))
+        r["min_ssim"] = round(float(ssim[sl].min()), 4)
+        r["max_epe"] = round(float(epe[sl].max()), 2)
+        r["t0"], r["t1"] = round(r["f0"] / fps, 3), round((r["f1"] + 1) / fps, 3)
+        r["shot"] = int(np.searchsorted(bounds, r["f0"], side="right")) if bounds else 1
+    out.sort(key=lambda r: (not r["diverges"], -r["excess"], -r["peak_score"]))
+    for i, r in enumerate(out[:n_max], 1):
+        r["id"] = f"r{i:02d}"
+    return out[:n_max]
+
+
+def flip_sheets(ranges, P, src, ren, fps, out, n_ranges):
+    """source | render | |difference| x4 triptychs, one PNG per frame, for the worst ranges."""
+    from PIL import Image, ImageDraw
+    common = _measure_mod()
+    pick = [r for r in ranges if r["diverges"]][:n_ranges] or ranges[:1]
+    if not pick:
+        return []
+    W, H = P["size"]
+    size = common.analysis_size(W, H, EXACT["flip_width"])
+    n = len(P["ssim"])
+    want = []
+    for r in pick:
+        a, b = max(0, r["f0"] - EXACT["flip_pad"]), min(n - 1, r["f1"] + EXACT["flip_pad"])
+        if b - a + 1 > EXACT["flip_max"]:
+            a = max(0, min(r["worst_frame"] - EXACT["flip_max"] // 2, n - EXACT["flip_max"]))
+            b = a + EXACT["flip_max"] - 1
+        r["flip_frames"] = [a, b]
+        want.extend(range(a, b + 1))
+    want = sorted(set(want))
+    times = [(k + 0.25) / fps for k in want]
+    ims_s = dict(zip(want, common.frames_at_times(src, times, size, gray=False, fps=fps)))
+    ims_r = dict(zip(want, common.frames_at_times(ren, times, size, gray=False, fps=fps)))
+    fdir = out / "flip"
+    if fdir.exists():
+        shutil.rmtree(fdir)
+    paths = []
+    gap, head = 8, 52
+    f_big, f_small = font(20), font(16)
+    for r in pick:
+        rdir = fdir / f"{r['id']}_f{r['flip_frames'][0]:04d}-{r['flip_frames'][1]:04d}"
+        rdir.mkdir(parents=True, exist_ok=True)
+        r["flip_dir"] = str(rdir)
+        for k in range(r["flip_frames"][0], r["flip_frames"][1] + 1):
+            a, b = ims_s[k], ims_r[k]
+            d = np.clip(np.abs(a.astype(np.int16) - b.astype(np.int16)) * 4, 0, 255).astype(np.uint8)
+            w, h = size
+            canvas = Image.new("RGB", (3 * w + 2 * gap, head + h), (14, 14, 16))
+            dr = ImageDraw.Draw(canvas)
+            inside = r["f0"] <= k <= r["f1"]
+            e = P["epe"][k]
+            col = (255, 120, 90) if inside and r["diverges"] else (235, 235, 235)
+            dr.text((8, 6), f"{r['id']}  frame {k}  {k / fps:.3f}s  SSIM {P['ssim'][k]:.4f}  "
+                            f"EPE {'n/a' if not np.isfinite(e) else f'{e:.2f}px'}"
+                            f"{'  in range' if inside else '  context'}", fill=col, font=f_big)
+            for c, lab in enumerate(("source", "render", "|source - render| x4")):
+                dr.text((c * (w + gap) + 8, 30), lab, fill=(160, 160, 165), font=f_small)
+            for c, im in enumerate((a, b, d)):
+                canvas.paste(Image.fromarray(im), (c * (w + gap), head))
+            p = rdir / f"f{k:04d}.png"
+            canvas.save(p)
+            paths.append(str(p))
+    return paths
+
+
+def curves_plot(P, bounds, fps, path):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    k = np.arange(len(P["ssim"]))
+    fig, ax = plt.subplots(2, 1, figsize=(16, 6), sharex=True)
+    ax[0].plot(k, P["ssim"], lw=0.8, color="#1f5fbf")
+    ax[0].axhline(EXACT["ssim_frame_min"], color="#c33", lw=0.8, ls="--")
+    ax[0].set_ylabel("SSIM (luma, 960w)")
+    ax[1].plot(k, P["epe"], lw=0.8, color="#bf6a1f")
+    ax[1].axhline(EXACT["epe_frame_max"], color="#c33", lw=0.8, ls="--")
+    ax[1].set_ylabel("flow EPE px @1920")
+    ax[1].set_xlabel(f"frame ({fps:g} fps)")
+    for a in ax:
+        for b in bounds[1:]:
+            a.axvline(b, color="#999", lw=0.4)
+    fig.tight_layout()
+    fig.savefig(path, dpi=110)
+    plt.close(fig)
+    return str(path)
+
+
+def exact_block(R, S, a, out):
+    """Frame-exact replica checks; adds metrics to R and returns the section data."""
+    common = _measure_mod()
+    ps, pr = common.probe(a.source_video), common.probe(a.render_video)
+    fps = ps["fps"]
+    bounds_t = cut_times(S)
+    n_est = int(round(ps["duration"] * fps))
+    bounds = sorted({0} | {int(round(t * fps)) for t in bounds_t if 0 < int(round(t * fps)) < n_est})
+    import time
+    t_start = time.time()
+    P = exact_pass(a.source_video, a.render_video, fps, bounds)
+    t_pass = time.time() - t_start
+    n = len(P["ssim"])
+    sec = {"fps": fps, "render_fps": P["render_fps"], "resampled": abs(P["render_fps"] - fps) > 1e-3,
+           "frames": {"source": P["n_source"], "render": P["n_render"], "compared": n}}
+    R.add("exact.frame_count", "exact", float(P["n_render"]), float(P["n_source"] - EXACT["frame_count_band"]),
+          float(P["n_source"] + EXACT["frame_count_band"]),
+          lambda d, dist: (f"render runs {P['n_render']} frames at {fps:g} fps against the source's {P['n_source']}; "
+                           f"{'add' if P['n_render'] < P['n_source'] else 'cut'} "
+                           f"{abs(P['n_render'] - P['n_source'])} frames ({abs(P['n_render'] - P['n_source']) / fps:.3f}s) "
+                           f"so the durations match"), src=P["n_source"], why="decoded frames at the source rate")
+    # global offset: which shift of the render best matches the source
+    TS, TR = P["TS"].astype(np.int16), P["TR"].astype(np.int16)
+    errs = {}
+    for d in range(-3, 4):
+        x, y = (TS[:n - d], TR[d:]) if d >= 0 else (TS[-d:], TR[:n + d])
+        errs[d] = float(np.abs(x - y).mean())
+    best = min(errs, key=errs.get)
+    goff = best if best != 0 and errs[best] < 0.85 * errs[0] else 0
+    R.add("exact.global_offset", "exact", float(goff), 0.0, 0.0,
+          lambda d, dist: (f"the whole render runs {fr_s(goff, fps)} {'late' if goff > 0 else 'early'}; "
+                           f"{'trim' if goff > 0 else 'pad'} {abs(goff)} frame(s) at the head of the composition"),
+          why="shift of the render that best matches the source (thumbnail MAE)",
+          detail={"mae_by_shift": {str(k): round(v, 3) for k, v in errs.items()}})
+    # cut frames are excluded from flow stats (flow across a cut is meaningless)
+    cut_rows = exact_cuts(S, P, fps, a.cut_band)
+    epe = P["epe"].copy()
+    for r in cut_rows:
+        for k in (r["frame_source"], r["frame_render"]):
+            if k is not None and 0 <= k < n:
+                epe[k] = np.nan
+    P["epe"] = epe
+    # per-shot means
+    shots = []
+    edges = bounds + [n]
+    for i in range(len(edges) - 1):
+        f0, f1 = edges[i], edges[i + 1] - 1
+        if f1 < f0:
+            continue
+        ss = P["ssim"][f0:f1 + 1]
+        ee = epe[f0:f1 + 1]
+        ee = ee[np.isfinite(ee)]
+        shots.append({"shot": i + 1, "f0": f0, "f1": f1, "t0": round(f0 / fps, 3), "t1": round((f1 + 1) / fps, 3),
+                      "ssim_mean": round(float(ss.mean()), 4), "ssim_min": round(float(ss.min()), 4),
+                      "worst_frame": f0 + int(np.argmin(ss)),
+                      "epe_mean": round(float(ee.mean()), 3) if len(ee) else 0.0,
+                      "epe_moving_mean": round(float(np.nanmean(P["epe_moving"][f0:f1 + 1])), 3)
+                      if np.isfinite(P["epe_moving"][f0:f1 + 1]).any() else 0.0})
+    for s in shots:
+        s["pass"] = s["ssim_mean"] >= a.ssim_shot_min and s["epe_mean"] <= a.epe_shot_max
+    worst_s = min(shots, key=lambda s: s["ssim_mean"])
+    bad_s = sorted([s for s in shots if s["ssim_mean"] < a.ssim_shot_min], key=lambda s: s["ssim_mean"])
+    shot_name = lambda s: f"shot {s['shot']} (frames {s['f0']}-{s['f1']}, {s['t0']:.2f}-{s['t1']:.2f}s)"
+    R.add("exact.ssim_shot_min", "exact", worst_s["ssim_mean"], a.ssim_shot_min, None,
+          lambda d, dist: "; ".join(f"{shot_name(s)} mean SSIM {s['ssim_mean']:.4f}, worst frame {s['worst_frame']} "
+                                    f"at {s['ssim_min']:.3f}" for s in bad_s[:4])
+          + "; open the flip sheets for those frames",
+          why=f"lowest per-shot mean SSIM on luma at 960 wide ({len(bad_s)} of {len(shots)} shots under the bar)",
+          detail={"failing_shots": [s["shot"] for s in bad_s]})
+    worst_e = max(shots, key=lambda s: s["epe_mean"])
+    bad_e = sorted([s for s in shots if s["epe_mean"] > a.epe_shot_max], key=lambda s: -s["epe_mean"])
+    R.add("exact.flow_epe_shot_max", "exact", worst_e["epe_mean"], None, a.epe_shot_max,
+          lambda d, dist: "; ".join(f"{shot_name(s)} flow differs by {s['epe_mean']:.2f} px per frame on average"
+                                    for s in bad_e[:4])
+          + "; a move there travels on the wrong curve or at the wrong speed (see the move timing rows)",
+          why=f"highest per-shot mean optical-flow endpoint error, px at 1920 ({len(bad_e)} of {len(shots)} shots over)",
+          detail={"failing_shots": [s["shot"] for s in bad_e]})
+    # cuts
+    bad_c = [r for r in cut_rows if not r["pass"]]
+    if cut_rows:
+        R.add("exact.cuts_off", "exact", float(len(bad_c)), None, 0.0,
+              lambda d, dist: "; ".join(r["fix"] for r in bad_c[:5]) + (f"; and {len(bad_c) - 5} more"
+                                                                         if len(bad_c) > 5 else ""),
+              why=f"source hard cuts not on the same frame in the render (band +/-{a.cut_band} frames, "
+                  f"{len(cut_rows)} cuts)")
+    # moves
+    t_m = time.time()
+    move_rows = exact_moves(S, P, fps, bounds, a.move_band)
+    gated = [r for r in move_rows if r["status"] in ("pass", "fail")]
+    bad_m = sorted([r for r in gated if r["status"] == "fail"],
+                   key=lambda r: -max([abs(v) for v in r.get("offsets", {}).values()] or [99]))
+    if gated:
+        R.add("exact.moves_off", "exact", float(len(bad_m)), None, 0.0,
+              lambda d, dist: "; ".join(r["fix"] for r in bad_m[:5]) + (f"; and {len(bad_m) - 5} more"
+                                                                         if len(bad_m) > 5 else ""),
+              why=f"source moves whose start, peak or settle is more than {a.move_band} frame off in the render "
+                  f"({len(gated)} measurable of {len(move_rows)})")
+    # sound
+    snd = exact_sound(S, a.source_video, a.render_video, fps, a.sfx_band, a.sfx_level_db)
+    if snd.get("missing"):
+        R.add("exact.sfx_off", "exact", 1.0, None, 0.0, "the render has no audio track; mux the mix in",
+              why="render audio")
+    elif snd["events"]:
+        bad_x = [r for r in snd["events"] if not r["pass"]]
+        R.add("exact.sfx_off", "exact", float(len(bad_x)), None, 0.0,
+              lambda d, dist: "; ".join(r["fix"] for r in bad_x[:5]) + (f"; and {len(bad_x) - 5} more"
+                                                                         if len(bad_x) > 5 else ""),
+              why=f"source SFX onsets not within {a.sfx_band} frame and {a.sfx_level_db:g} dB in the render "
+                  f"({len(snd['events'])} events)")
+    band_ms = a.sfx_band * 1000 / fps
+    if snd.get("bed") and snd["bed"]["offset_ms"] is not None:
+        o = snd["bed"]["offset_ms"]
+        R.add("exact.bed_onset_ms", "exact", round(abs(o), 1), None, round(EXACT["bed_band"] * 1000 / fps, 1),
+              f"the audio starts {abs(o):.0f} ms {'late' if o > 0 else 'early'}; "
+              f"move the bed {abs(o) / 1000:.3f}s {'earlier' if o > 0 else 'later'}",
+              why="music bed onset (first audio 25 dB under the median level), source against render")
+    if snd.get("lag_ms") is not None:
+        o = snd["lag_ms"]
+        R.add("exact.audio_lag_ms", "exact", abs(o), None, round(EXACT["bed_band"] * 1000 / fps, 1),
+              f"the whole mix runs {abs(o):.0f} ms {'late' if o > 0 else 'early'} against the picture; "
+              f"shift the audio {abs(o) / 1000:.3f}s {'earlier' if o > 0 else 'later'}",
+              why="overall audio lag (10 ms log-energy cross-correlation)")
+    t_moves = time.time() - t_m
+    ranges = frame_ranges(P, bounds, fps, EXACT["ranges"])
+    t_f = time.time()
+    flips = flip_sheets(ranges, P, a.source_video, a.render_video, fps, out, a.flip_ranges)
+    plot = curves_plot(P, bounds, fps, out / "exact-curves.png")
+    sec.update(shots=shots, cuts=cut_rows, moves=move_rows, sound=snd, ranges=ranges, flip=flips, curves_png=plot,
+               global_offset={"frames": goff, "mae_by_shift": errs},
+               per_frame={"ssim": [round(float(v), 4) for v in P["ssim"]],
+                          "epe": [None if not np.isfinite(v) else round(float(v), 3) for v in epe],
+                          "epe_moving": [None if not np.isfinite(v) else round(float(v), 3) for v in P["epe_moving"]]},
+               thresholds={"ssim_shot_min": a.ssim_shot_min, "epe_shot_max": a.epe_shot_max,
+                           "ssim_frame_min": EXACT["ssim_frame_min"], "epe_frame_max": EXACT["epe_frame_max"],
+                           "cut_band": a.cut_band, "move_band": a.move_band, "sfx_band": a.sfx_band,
+                           "sfx_level_db": a.sfx_level_db},
+               runtime_s={"frame_pass": round(t_pass, 1), "moves_and_sound": round(t_moves, 1),
+                          "flip_and_plot": round(time.time() - t_f, 1), "total": round(time.time() - t_start, 1)})
+    return sec
+
+
+def exact_md(sec, fps):
+    L = ["## Frame-exact replica", ""]
+    fr = sec["frames"]
+    L.append(f"{fr['compared']} frames compared at {fps:g} fps (source {fr['source']}, render {fr['render']}"
+             f"{', render resampled from ' + format(sec['render_fps'], 'g') + ' fps' if sec['resampled'] else ''}). "
+             f"Per-frame curves: {sec['curves_png']}; values in report.json under exact.per_frame. "
+             f"Bars: shot mean SSIM at least {sec['thresholds']['ssim_shot_min']}, shot mean flow EPE at most "
+             f"{sec['thresholds']['epe_shot_max']} px; a frame diverges under SSIM {sec['thresholds']['ssim_frame_min']} "
+             f"or over EPE {sec['thresholds']['epe_frame_max']} px.")
+    L.append("")
+    L.append("### Worst frame ranges")
+    L.append("")
+    for r in sec["ranges"]:
+        L.append(f"- {r['id']} frames {r['f0']}-{r['f1']} ({r['t0']:.3f}-{r['t1']:.3f}s, shot {r['shot']}): "
+                 f"{'diverges' if r['diverges'] else 'within the frame bar'}, min SSIM {r['min_ssim']}, max EPE "
+                 f"{r['max_epe']} px, worst frame {r['worst_frame']}" + (f"; flip: {r['flip_dir']}" if r.get('flip_dir') else ""))
+    L.append("")
+    L.append("### Shots")
+    L.append("")
+    L.append("| shot | frames | seconds | mean SSIM | min SSIM (frame) | mean EPE px | |")
+    L.append("|---|---|---|---|---|---|---|")
+    for s in sec["shots"]:
+        L.append(f"| {s['shot']} | {s['f0']}-{s['f1']} | {s['t0']:.2f}-{s['t1']:.2f} | {s['ssim_mean']:.4f} | "
+                 f"{s['ssim_min']:.3f} ({s['worst_frame']}) | {s['epe_mean']:.2f} | {'pass' if s['pass'] else 'FAIL'} |")
+    L.append("")
+    bad = [r for r in sec["cuts"] if not r["pass"]]
+    L.append(f"### Cuts: {len(sec['cuts']) - len(bad)} of {len(sec['cuts'])} on the source's frame")
+    L.append("")
+    for r in bad:
+        L.append(f"- {r['fix']}")
+    if bad:
+        L.append("")
+    mv = sec["moves"]
+    gated = [r for r in mv if r["status"] in ("pass", "fail")]
+    badm = [r for r in gated if r["status"] == "fail"]
+    L.append(f"### Move timing: {len(gated) - len(badm)} of {len(gated)} measurable moves within a frame "
+             f"({len(mv) - len(gated)} under the noise floor)")
+    L.append("")
+    for r in badm:
+        L.append(f"- {r['fix']} (source start/peak/settle {r.get('source_frames')}, render {r.get('render_frames')})")
+    if badm:
+        L.append("")
+    snd = sec["sound"]
+    ev = snd.get("events") or []
+    badx = [r for r in ev if not r["pass"]]
+    L.append(f"### Sound: {len(ev) - len(badx)} of {len(ev)} SFX onsets within a frame and the level band")
+    L.append("")
+    for r in badx:
+        L.append(f"- {r['fix']}")
+    if snd.get("bed"):
+        b = snd["bed"]
+        L.append(f"- bed onset source {b['source_ms']} ms, render {b['render_ms']} ms; overall audio lag "
+                 f"{snd.get('lag_ms')} ms")
+    L.append("")
+    return L
+
+
 # ---------------------------------------------------------------- report
 
-def write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out):
+def write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out, exact=None):
     scored = [m for m in R.metrics if m["status"] != "skipped"]
     fails = sorted([m for m in scored if m["status"] == "fail"], key=lambda m: -(m.get("norm_distance") or 0))
     ok = not fails
@@ -1106,6 +1785,8 @@ def write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out):
             "durations": {"source": ds, "render": dr}, "counts": {"scored": len(scored), "failed": len(fails),
             "skipped": len(R.metrics) - len(scored)}, "blocking": [m["id"] for m in fails],
             "metrics": R.metrics, "beats": beats, "sheets": sheet_paths}
+    if exact:
+        data["exact"] = exact
     (out / "report.json").write_text(json.dumps(data, indent=1, default=float))
 
     def line(m):
@@ -1116,7 +1797,7 @@ def write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out):
 
     get_m = {m["id"]: m for m in R.metrics}
     name = lambda p: Path(p).resolve().parent.name + "/" + Path(p).name
-    L = [f"# Compare: {name(a.render_fp)} against {name(a.source_fp)}", ""]
+    L = [f"# Compare: {name(a.render_fp or a.render_video)} against {name(a.source_fp)}", ""]
     L.append(f"{'PASS' if ok else 'FAIL'} in {a.mode} mode: {len(scored) - len(fails)} of {len(scored)} metrics pass, "
              f"{len(fails)} block. Source {f2(ds)}s, render {f2(dr)}s.")
     head = []
@@ -1133,6 +1814,8 @@ def write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out):
         for i, m in enumerate(fails, 1):
             L.append(f"{i}. {line(m)}. {m['fix']}.")
         L.append("")
+    if exact:
+        L.extend(exact_md(exact, exact["fps"]))
     en = get_m.get("energy_shape")
     if en and en.get("detail"):
         L.append("## Energy shape")
@@ -1160,7 +1843,7 @@ def write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out):
         L.append("## Sound")
         L.append("")
         for m in snd:
-            if m["status"] == "skipped":
+            if m["status"] == "skipped" and m.get("reason"):
                 L.append(f"- skipped {m['id']}: {m['reason']}")
             else:
                 L.append(f"- {m['status']} {line(m)}" + (f". {m['fix']}" if m.get("fix") else ""))
@@ -1195,7 +1878,9 @@ def write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("source_fp")
-    ap.add_argument("render_fp")
+    ap.add_argument("render_fp", nargs="?",
+                    help="render fingerprint; optional in replica mode, where leaving it out runs the frame-exact "
+                         "checks alone")
     ap.add_argument("--out", required=True)
     ap.add_argument("--mode", choices=["novel", "replica"], default="novel")
     ap.add_argument("--source-video")
@@ -1203,10 +1888,26 @@ def main():
     ap.add_argument("--render-words", help="tts.py words.json for the render's VO")
     ap.add_argument("--source-words", help="word timings for the source's VO, if not in its fingerprint")
     ap.add_argument("--beats", type=int, default=8, help="beats on the sheets (6 to 10)")
+    ex = ap.add_argument_group("replica (frame-exact)")
+    ex.add_argument("--ssim-shot-min", type=float, default=EXACT["ssim_shot_min"],
+                    help="every shot's mean luma SSIM must reach this (default calibrated, see loop.md)")
+    ex.add_argument("--epe-shot-max", type=float, default=EXACT["epe_shot_max"],
+                    help="every shot's mean flow endpoint error, px at 1920, must stay under this")
+    ex.add_argument("--cut-band", type=int, default=EXACT["cut_band"], help="frames a cut may be off (default 0)")
+    ex.add_argument("--move-band", type=int, default=EXACT["move_band"],
+                    help="frames a move's start, peak or settle may be off (default 1)")
+    ex.add_argument("--sfx-band", type=int, default=EXACT["sfx_band"], help="frames an SFX onset may be off (default 1)")
+    ex.add_argument("--sfx-level-db", type=float, default=EXACT["sfx_level_db"], help="SFX level band in dB (default 2)")
+    ex.add_argument("--flip-ranges", type=int, default=EXACT["flip_ranges"],
+                    help="divergent ranges exported as flip sheets (default 10)")
     a = ap.parse_args()
+    if a.mode == "replica" and not (a.source_video and a.render_video):
+        ap.error("replica mode needs --source-video and --render-video (it compares them frame by frame)")
+    if a.mode == "novel" and not a.render_fp:
+        ap.error("novel mode needs the render fingerprint")
 
     S = json.loads(Path(a.source_fp).read_text())
-    T = json.loads(Path(a.render_fp).read_text())
+    T = json.loads(Path(a.render_fp).read_text()) if a.render_fp else None
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     ds, dr = duration_of(S, a.source_video), duration_of(T, a.render_video)
@@ -1218,6 +1919,10 @@ def main():
             th[k] = (t.get("lo"), t.get("hi"))
 
     R = Report(a.mode)
+    exact = exact_block(R, S, a, out) if a.mode == "replica" else None
+    if T is None:
+        ok = write_report(R, a, ds, dr, [], [], [], out, exact)
+        finish(R, a, ok, out)
     covered = score_tolerances(R, S, T, tol, a.mode)
     if "look.luma_hist" not in covered and get(S, "look.luma_hist") and get(T, "look.luma_hist"):
         d = emd_hist(get(S, "look.luma_hist"), get(T, "look.luma_hist"))
@@ -1240,7 +1945,11 @@ def main():
     if a.source_video and a.render_video and ds and dr:
         beats = pick_beats(beat_rows, energy, ds, dr, a.mode, max(6, min(10, a.beats)))
         sheet_paths = sheets(beats, a.source_video, a.render_video, out)
-    ok = write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out)
+    ok = write_report(R, a, ds, dr, beats, sheet_paths, curve_rows, out, exact)
+    finish(R, a, ok, out)
+
+
+def finish(R, a, ok, out):
     fails = [m for m in R.metrics if m["status"] == "fail"]
     print(f"{'PASS' if ok else 'FAIL'} {a.mode}: {len(fails)} blocking -> {out / 'report.md'}")
     for m in sorted(fails, key=lambda m: -(m.get("norm_distance") or 0))[:5]:
