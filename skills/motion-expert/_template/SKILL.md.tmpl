@@ -21,6 +21,12 @@ Every value comes from the source video, measured on {{date}} (see `references/s
 |---|---|---|---|
 | `library/{{move}}.html` | {{description}} | {{duration, bezier, overshoot, stagger}} | `assets/frames/{{move}}.png` |
 
+## Signature sounds
+
+| Class | Fires on | Offset | Level under VO | Clip |
+|---|---|---|---|---|
+| {{class}} | {{property}} {{keyframe}} | {{ms}} | {{dB}} | `sound/{{source or generated}}/{{clip}}.wav` |
+
 ## Decision procedure for a new piece
 
 {{Script under ~/agent-core/voice.md, delivery from references/delivery.md, structure from references/scenes.md, moves from the library first and the grammar second, format from references/formats.md.}}
@@ -38,5 +44,6 @@ Every value comes from the source video, measured on {{date}} (see `references/s
 | `references/grammar.md` | Composing a move, scene or format the library does not have |
 | `references/scenes.md` | Planning a piece's structure and the feeling of each beat |
 | `references/delivery.md` | Writing and voicing the script |
+| `references/sound.md` | Placing sound effects and the music bed, or generating an effect for a novel move |
 | `references/formats.md` | Any format other than the source's |
 | `references/log.md` | Before starting, to avoid repeating a miss |

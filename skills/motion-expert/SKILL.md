@@ -1,6 +1,6 @@
 ---
 name: motion-expert
-description: Turn a video found on X, LinkedIn or anywhere else into a reusable motion-style skill, then make new HyperFrames videos about unrelated subjects in that same hand, voiced by the house voice on ElevenLabs eleven_v4. Load when Umer shares a video link or file and wants its motion, look or feel captured, says "make a style from this", "capture this video's style", "do this in the style of", "same motion as", names an existing style skill (any <slug>-motion skill listed in ~/motion-expert/registry.json), or asks for a new video in a captured style. Covers ingest, measurement, signature moves, the grammar that generates new moves, the storyboard canvas gate, the render and compare loop, and where every miss gets folded back.
+description: Turn a video found on X, LinkedIn or anywhere else into a reusable motion and sound-design style skill, then make new HyperFrames videos about unrelated subjects in that same hand, voiced by the house voice on ElevenLabs eleven_v4. Load when Umer shares a video link or file and wants its motion, look or feel captured, says "make a style from this", "capture this video's style", "do this in the style of", "same motion as", names an existing style skill (any <slug>-motion skill listed in ~/motion-expert/registry.json), or asks for a new video in a captured style. Covers ingest, measurement, signature moves, sound effects bound to motion, the grammar that generates new moves, the storyboard canvas gate, the render and compare loop, and where every miss gets folded back.
 ---
 
 # Motion expert
@@ -27,13 +27,19 @@ Moves are code plus written rules and never a fixed vocabulary of named verbs, b
 
 The look follows the same split. Tokens carry the measured palette, type scale, spacing, timing unit and named easings, and `SKILL.md` carries the identity in one paragraph plus four to six principles, each with the reason it exists, what breaks without it, and its trade-off, so an agent facing a format nobody anticipated can reason its way to the answer.
 
+## Sound is bound to motion
+
+Sound effects carry as much of the hand as the curves do, so they are captured, generated and validated as a layer of their own rather than added at the end. `toolkit/measure/sound.py` splits the source mix into voice and everything else, separates the music bed from the effects, and records every effect with its class, timbre, envelope, level under the voice, pan and the visual keyframe it fires against (a move's start, its peak velocity, its landing, or a cut) with the offset in milliseconds. Those pairings become the style's binding rules, such as a whoosh that leads every card rise by 60ms or a tick on each word landing at 9dB under the voice, and the rules are what let a novel move get the sound this hand would have given it.
+
+The palette in `sound/` holds clean source clips where an effect isolates cleanly, since a sound is part of the hand and not the source's content, and ElevenLabs-generated matches scored by spectral distance where it does not; `toolkit/sfx.py` builds and serves it and `toolkit/SFX.md` holds the prompting that works. `toolkit/sound-plan.py` places effects on a piece from its scene plan and the binding rules, never past the source's measured density, the storyboard shows every effect on its frame's timing ruler so Umer reviews sound placement on the canvas, and the loop scores sync, level, class mix and timbre as hard metrics. An effect landing 40ms late against its move is a miss in the same way a late cut is.
+
 ## Content never crosses over
 
 Nothing from the source's script, product, claims, people or shots enters a style skill or a piece. Footage slots in the source are rebuilt as designed HTML and CSS scenes in the captured identity, which keeps every render self-contained. The voice is captured as delivery only: pace in words per minute, the pause profile, where emphasis lands, energy across the piece, and an example script written about an unrelated subject with eleven_v4 audio tags showing how to steer the house voice into that delivery (`references/delivery.md`, and `toolkit/DELIVERY-V4.md` for the tags). The source voice itself is never cloned or matched.
 
 ## Capturing a style
 
-Run the steps in order and commit after each style passes. Ingest and fingerprint the source, read the strips and write the move inventory with timecodes into `references/moves.md`, then copy `_template/` to `skills/<slug>-motion/` and fill it: tokens, signature elements, `grammar.md`, `scenes.md` (the structure of the source as beats, each with the feeling it lands and how long it holds), `delivery.md`, `sources.md` with gaps, and `SKILL.md`. The slug names the visual hand in a word or two, never the source's product.
+Run the steps in order and commit after each style passes. Ingest and fingerprint the source, read the strips and write the move inventory with timecodes into `references/moves.md`, then copy `_template/` to `skills/<slug>-motion/` and fill it: tokens, signature elements, `grammar.md`, `scenes.md` (the structure of the source as beats, each with the feeling it lands and how long it holds), `delivery.md`, the sound palette and binding rules in `sound/` and `references/sound.md`, `sources.md` with gaps, and `SKILL.md`. The slug names the visual hand in a word or two, never the source's product.
 
 Then prove it in two stages. The replica rebuilds the source's structure with neutral placeholder copy of matching length and runs the loop in replica mode, where every fingerprint metric and every signature curve must land inside tolerance of the source's own; this proves the skill reproduces the hand before it is trusted on anything new, and it is never shipped. After the replica passes, make two novel pieces on unrelated subjects, one of them in a format or length the source never used, and run them through the loop in novel mode. Add the style to `registry.json` with its source URL, capture date and status, symlink it into `~/.claude/skills`, then commit and push.
 
@@ -45,7 +51,7 @@ The storyboard is the gate. `toolkit/storyboard.mjs --register` writes one scrub
 
 ## The loop decides when it is done
 
-Render, measure the render, compare, judge, fix, repeat. `toolkit/compare.py` scores the render's fingerprint against the source's tolerance bands (timing and sequencing, curves, the energy curve's shape after time-normalisation, look and delivery) and writes beat-matched source and render sheets; the vision judge then scores those sheets on `toolkit/judge.md`, including whether each beat produces the feeling `scenes.md` names for it. A piece ships when every metric is inside tolerance and every judge criterion is 8 or above. After five passes without converging, stop and hand Umer the report and sheets with the blocking metric named rather than polishing blind. `toolkit/loop.md` holds the full procedure.
+Render, measure the render, compare, judge, fix, repeat. `toolkit/compare.py` scores the render's fingerprint against the source's tolerance bands (timing and sequencing, curves, the energy curve's shape after time-normalisation, look, sound effects and delivery) and writes beat-matched source and render sheets; the vision judge then scores those sheets on `toolkit/judge.md`, including whether each beat produces the feeling `scenes.md` names for it. A piece ships when every metric is inside tolerance and every judge criterion is 8 or above. After five passes without converging, stop and hand Umer the report and sheets with the blocking metric named rather than polishing blind. `toolkit/loop.md` holds the full procedure.
 
 Fold every miss back. A fix that only touches the piece will recur on the next one, so each miss is logged in the style's `references/log.md` and corrected in the token, element, grammar rule or tolerance band that should have prevented it; a miss that would hit every style is fixed in the toolkit or in this file. A decision Umer makes for one piece, such as cutting a scene, stays in that piece and never becomes a rule.
 
@@ -58,4 +64,5 @@ Fold every miss back. A fix that only touches the piece will recur on the next o
 | `references/storyboard.md` | Building the board and handling canvas comments |
 | `references/validation.md` | Running the loop, setting tolerance bands, or the loop will not converge |
 | `references/delivery.md` | Capturing a voice's delivery or voicing a piece |
+| `references/sound.md` | Capturing a source's sound effects and music bed, building a style's palette, or placing effects on a piece |
 | `_template/` | Starting a new style skill |
