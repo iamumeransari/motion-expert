@@ -1,0 +1,19 @@
+# Delivery on eleven_v4
+
+Every piece is voiced on `eleven_v4` (the highest-quality variant; `eleven_v4_turbo` is the low-latency one and has no place in rendered work) through `/v1/text-to-speech/{voice}/with-timestamps`, which returns per-character alignment for v4 on our key, confirmed on 2026-10-01 with request `5Bf3XRQj9SCsOJGcxlCu`. The model takes two settings, stability and similarity, and nothing else: there is no style slider, no speed slider and no SSML, so a `<break>` tag is ignored and `tts.py` refuses a script that contains one. Lower stability gives a more varied, expressive read and higher stability holds a flatter baseline, while higher similarity holds the voice closer to its reference at some cost to naturalness; 0.5 and 0.75 are the defaults until a style's `delivery.md` says otherwise. A request takes at most 10,000 characters, far more than any social piece needs.
+
+Delivery is steered in the text itself. Audio tags are short instructions in square brackets placed where the delivery should change, and ElevenLabs documents these: `[laughs]`, `[laughs harder]`, `[starts laughing]`, `[wheezing]`, `[whispers]`, `[sighs]`, `[exhales]`, `[sarcastic]`, `[curious]`, `[excited]`, `[crying]`, `[snorts]` and `[mischievously]` for the voice; `[happy]`, `[sad]`, `[angry]`, `[annoyed]`, `[appalled]`, `[thoughtful]` and `[surprised]` as directions; `[chuckles]`, `[clears throat]`, `[short pause]`, `[long pause]`, `[exhales sharply]` and `[inhales deeply]` as non-verbal cues; and `[strong X accent]` and `[sings]` as experimental. The list is explicitly non-exhaustive, and v4 also follows descriptive tags such as `[Quiet, measured narration]`, `[Building tension, measured pace]` or `[Low, steady voice, restrained urgency]`, which set the tone and pace for the passage that follows them. Because v4 also generates sound effects, a tag that could read as a sound cue can come out as one, so a tag should describe the voice quality wanted rather than an event. Tags land most reliably when the delivery is already in the voice's training data, so a measured narrator voice should not be asked to giggle or shout, and every new tag gets tested on the house voice before a style relies on it.
+
+Pauses come from punctuation, line structure and the two pause tags. Ellipses add a pause and weight, capitalised words take emphasis, and ordinary punctuation sets the rhythm; dashes are documented as less consistent, so avoid them. On the house voice the probe measured 0.65s of silence after `small...` and 0.68s after `MOVES. [short pause]`, which makes the ellipsis and the tag the two reliable levers for a long beat. `tts.py` sends each script line on its own line, and the line break itself shapes phrasing.
+
+Pace is the one thing the text cannot set precisely, which is why `tts.py --retime` exists. It reads the style's pause profile (words per minute, median pause, p90 pause and pauses per minute, from `fingerprint.json` or a `json` block in the style's `delivery.md`), sets the silences at word boundaries so the median and p90 land exactly, promotes unpaused punctuation to pauses or demotes mid-phrase ones to match pauses per minute, and only then applies a pitch-preserving tempo change, clamped to 0.85 to 1.25, for whatever silence alone cannot reach. When the clamp bites it says so, and the fix is the script: fewer or more words per line, or a different voice.
+
+A style script therefore looks like the source's delivery written into text, with tags only where the source's voice audibly changes:
+
+```
+[Calm, close narration] Most teams ship the same feature twice.
+Once in the code... and once in the docs nobody reads.
+[short pause] [Brighter, quicker] So we made the docs write THEMSELVES.
+```
+
+Bracketed tags are masked out of the alignment, so `words.json` holds only the spoken words with their real start and end times, snapped to the measured silence edges.

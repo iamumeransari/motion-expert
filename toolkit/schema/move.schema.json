@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://motion-expert.local/move.schema.json",
+  "title": "Primitive envelope",
+  "description": "One primitive of a style's grammar: a property the style animates and the measured range of every parameter it takes. A style keeps its envelopes in grammar.json as { \"primitives\": [ ... ] }, and validate-plan.mjs checks every grammar-composed tween against them. Ranges are the observed minimum to maximum widened by measurement error, never a guess.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["property", "curves", "duration_units"],
+  "properties": {
+    "property": {
+      "type": "string",
+      "description": "The animated property as GSAP names it: opacity, x, y, scale, scaleX, scaleY, rotation, clipPath, filter, and so on.",
+      "minLength": 1
+    },
+    "absent": { "type": "boolean", "description": "True when the source never animates this property. A tween on it is then a violation, because restraint is part of the hand." },
+    "family": {
+      "type": "string",
+      "description": "The curve family the fitted moves fall into.",
+      "enum": ["linear", "ease-in", "ease-out", "ease-in-out", "overshoot", "spring", "step"]
+    },
+    "curves": {
+      "type": "array",
+      "description": "Names of the easings in tokens.json this property is seen on.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "duration_units": { "$ref": "#/$defs/range", "description": "Tween duration in the style's timing unit." },
+    "vo_offset_s": { "$ref": "#/$defs/range", "description": "Seconds from the voice-over word the move answers to the move's start. Negative leads the word." },
+    "stagger_units": { "$ref": "#/$defs/range", "description": "Stagger between siblings, in timing units." },
+    "stagger_direction": { "type": "string", "enum": ["forward", "reverse", "center", "random-seeded", "none"] },
+    "travel_frac": { "$ref": "#/$defs/range", "description": "Travel as a share of the frame along the axis of motion (x against width, y against height)." },
+    "overshoot": { "$ref": "#/$defs/range", "description": "Peak overshoot past the target as a share of the travel." },
+    "source_moves": { "type": "array", "items": { "type": "string" }, "description": "Library moves this envelope was measured from." },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "range": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "number" }
+    }
+  }
+}

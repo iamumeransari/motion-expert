@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://motion-expert.local/scene-plan.schema.json",
+  "title": "Motion expert scene plan",
+  "description": "One piece in a captured style. The agent writes it against the style's grammar after the voice-over has been generated, toolkit/validate-plan.mjs enforces what a shape cannot (moves resolve, times land inside their scene, word references exist), toolkit/storyboard.mjs turns it into a board for the canvas, and toolkit/build-composition.mjs turns the approved plan into a HyperFrames project from the same scene code.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["style", "title", "format", "duration", "vo", "scenes"],
+  "properties": {
+    "style": {
+      "type": "string",
+      "description": "Slug of the style skill, resolving to ~/motion-expert/skills/<slug>-motion. The CLIs take --style-dir to point at a style anywhere else, which is how throwaway test styles under work/ are exercised.",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "title": { "type": "string", "minLength": 1, "description": "Names the piece, the board and the composition." },
+    "format": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "fps"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 16 },
+        "height": { "type": "integer", "minimum": 16 },
+        "fps": { "type": "number", "minimum": 1, "maximum": 240, "description": "Integer, or a broadcast rate such as 29.97 which the composition writes back as 30000/1001." }
+      }
+    },
+    "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Length of the piece in seconds. The scenes must tile it." },
+    "vo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["script", "words"],
+      "properties": {
+        "script": { "type": "string", "description": "The script as voiced, audio tags included." },
+        "audio": { "type": ["string", "null"], "description": "Voice-over file, absolute or relative to the plan file. Null only while the plan is a sketch; build-composition refuses a plan without it." },
+        "words": {
+          "type": "array",
+          "description": "Word timings from tts.py, in seconds from the start of the piece. Moves reference them as word:<index>.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["w", "start", "end"],
+            "properties": {
+              "w": { "type": "string", "minLength": 1 },
+              "start": { "type": "number", "minimum": 0 },
+              "end": { "type": "number", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "notes": { "type": "string", "description": "Free text for the planning agent. Never read downstream." },
+    "scenes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/scene" } }
+  },
+  "$defs": {
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "start", "duration", "feeling", "vo_line", "layout", "moves"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "Stable id. Names the board frame (01-<id>.html), the data-scene attribute and the clip in the composition." },
+        "title": { "type": "string", "minLength": 1, "description": "What the frame is called on the canvas." },
+        "start": { "type": "number", "minimum": 0, "description": "Seconds into the piece." },
+        "duration": { "type": "number", "exclusiveMinimum": 0 },
+        "feeling": { "type": "string", "minLength": 3, "description": "The emotion this beat must land, in the words of the style's scenes.md. The vision judge scores the render against it." },
+        "vo_line": { "type": "string", "description": "The words spoken over this scene, verbatim from the script. Empty for a silent beat." },
+        "layout": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "center, stack, split, free or full from the toolkit, or a .layout-<name> rule the style declares in tokens.css." },
+        "background": { "type": "string", "description": "Optional CSS colour or var(--token) for the scene ground. Defaults to var(--color-bg)." },
+        "moves": { "type": "array", "items": { "$ref": "#/$defs/move" } },
+        "notes": { "type": "string", "description": "Anything the reviewer should know about this frame. Shown in board.json." }
+      }
+    },
+    "move": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "target", "t"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "A library element in the style's library/<name>.html, or a novel move: either an element written beside the plan in library/<name>.html, or a grammar-composed move whose props.tweens are built from the style's primitives." },
+        "target": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "The node this move drives. The first move on a target renders it; a later move on the same target in the same scene animates the existing node." },
+        "t": { "type": ["number", "string"], "pattern": "^word:[0-9]+([+-][0-9]*\\.?[0-9]+)?$", "description": "When the move starts: absolute seconds into the piece, or word:<index> for that word's onset, optionally offset (word:12-0.08 leads the word by 80ms)." },
+        "props": { "type": "object", "description": "Parameters for the element. A grammar-composed move carries props.tweens." },
+        "novel": { "type": "boolean", "description": "True for a move the source never showed. It then needs a grammar_note and is checked against envelopes rather than against a source move." },
+        "grammar_note": { "type": "string", "description": "One line naming the primitives the novel move is built from and the envelopes it stays inside." },
+        "sfx": {
+          "type": ["object", "boolean"],
+          "description": "Sound override for this move, applied over sfx-plan.json by storyboard.mjs and build-composition.mjs. false silences any event sound-plan.py tied to this move; an object replaces its fields, and with a clip it adds an event when the sound plan gave none. true is not meaningful and is rejected.",
+          "additionalProperties": false,
+          "properties": {
+            "class": { "type": "string", "minLength": 1, "description": "Sound class, such as impact, whoosh, tick or riser." },
+            "clip": { "type": "string", "minLength": 1, "description": "Audio file, absolute or relative to the plan file." },
+            "offset_s": { "type": "number", "description": "Seconds from the move's start to the sound's start. Negative leads the move." },
+            "gain_db": { "type": "number", "maximum": 12 }
+          }
+        }
+      }
+    }
+  }
+}

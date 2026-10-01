@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://motion-expert.local/tokens.schema.json",
+  "title": "Style tokens",
+  "description": "A style's look and timing as data. tokens.css carries the same values as custom properties for the elements; this file is what the runtime reads for named easings and the timing unit, and what compare.py reads for palette and type scale.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["palette", "type", "spacing", "timing", "easings"],
+  "properties": {
+    "name": { "type": "string" },
+    "palette": {
+      "type": "object",
+      "description": "Named colours as hex, measured from the source (look.py k-means in Lab).",
+      "additionalProperties": { "type": "string", "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$" }
+    },
+    "type": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scale"],
+      "properties": {
+        "family": { "type": "string", "description": "CSS font-family stack, with the matched or substituted face first." },
+        "weights": { "type": "array", "items": { "type": "integer", "minimum": 100, "maximum": 900 } },
+        "scale": {
+          "type": "object",
+          "description": "Named sizes in px at the source frame size.",
+          "additionalProperties": { "type": "number", "exclusiveMinimum": 0 }
+        },
+        "tracking": { "type": "object", "additionalProperties": { "type": "number" }, "description": "Letter-spacing in em per scale step." },
+        "leading": { "type": "object", "additionalProperties": { "type": "number" } }
+      }
+    },
+    "spacing": {
+      "type": "object",
+      "description": "Named spacing in px, margins included, measured as the source's own margins.",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit_ms"],
+      "properties": {
+        "unit_ms": { "type": "number", "exclusiveMinimum": 0, "description": "The style's timing unit: the shortest recurring interval in the source. Durations, staggers and holds are counted in it." },
+        "durations": { "type": "object", "additionalProperties": { "type": "number", "exclusiveMinimum": 0 }, "description": "Named durations in units." }
+      }
+    },
+    "easings": {
+      "type": "object",
+      "description": "Named curves as cubic-bezier control points [x1, y1, x2, y2]. y may leave 0..1 for overshoot.",
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 4,
+        "maxItems": 4,
+        "items": { "type": "number" }
+      }
+    }
+  }
+}
