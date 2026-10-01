@@ -33,6 +33,10 @@ Sound effects carry as much of the hand as the curves do, so they are captured, 
 
 The palette in `sound/` holds clean source clips where an effect isolates cleanly, since a sound is part of the hand and not the source's content, and ElevenLabs-generated matches scored by spectral distance where it does not; `toolkit/sfx.py` builds and serves it and `toolkit/SFX.md` holds the prompting that works. `toolkit/sound-plan.py` places effects on a piece from its scene plan and the binding rules, never past the source's measured density, the storyboard shows every effect on its frame's timing ruler so Umer reviews sound placement on the canvas, and the loop scores sync, level, class mix and timbre as hard metrics. An effect landing 40ms late against its move is a miss in the same way a late cut is.
 
+## Imagery is generated, motion is built
+
+When a source's look depends on photoreal imagery, a new piece generates on-subject stills in that look and HyperFrames does all the motion. `toolkit/measure/imagery.py` measures the photographic hand per shot (grade, contrast, grain, depth of field, lighting key, subject placement and shot scale), `toolkit/imagery.py` builds prompts from that profile without naming anything from the source, generates candidates through fal, ranks them by measured distance to the profile, grades the best into tolerance and cuts the subject out so type can sit between subject and plate. Video models are not used, because the loop needs every frame's timing under its own control. `toolkit/IMAGERY.md` holds the details.
+
 ## Content never crosses over
 
 Nothing from the source's script, product, claims, people or shots enters a style skill or a piece. Footage slots in the source are rebuilt as designed HTML and CSS scenes in the captured identity, which keeps every render self-contained. The voice is captured as delivery only: pace in words per minute, the pause profile, where emphasis lands, energy across the piece, and an example script written about an unrelated subject with eleven_v4 audio tags showing how to steer the house voice into that delivery (`references/delivery.md`, and `toolkit/DELIVERY-V4.md` for the tags). The source voice itself is never cloned or matched.
@@ -64,5 +68,6 @@ Fold every miss back. A fix that only touches the piece will recur on the next o
 | `references/storyboard.md` | Building the board and handling canvas comments |
 | `references/validation.md` | Running the loop, setting tolerance bands, or the loop will not converge |
 | `references/delivery.md` | Capturing a voice's delivery or voicing a piece |
+| `toolkit/IMAGERY.md` | A style that depends on photography, or generating and matting stills for a piece |
 | `references/sound.md` | Capturing a source's sound effects and music bed, building a style's palette, or placing effects on a piece |
 | `_template/` | Starting a new style skill |
