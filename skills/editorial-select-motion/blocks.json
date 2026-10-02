@@ -1,695 +1,821 @@
 {
- "style": "editorial-select",
- "blocks": {
-  "chromatic-title": {
-   "what": "A serif line slides in from the right and settles word by word over colour fields cut on the 16 fps picture cadence, then cuts to a paper card where each word takes its own gradient under a slow exponential push.",
-   "file": "library/chromatic-title.html",
-   "doc": "library/chromatic-title.md",
-   "slots": {
-    "fields": "array of image sequences or stills, each {frames|src, dur, at, fit, focal, rate, loop, dissolve}",
-    "card": "paper texture slot {src, fit, focal, color} plus at, hold, palette, gradients",
-    "images": "preset only: the 66 field pictures the replica schedule indexes"
-   },
-   "text_params": {
-    "words": "string, \\n breaks rows",
-    "font": "default ES Serif (preset uses ES Line)",
-    "size": "px or measured to fill 0.84 of the width",
-    "leading": 1.12,
-    "y": 0.504,
-    "white": "var(--color-type-light)",
-    "card.palette": "tokens steel-blue, violet, orchid, lavender"
-   },
-   "timing": {
-    "scale": "stretches slide, settles, push and field durations",
-    "line_in": 0,
-    "slide_dur": 2.01,
-    "slide_dist": 0.0767,
-    "settle_amp": 1,
-    "cadence": "16 fps holds on (f+phase) mod 3 = 2",
-    "beats": "cut fields and land the card on beats; at and beats are not scaled"
-   },
-   "duration_range_s": [
-    2.5,
-    6.0
-   ],
-   "signature": true,
-   "source_shots": [
-    "s3 shots 2-9, source frames 244-339 (10.167-14.167 s)"
-   ],
-   "presets": {
-    "replica-s3-line": "measured per-frame keys of s3 shots 2-9; replica score min shot SSIM 0.980, max rel flow 0.143, 7 of 7 cuts"
-   }
-  },
-  "cursor": {
-   "name": "cursor",
-   "file": "library/cursor.html",
-   "doc": "library/cursor.md",
-   "what": "The film's pointer: rounded kite, white keyline, translucent grey body; travels in 4 to 10 frame ease-out hops on the 16 fps cadence, leans with the hand, squashes to 0.85 for one picture on a click. Its drawing and travel are the es-cursor kit, which any block can copy to carry a pointer.",
-   "slots": [],
-   "text": [],
-   "params": [
-    "preset",
-    "stops [{x, y, at, click, th, hop}]",
-    "cadence",
-    "size",
-    "shape",
-    "fill",
-    "stroke",
-    "curve",
-    "exitAt",
-    "beats"
-   ],
-   "duration": {
-    "min": 0.17,
-    "max": 4.0,
-    "default": 1.0,
-    "unit": "s",
-    "note": "per hop 0.17 to 0.42 s"
-   },
-   "signature": true,
-   "source_shots": [
-    "s4 shot 17 (420-452)",
-    "s4 shot 18 (453-477)",
-    "s4 shot 19 (478-492)",
-    "s4 shot 21 (505-531)",
-    "s5 shot 26 (600-636)"
-   ],
-   "presets": [
-    "replica-s4-shot18",
-    "replica-s4-shot19"
-   ],
-   "replica": {
-    "preset": "replica-s4-shot18",
-    "range": [
-     453,
-     477
-    ],
-    "ssim_mean": 0.998,
-    "ssim_min": 0.997,
-    "rel_epe": 0.101,
-    "pass": true,
-    "dir": "work/blocks/cursor/replica"
-   },
-   "demo": "work/blocks/cursor/demo (1080x1350, teapot still, two clicks)"
-  },
-  "lockup-scramble": {
-   "file": "library/lockup-scramble.html",
-   "doc": "library/lockup-scramble.md",
-   "does": "One serif line turns into the next by losing letters at random while the new line's letters arrive in place in violet; the finished line turns black, holds with a barely visible breathing scale, then its tail changes face on every second picture while the line steps up in size towards the frame edge.",
-   "slots": [
-    {
-     "name": "paper",
-     "kind": "image, full frame",
-     "notes": "optional ground under everything; the scene background shows without it"
+  "style": "editorial-select",
+  "blocks": {
+    "chromatic-title": {
+      "what": "A serif line slides in from the right and settles word by word over colour fields cut on the 16 fps picture cadence, then cuts to a paper card where each word takes its own gradient under a slow exponential push.",
+      "file": "library/chromatic-title.html",
+      "doc": "library/chromatic-title.md",
+      "slots": {
+        "fields": "array of image sequences or stills, each {frames|src, dur, at, fit, focal, rate, loop, dissolve}",
+        "card": "paper texture slot {src, fit, focal, color} plus at, hold, palette, gradients",
+        "images": "preset only: the 66 field pictures the replica schedule indexes"
+      },
+      "text_params": {
+        "words": "string, \\n breaks rows",
+        "font": "default ES Serif (preset uses ES Line)",
+        "size": "px or measured to fill 0.84 of the width",
+        "leading": 1.12,
+        "y": 0.504,
+        "white": "var(--color-type-light)",
+        "card.palette": "tokens steel-blue, violet, orchid, lavender"
+      },
+      "timing": {
+        "scale": "stretches slide, settles, push and field durations",
+        "line_in": 0,
+        "slide_dur": 2.01,
+        "slide_dist": 0.0767,
+        "settle_amp": 1,
+        "cadence": "16 fps holds on (f+phase) mod 3 = 2",
+        "beats": "cut fields and land the card on beats; at and beats are not scaled"
+      },
+      "duration_range_s": [
+        2.5,
+        6.0
+      ],
+      "signature": true,
+      "source_shots": [
+        "s3 shots 2-9, source frames 244-339 (10.167-14.167 s)"
+      ],
+      "presets": {
+        "replica-s3-line": "measured per-frame keys of s3 shots 2-9; replica score min shot SSIM 0.980, max rel flow 0.143, 7 of 7 cuts"
+      }
     },
-    {
-     "name": "tile",
-     "kind": "image",
-     "notes": "{src, fit, focal, zoom, rect, until}: a photo tile left over from the previous block, removed at until"
+    "cursor": {
+      "name": "cursor",
+      "file": "library/cursor.html",
+      "doc": "library/cursor.md",
+      "what": "The film's pointer: rounded kite, white keyline, translucent grey body; travels in 4 to 10 frame ease-out hops on the 16 fps cadence, leans with the hand, squashes to 0.85 for one picture on a click. Its drawing and travel are the es-cursor kit, which any block can copy to carry a pointer.",
+      "slots": [],
+      "text": [],
+      "params": [
+        "preset",
+        "stops [{x, y, at, click, th, hop}]",
+        "cadence",
+        "size",
+        "shape",
+        "fill",
+        "stroke",
+        "curve",
+        "exitAt",
+        "beats"
+      ],
+      "duration": {
+        "min": 0.17,
+        "max": 4.0,
+        "default": 1.0,
+        "unit": "s",
+        "note": "per hop 0.17 to 0.42 s"
+      },
+      "signature": true,
+      "source_shots": [
+        "s4 shot 17 (420-452)",
+        "s4 shot 18 (453-477)",
+        "s4 shot 19 (478-492)",
+        "s4 shot 21 (505-531)",
+        "s5 shot 26 (600-636)"
+      ],
+      "presets": [
+        "replica-s4-shot18",
+        "replica-s4-shot19"
+      ],
+      "replica": {
+        "preset": "replica-s4-shot18",
+        "range": [
+          453,
+          477
+        ],
+        "ssim_mean": 0.998,
+        "ssim_min": 0.997,
+        "rel_epe": 0.101,
+        "pass": true,
+        "dir": "work/blocks/cursor/replica"
+      },
+      "demo": "work/blocks/cursor/demo (1080x1350, teapot still, two clicks)"
     },
-    {
-     "name": "grid",
-     "kind": "code",
-     "notes": "{x0, dx, y0, dy, color, until}: grid rules left over from the previous block"
-    }
-   ],
-   "text": [
-    {
-     "name": "from",
-     "face": "ES Serif",
-     "notes": "outgoing line, 77.6 px cap; optional"
+    "lockup-scramble": {
+      "file": "library/lockup-scramble.html",
+      "doc": "library/lockup-scramble.md",
+      "does": "One serif line turns into the next by losing letters at random while the new line's letters arrive in place in violet; the finished line turns black, holds with a barely visible breathing scale, then its tail changes face on every second picture while the line steps up in size towards the frame edge.",
+      "slots": [
+        {
+          "name": "paper",
+          "kind": "image, full frame",
+          "notes": "optional ground under everything; the scene background shows without it"
+        },
+        {
+          "name": "tile",
+          "kind": "image",
+          "notes": "{src, fit, focal, zoom, rect, until}: a photo tile left over from the previous block, removed at until"
+        },
+        {
+          "name": "grid",
+          "kind": "code",
+          "notes": "{x0, dx, y0, dy, color, until}: grid rules left over from the previous block"
+        }
+      ],
+      "text": [
+        {
+          "name": "from",
+          "face": "ES Serif",
+          "notes": "outgoing line, 77.6 px cap; optional"
+        },
+        {
+          "name": "to",
+          "face": "ES Serif lead plus cycle faces",
+          "notes": "the lockup; lead words stay serif, the tail cycles mono, pixel, humanist, bitmap, grotesk; 84.4 px cap, shrunk to fit the margins"
+        },
+        {
+          "name": "faces",
+          "face": "mono, pixel, humanist, bitmap, grotesk, serif",
+          "notes": "the cycle order"
+        }
+      ],
+      "duration": {
+        "min": 1.2,
+        "max": 4.0,
+        "default": 2.167
+      },
+      "signature": true,
+      "source_shots": [
+        "shot 8, source frames 128 to 179 (5.333 to 7.500 s): glyph-scramble, hold, font-cycle"
+      ],
+      "presets": [
+        "replica-s2-lockup"
+      ],
+      "proof": {
+        "replica": {
+          "preset": "replica-s2-lockup",
+          "ssim": 0.9914,
+          "flow_rel_epe": 0.118,
+          "pass": true,
+          "render": "work/blocks/lockup-scramble/replica-2/render.mp4"
+        },
+        "demo": {
+          "render": "work/blocks/lockup-scramble/demo/render.mp4",
+          "verdict": "Portrait 1080x1920, new words and a stand-in tile: the scramble, violet arrivals, black hold and font cycle all read, and the cycle grows to 0.96 of the narrow width instead of cropping."
+        }
+      },
+      "name": "lockup-scramble"
     },
-    {
-     "name": "to",
-     "face": "ES Serif lead plus cycle faces",
-     "notes": "the lockup; lead words stay serif, the tail cycles mono, pixel, humanist, bitmap, grotesk; 84.4 px cap, shrunk to fit the margins"
+    "ghost-word-grow": {
+      "name": "ghost-word-grow",
+      "file": "library/ghost-word-grow.html",
+      "doc": "library/ghost-word-grow.md",
+      "does": "A giant ghost word fills the paper behind everything; a small serif word at the centre; photo tiles pop in one picture at a time; the word steps up x2 in one picture; violet chips land around a tile pulled in behind the word, which grows on an accelerating curve into the cut with its chips streaking outward.",
+      "signature": true,
+      "slots": {
+        "paper": "optional image (flat --color-paper otherwise)",
+        "tiles[]": "image slots with optional box (frame fractions) and art overlay riding the tile",
+        "select": "image slot pulled in behind the word; the growing box is a window onto it"
+      },
+      "text": {
+        "word": "small word, any length (default Big)",
+        "ghost": "ghost word (defaults to word, repeated across the row)",
+        "cap": "small cap height px at a 1080 short side (85)",
+        "stepRatio": "1.994",
+        "tracking": "em",
+        "font": "ES Serif"
+      },
+      "colors": {
+        "ink": "ink",
+        "ghostColor": "ghost",
+        "chipColor": "violet",
+        "paper": "paper"
+      },
+      "timing": {
+        "frames": 27,
+        "fps": 24,
+        "cadence": "16 fps (phase 1)",
+        "scale": "0.75 to 2",
+        "duration_s": [
+          0.85,
+          2.25
+        ],
+        "beats": "first beats pop the tiles, the next one steps the word"
+      },
+      "presets": {
+        "replica-s6-1-2": "s6 shots 1 and 2 frame for frame (needs ES Source Serif from work/blocks/_style-s67 and calibration plates)"
+      },
+      "source_shots": [
+        "s6 shot 1 (film 733-746, 30.542-31.125 s)",
+        "s6 shot 2 (film 747-759, 31.125-31.667 s)"
+      ],
+      "hands_off_to": "crop-select (the selected tile keeps growing in the next shot)"
     },
-    {
-     "name": "faces",
-     "face": "mono, pixel, humanist, bitmap, grotesk, serif",
-     "notes": "the cycle order"
-    }
-   ],
-   "duration": {
-    "min": 1.2,
-    "max": 4.0,
-    "default": 2.167
-   },
-   "signature": true,
-   "source_shots": [
-    "shot 8, source frames 128 to 179 (5.333 to 7.500 s): glyph-scramble, hold, font-cycle"
-   ],
-   "presets": [
-    "replica-s2-lockup"
-   ],
-   "proof": {
-    "replica": {
-     "preset": "replica-s2-lockup",
-     "ssim": 0.9914,
-     "flow_rel_epe": 0.118,
-     "pass": true,
-     "render": "work/blocks/lockup-scramble/replica-2/render.mp4"
+    "tile-scatter": {
+      "file": "library/tile-scatter.html",
+      "doc": "library/tile-scatter.md",
+      "does": "Grid paper fills with picture tiles that pop and drift into whole cells and lowercase serif words that land one per beat on paper cards and walk a cell at a time; then the cards cut to one centred line that swells while the grid grows and the tiles drop out a few per picture. Steps on the 16 fps cadence.",
+      "slots": [
+        {
+          "name": "tiles[]",
+          "kind": "image",
+          "notes": "any count; {src, fit, focal [x,y], zoom, cells [cw,ch] or aspect, label}; whole-cell sizes, crop and drift are code; placeholder when no src"
+        },
+        {
+          "name": "paper",
+          "kind": "image",
+          "notes": "optional paper texture under the rules; flat --color-paper-grid otherwise"
+        },
+        {
+          "name": "images[]",
+          "kind": "image",
+          "notes": "preset only: one picture per held tile pose (195 for replica-s1-shot8)"
+        }
+      ],
+      "text": [
+        {
+          "name": "words",
+          "face": "ES Serif",
+          "notes": "array or string; card width from glyph metrics, whole cells, two at least; cap 58 px at 1080, tracking 2 px"
+        },
+        {
+          "name": "line",
+          "face": "ES Serif",
+          "notes": "the words joined; lineScale [1.14, 1.34] of the word size; wraps to up to three balanced rows before shrinking to fit 64 px margins"
+        }
+      ],
+      "duration": {
+        "min": 1.5,
+        "max": 4.0,
+        "default": 2.04
+      },
+      "timing": {
+        "durScale": "multiplies every time",
+        "beats": "one word lands per beat (s after t0); even when absent",
+        "tileTimes": "tile pops",
+        "gatherAt": "0.67 of duration",
+        "cadence": "16 | twos | ones",
+        "exitAt": "hard out"
+      },
+      "signature": true,
+      "source_shots": [
+        "s1 shot 8, film frames 79-127 (3.292-5.333 s)"
+      ],
+      "presets": [
+        "replica-s1-shot8"
+      ],
+      "proof": {
+        "replica": {
+          "preset": "replica-s1-shot8",
+          "ssim": 0.9905,
+          "ssim_min_frame": 0.979,
+          "flow_rel_epe": 0.079,
+          "moves_within_frame": "4 of 4",
+          "frame_count": "49 of 49",
+          "global_offset": 0,
+          "pass": true,
+          "render": "work/blocks/tile-scatter/replica-2/render.mp4",
+          "report": "work/blocks/tile-scatter/replica-2/cmp/report.md"
+        },
+        "demo": {
+          "render": "work/blocks/tile-scatter/demo/render.mp4",
+          "format": "1080x1920",
+          "verdict": "Reads in the film's hand at portrait: seven stand-in tiles (three re-cropped by focal and zoom) and five new words scatter, walk without colliding and gather into a three-row line clear of the tiles."
+        }
+      },
+      "limits": "General mode does not swap pictures inside resting tiles and walks words on shortest paths rather than the film's deliberate detours; the tile-free band is measured from the frame centre, so lineY away from 0.5 can put a tile under the line.",
+      "name": "tile-scatter"
     },
-    "demo": {
-     "render": "work/blocks/lockup-scramble/demo/render.mp4",
-     "verdict": "Portrait 1080x1920, new words and a stand-in tile: the scramble, violet arrivals, black hold and font cycle all read, and the cycle grows to 0.96 of the narrow width instead of cropping."
-    }
-   },
-   "name": "lockup-scramble"
-  },
-  "ghost-word-grow": {
-   "name": "ghost-word-grow",
-   "file": "library/ghost-word-grow.html",
-   "doc": "library/ghost-word-grow.md",
-   "does": "A giant ghost word fills the paper behind everything; a small serif word at the centre; photo tiles pop in one picture at a time; the word steps up x2 in one picture; violet chips land around a tile pulled in behind the word, which grows on an accelerating curve into the cut with its chips streaking outward.",
-   "signature": true,
-   "slots": {
-    "paper": "optional image (flat --color-paper otherwise)",
-    "tiles[]": "image slots with optional box (frame fractions) and art overlay riding the tile",
-    "select": "image slot pulled in behind the word; the growing box is a window onto it"
-   },
-   "text": {
-    "word": "small word, any length (default Big)",
-    "ghost": "ghost word (defaults to word, repeated across the row)",
-    "cap": "small cap height px at a 1080 short side (85)",
-    "stepRatio": "1.994",
-    "tracking": "em",
-    "font": "ES Serif"
-   },
-   "colors": {
-    "ink": "ink",
-    "ghostColor": "ghost",
-    "chipColor": "violet",
-    "paper": "paper"
-   },
-   "timing": {
-    "frames": 27,
-    "fps": 24,
-    "cadence": "16 fps (phase 1)",
-    "scale": "0.75 to 2",
-    "duration_s": [
-     0.85,
-     2.25
-    ],
-    "beats": "first beats pop the tiles, the next one steps the word"
-   },
-   "presets": {
-    "replica-s6-1-2": "s6 shots 1 and 2 frame for frame (needs ES Source Serif from work/blocks/_style-s67 and calibration plates)"
-   },
-   "source_shots": [
-    "s6 shot 1 (film 733-746, 30.542-31.125 s)",
-    "s6 shot 2 (film 747-759, 31.125-31.667 s)"
-   ],
-   "hands_off_to": "crop-select (the selected tile keeps growing in the next shot)"
-  },
-  "tile-scatter": {
-   "file": "library/tile-scatter.html",
-   "doc": "library/tile-scatter.md",
-   "does": "Grid paper fills with picture tiles that pop and drift into whole cells and lowercase serif words that land one per beat on paper cards and walk a cell at a time; then the cards cut to one centred line that swells while the grid grows and the tiles drop out a few per picture. Steps on the 16 fps cadence.",
-   "slots": [
-    {
-     "name": "tiles[]",
-     "kind": "image",
-     "notes": "any count; {src, fit, focal [x,y], zoom, cells [cw,ch] or aspect, label}; whole-cell sizes, crop and drift are code; placeholder when no src"
+    "endcard-typeon": {
+      "what": "End card: a sentence types on word by word inside violet pixel-bar handles that open past the line and pull in to corner chips; the line cuts to diagonal pixel-step brackets around a mark slot, the mark grows while the brackets shrink, blink faint and go; the lockup cuts in sliding left on an exponential ease and the tagline drops in on one frame.",
+      "slots": {
+        "mark": "inline SVG (currentColor) or image {src, fit, focal, aspect}",
+        "wordmark": "artwork {src, fit, focal, aspect, h, cap} or text {text, size, tracking}, optional",
+        "paper": "image {src, fit, focal}, default --color-paper"
+      },
+      "text_params": {
+        "sentence": "any words, EditorialSelect Serif, sized to 0.766 of frame width and fitted",
+        "tagline": "string or false, 0.63 of body size",
+        "size": "body px",
+        "tracking": "em, default -0.0076",
+        "font": "canvas family, default \"ES Serif\"",
+        "cx": "fraction",
+        "cy": "fraction"
+      },
+      "timing": {
+        "wordTimes": "s per word, beat-snappable",
+        "wordGap": "default 0.073 s",
+        "collapseAt": "default last word + 0.875 s",
+        "lockupAt": "default collapse + 0.583 s",
+        "taglineAt": "default collapse + 1.75 s",
+        "scale": "duration scale",
+        "cadence": "16 (default), twos, ones",
+        "abs0": "cadence phase",
+        "exitAt": "s"
+      },
+      "duration_range_s": [
+        2.0,
+        6.0
+      ],
+      "signature": true,
+      "source_shots": [
+        "s8: film frames 993-1135 (41.375-47.381 s), shot 42 end card"
+      ],
+      "presets": {
+        "replica-s8-endcard": "measured per-frame keys of s8 at 1920x1080; replica SSIM 0.992, flow rel 0.037 (pass)"
+      },
+      "colours": [
+        "--color-violet",
+        "--color-ink-soft",
+        "--color-paper"
+      ],
+      "file": "library/endcard-typeon.html",
+      "doc": "library/endcard-typeon.md"
     },
-    {
-     "name": "paper",
-     "kind": "image",
-     "notes": "optional paper texture under the rules; flat --color-paper-grid otherwise"
+    "camera-rig": {
+      "name": "camera-rig",
+      "file": "library/camera-rig.html",
+      "doc": "library/camera-rig.md",
+      "does": "The film's camera on any image slot or image sequence: push, punch on a cut, pull-back, steady pull, settle, drift and tilt as measured presets, scale in log space, on the film's cadences (16 fps on stills, ones on footage); exact per-frame keys or homographies for replica shots. Other blocks carry the same engine (window.__esCamera) for their own moves.",
+      "signature": false,
+      "slots": {
+        "slot": "image slot: src, fit, focal [x, y], zoom, or frames [src...] with fps for a sequence; no src draws a labelled placeholder",
+        "swaps": "[{ frame | t, src }] picture changes inside the shot"
+      },
+      "text": {},
+      "params": {
+        "preset": "push | punch | push-soft | push-hard | pull-back | pull-steady | pull-settle | drift | tilt | hold | replica-s7-A",
+        "cam": "one move or a list: at, dur or frames, scale, from, to, dx, dy, r, origin, ease, cadence, phase, keys, mats",
+        "box": "[x, y, w, h] frame px (default full frame)",
+        "ground": "token name or CSS behind the picture",
+        "keepCover": "default true: a pull starts far enough in that the picture always covers the box",
+        "durationScale": "multiplies every move",
+        "beats": "moves without at start on beats[i]",
+        "exitAt": "s after start"
+      },
+      "timing": {
+        "fps": 24,
+        "cadence": "16 fps for push and punch, ones for pulls, drift and tilt (overridable)",
+        "duration_s": [
+          0,
+          2.5
+        ],
+        "measured": {
+          "push": "x1.100 / 12 f",
+          "punch": "x1.097 / 1 f",
+          "pull-back": "x0.407 / 35 f",
+          "pull-steady": "-1.99 %/f",
+          "drift": "0.035W, 0.025H / 20 f",
+          "tilt": "-0.06H / 13 f"
+        }
+      },
+      "presets": {
+        "replica-s7-A": "film 828 to 846 frame for frame: per-picture homographies of the clean plate, the print clip at frames 16 to 18; plan supplies the plates, the hair swap at frame 7 and a second camera-rig holding the paper"
+      },
+      "source_shots": [
+        "film 822 to 846 (shots 34 and 35: s6 shot 4, s7 shot A) for push, punch and the replica preset",
+        "film 847 to 992 (s7 shots B to I, tracked board planes) for pull-back and pull-steady",
+        "fingerprint moves 29, 48, 52, 66, 67 for drift, push-hard, push-soft, tilt, pull-settle"
+      ],
+      "shared": "work/blocks/camera-rig/es-camera.src.js, injected by work/blocks/camera-rig/inject.py between BEGIN/END es-camera markers"
     },
-    {
-     "name": "images[]",
-     "kind": "image",
-     "notes": "preset only: one picture per held tile pose (195 for replica-s1-shot8)"
-    }
-   ],
-   "text": [
-    {
-     "name": "words",
-     "face": "ES Serif",
-     "notes": "array or string; card width from glyph metrics, whole cells, two at least; cap 58 px at 1080, tracking 2 px"
+    "billboard": {
+      "what": "Artwork put up in the world: a logotype (ES Serif word or traced paths), small type lines and rules laid out in a board's flat space and warped onto a plane in a photograph by a homography (matrix3d), with ink colour, glow and edge blur matched to the plate and foreground cut-outs drawn over the type; the picture, the plane and the cut-outs move as one under an es-camera move, by default the film's pull-back.",
+      "file": "library/billboard.html",
+      "doc": "library/billboard.md",
+      "slots": {
+        "slot": "the photograph {src, fit, focal, zoom, size, cutout} or a photo sequence {frames: [...]} played one picture per film frame",
+        "slot.cutout": "the same picture on transparency, drawn over the type (type behind subject)",
+        "fgs": "per-frame cut-outs aligned with the frames (moving occluders)",
+        "panel": "printed ground on the plane: {color} or an image slot {src, focal, light, scrim}"
+      },
+      "text_params": {
+        "word / art.logo": "logotype in ES Serif: text, cap (0.3 of board height), width (0.84), y (0.56), align; or d + box for a path set",
+        "art.lines": "small type blocks {at: below|tl|tr|bl|br|above, text, face: mono|grotesk|humanist|serif, size 0.045, leading, tracking}",
+        "art.rules": "[x, y, w, h] shares of the board",
+        "art.items": "replica item list (path, text with per-glyph xs, rect)",
+        "ink": "token, default type-light (replica: per-frame from the plate)",
+        "glow": "[blur, opacity], default [0.006 W, 0.45]; null for none",
+        "soften": "edge blur, default about 0.6 frame px",
+        "quad / quadSpace": "four corners tl tr br bl in frame px, or in the picture's px with quadSpace image and slot.size"
+      },
+      "timing": {
+        "entrance": "hard cut, no tween",
+        "cam": "es-camera move or list (pull-back, pull-steady, push, push-soft, push-hard, drift, tilt, keys, mats); presets on ones for footage, cadence 16 for the graphic hand on stills",
+        "scale": "stretches every camera move",
+        "beats": "a cam move with at {beat: i} starts on beats[i]",
+        "sequence": "photo sequences and per-frame keys advance one source frame per film frame",
+        "exitAt": "cut out"
+      },
+      "duration_range_s": [
+        0.45,
+        6.0
+      ],
+      "signature": false,
+      "source_shots": [
+        "s7 shots B to I, film frames 847 to 992 (35.292 to 41.375 s)"
+      ],
+      "presets": {
+        "replica-s7-B": "rooftop VELORA, 19 frames; SSIM 0.9865 alone, rel flow 0.032",
+        "replica-s7-C": "wider street, 16 frames; 0.9930 in the B to I run",
+        "replica-s7-D": "Think it on brick, 16 frames; 0.9899 in the run",
+        "replica-s7-E": "bus shelter at night with a car crossing (per-frame cut-outs), 13 frames; SSIM 0.9848 alone, rel flow 0.058",
+        "replica-s7-F": "night poster in a crowd (per-frame cut-outs), 16 frames; 0.9871 in the run",
+        "replica-s7-G": "aerial Own it, 11 frames; 0.9882 in the run",
+        "replica-s7-H": "Own it under the rail bridge, 20 frames; 0.9881 in the run",
+        "replica-s7-I": "the long pull-back on the brownstone, 35 frames; 0.9876 in the run"
+      },
+      "replica_note": "replica builds need --style-dir work/blocks/_style-s67 (s7 small-type faces) and a BT.709 to BT.601 conversion of the render before scoring; the photograph is the shot's own inpainted frames as a photo sequence (real parallax)",
+      "name": "billboard"
     },
-    {
-     "name": "line",
-     "face": "ES Serif",
-     "notes": "the words joined; lineScale [1.14, 1.34] of the word size; wraps to up to three balanced rows before shrinking to fit 64 px margins"
-    }
-   ],
-   "duration": {
-    "min": 1.5,
-    "max": 4.0,
-    "default": 2.04
-   },
-   "timing": {
-    "durScale": "multiplies every time",
-    "beats": "one word lands per beat (s after t0); even when absent",
-    "tileTimes": "tile pops",
-    "gatherAt": "0.67 of duration",
-    "cadence": "16 | twos | ones",
-    "exitAt": "hard out"
-   },
-   "signature": true,
-   "source_shots": [
-    "s1 shot 8, film frames 79-127 (3.292-5.333 s)"
-   ],
-   "presets": [
-    "replica-s1-shot8"
-   ],
-   "proof": {
-    "replica": {
-     "preset": "replica-s1-shot8",
-     "ssim": 0.9905,
-     "ssim_min_frame": 0.979,
-     "flow_rel_epe": 0.079,
-     "moves_within_frame": "4 of 4",
-     "frame_count": "49 of 49",
-     "global_offset": 0,
-     "pass": true,
-     "render": "work/blocks/tile-scatter/replica-2/render.mp4",
-     "report": "work/blocks/tile-scatter/replica-2/cmp/report.md"
+    "genre-word-card": {
+      "file": "library/genre-word-card.html",
+      "doc": "library/genre-word-card.md",
+      "does": "A run of hard-cut cards: one serif word centred between four selection-handle chips over a full-bleed picture; on each cut the picture and word change together, the letters snap from crowded or spread to their set spacing over six frames, and the handles glide to the new word's box with a segmented streak. Optional step-up nests a second handle set on a bigger word. Steps on the 16 fps cadence.",
+      "slots": [
+        {
+          "name": "cards[].image (images[], or image in a one-shot preset)",
+          "kind": "image",
+          "notes": "{src, fit, focal [x,y], zoom, scrim, label} or {seq: [{f|t, src}]}; full bleed or imageBox [x,y,w,h] shares; crop and focal are code; placeholder when no src"
+        }
+      ],
+      "text": [
+        {
+          "name": "cards[].word (words[])",
+          "face": "ES Serif",
+          "notes": "any length, laid out from glyph metrics; cap 102 px at 1080; wordX/wordY place ink centre and baseline (never x/y); tracking in em; color token (type-light) per card"
+        }
+      ],
+      "duration": {
+        "min": 0.3,
+        "max": 0.9,
+        "default": 0.54,
+        "unit": "per card; a run of 5 or 6 cards lasts 2.5 to 4 s"
+      },
+      "timing": {
+        "durScale": "multiplies the cut lengths (default cycle 10,14,13,15,12,8 frames)",
+        "beats": "cut times in seconds",
+        "enter": "entry spread, default clamp((prevInk/ink)^0.3, 0.7, 1.27)",
+        "step": "{at, scale} per card",
+        "cadence": "16 | twos | ones",
+        "exitAt": "hard out"
+      },
+      "signature": true,
+      "source_shots": [
+        "s1 shots 1 to 7, film frames 0-78 (0.000-3.292 s): Art, Design, Photography, Editorial, Film, Ecommerce, the Ecommerce step"
+      ],
+      "presets": [
+        "replica-s1-shot1",
+        "replica-s1-shot2",
+        "replica-s1-shot3",
+        "replica-s1-shot4",
+        "replica-s1-shot5",
+        "replica-s1-shot6",
+        "replica-s1-shot7",
+        "replica-s1-cards"
+      ],
+      "uses": [
+        "window.__esSelect (select-handles engine, copied verbatim)"
+      ],
+      "proof": {
+        "replica": {
+          "preset": "replica-s1-shot2",
+          "ssim": 0.992,
+          "ssim_min_frame": 0.991,
+          "flow_rel_epe": 0.077,
+          "moves_within_frame": "1 of 1",
+          "frame_count": "14 of 14",
+          "global_offset": 0,
+          "pass": true,
+          "render": "work/blocks/genre-word-card/replica-2/render.mp4",
+          "report": "work/blocks/genre-word-card/replica-2/cmp/report.md",
+          "also": "replica-s1-cards over frames 0-71: 5 of 5 cuts on frame; every shot passes (0.989-0.997, flow <= 0.149) with colour tags matched to the source; as rendered shot 6 reads 0.971 from compare.py's bt709 decode and shot 5 flow 0.153 (work/blocks/genre-word-card/replica-cards-2)"
+        },
+        "demo": {
+          "render": "work/blocks/genre-word-card/demo/render.mp4",
+          "format": "1080x1920",
+          "verdict": "Reads as the film's genre run in portrait: five new words over stand-in pictures cut on the tightening rhythm, letters snap, handles glide and streak, and the last word steps up with nested handles; light pictures needed a scrim or ink type to stay legible."
+        }
+      },
+      "limits": "Chip colours sampled from the picture must be passed in (render cannot read pixels); chips land and hold instead of creeping between cuts; the film's letterpress speckle is matched only as a mean fill tone in the preset.",
+      "name": "genre-word-card"
     },
-    "demo": {
-     "render": "work/blocks/tile-scatter/demo/render.mp4",
-     "format": "1080x1920",
-     "verdict": "Reads in the film's hand at portrait: seven stand-in tiles (three re-cropped by focal and zoom) and five new words scatter, walk without colliding and gather into a three-row line clear of the tiles."
-    }
-   },
-   "limits": "General mode does not swap pictures inside resting tiles and walks words on shortest paths rather than the film's deliberate detours; the tile-free band is measured from the frame centre, so lineY away from 0.5 can put a tile under the line.",
-   "name": "tile-scatter"
-  },
-  "endcard-typeon": {
-   "what": "End card: a sentence types on word by word inside violet pixel-bar handles that open past the line and pull in to corner chips; the line cuts to diagonal pixel-step brackets around a mark slot, the mark grows while the brackets shrink, blink faint and go; the lockup cuts in sliding left on an exponential ease and the tagline drops in on one frame.",
-   "slots": {
-    "mark": "inline SVG (currentColor) or image {src, fit, focal, aspect}",
-    "wordmark": "artwork {src, fit, focal, aspect, h, cap} or text {text, size, tracking}, optional",
-    "paper": "image {src, fit, focal}, default --color-paper"
-   },
-   "text_params": {
-    "sentence": "any words, EditorialSelect Serif, sized to 0.766 of frame width and fitted",
-    "tagline": "string or false, 0.63 of body size",
-    "size": "body px",
-    "tracking": "em, default -0.0076",
-    "font": "canvas family, default \"ES Serif\"",
-    "cx": "fraction",
-    "cy": "fraction"
-   },
-   "timing": {
-    "wordTimes": "s per word, beat-snappable",
-    "wordGap": "default 0.073 s",
-    "collapseAt": "default last word + 0.875 s",
-    "lockupAt": "default collapse + 0.583 s",
-    "taglineAt": "default collapse + 1.75 s",
-    "scale": "duration scale",
-    "cadence": "16 (default), twos, ones",
-    "abs0": "cadence phase",
-    "exitAt": "s"
-   },
-   "duration_range_s": [
-    2.0,
-    6.0
-   ],
-   "signature": true,
-   "source_shots": [
-    "s8: film frames 993-1135 (41.375-47.381 s), shot 42 end card"
-   ],
-   "presets": {
-    "replica-s8-endcard": "measured per-frame keys of s8 at 1920x1080; replica SSIM 0.992, flow rel 0.037 (pass)"
-   },
-   "colours": [
-    "--color-violet",
-    "--color-ink-soft",
-    "--color-paper"
-   ],
-   "file": "library/endcard-typeon.html",
-   "doc": "library/endcard-typeon.md"
-  },
-  "camera-rig": {
-   "name": "camera-rig",
-   "file": "library/camera-rig.html",
-   "doc": "library/camera-rig.md",
-   "does": "The film's camera on any image slot or image sequence: push, punch on a cut, pull-back, steady pull, settle, drift and tilt as measured presets, scale in log space, on the film's cadences (16 fps on stills, ones on footage); exact per-frame keys or homographies for replica shots. Other blocks carry the same engine (window.__esCamera) for their own moves.",
-   "signature": false,
-   "slots": {
-    "slot": "image slot: src, fit, focal [x, y], zoom, or frames [src...] with fps for a sequence; no src draws a labelled placeholder",
-    "swaps": "[{ frame | t, src }] picture changes inside the shot"
-   },
-   "text": {},
-   "params": {
-    "preset": "push | punch | push-soft | push-hard | pull-back | pull-steady | pull-settle | drift | tilt | hold | replica-s7-A",
-    "cam": "one move or a list: at, dur or frames, scale, from, to, dx, dy, r, origin, ease, cadence, phase, keys, mats",
-    "box": "[x, y, w, h] frame px (default full frame)",
-    "ground": "token name or CSS behind the picture",
-    "keepCover": "default true: a pull starts far enough in that the picture always covers the box",
-    "durationScale": "multiplies every move",
-    "beats": "moves without at start on beats[i]",
-    "exitAt": "s after start"
-   },
-   "timing": {
-    "fps": 24,
-    "cadence": "16 fps for push and punch, ones for pulls, drift and tilt (overridable)",
-    "duration_s": [
-     0,
-     2.5
-    ],
-    "measured": {
-     "push": "x1.100 / 12 f",
-     "punch": "x1.097 / 1 f",
-     "pull-back": "x0.407 / 35 f",
-     "pull-steady": "-1.99 %/f",
-     "drift": "0.035W, 0.025H / 20 f",
-     "tilt": "-0.06H / 13 f"
-    }
-   },
-   "presets": {
-    "replica-s7-A": "film 828 to 846 frame for frame: per-picture homographies of the clean plate, the print clip at frames 16 to 18; plan supplies the plates, the hair swap at frame 7 and a second camera-rig holding the paper"
-   },
-   "source_shots": [
-    "film 822 to 846 (shots 34 and 35: s6 shot 4, s7 shot A) for push, punch and the replica preset",
-    "film 847 to 992 (s7 shots B to I, tracked board planes) for pull-back and pull-steady",
-    "fingerprint moves 29, 48, 52, 66, 67 for drift, push-hard, push-soft, tilt, pull-settle"
-   ],
-   "shared": "work/blocks/camera-rig/es-camera.src.js, injected by work/blocks/camera-rig/inject.py between BEGIN/END es-camera markers"
-  },
-  "billboard": {
-   "what": "Artwork put up in the world: a logotype (ES Serif word or traced paths), small type lines and rules laid out in a board's flat space and warped onto a plane in a photograph by a homography (matrix3d), with ink colour, glow and edge blur matched to the plate and foreground cut-outs drawn over the type; the picture, the plane and the cut-outs move as one under an es-camera move, by default the film's pull-back.",
-   "file": "library/billboard.html",
-   "doc": "library/billboard.md",
-   "slots": {
-    "slot": "the photograph {src, fit, focal, zoom, size, cutout} or a photo sequence {frames: [...]} played one picture per film frame",
-    "slot.cutout": "the same picture on transparency, drawn over the type (type behind subject)",
-    "fgs": "per-frame cut-outs aligned with the frames (moving occluders)",
-    "panel": "printed ground on the plane: {color} or an image slot {src, focal, light, scrim}"
-   },
-   "text_params": {
-    "word / art.logo": "logotype in ES Serif: text, cap (0.3 of board height), width (0.84), y (0.56), align; or d + box for a path set",
-    "art.lines": "small type blocks {at: below|tl|tr|bl|br|above, text, face: mono|grotesk|humanist|serif, size 0.045, leading, tracking}",
-    "art.rules": "[x, y, w, h] shares of the board",
-    "art.items": "replica item list (path, text with per-glyph xs, rect)",
-    "ink": "token, default type-light (replica: per-frame from the plate)",
-    "glow": "[blur, opacity], default [0.006 W, 0.45]; null for none",
-    "soften": "edge blur, default about 0.6 frame px",
-    "quad / quadSpace": "four corners tl tr br bl in frame px, or in the picture's px with quadSpace image and slot.size"
-   },
-   "timing": {
-    "entrance": "hard cut, no tween",
-    "cam": "es-camera move or list (pull-back, pull-steady, push, push-soft, push-hard, drift, tilt, keys, mats); presets on ones for footage, cadence 16 for the graphic hand on stills",
-    "scale": "stretches every camera move",
-    "beats": "a cam move with at {beat: i} starts on beats[i]",
-    "sequence": "photo sequences and per-frame keys advance one source frame per film frame",
-    "exitAt": "cut out"
-   },
-   "duration_range_s": [
-    0.45,
-    6.0
-   ],
-   "signature": false,
-   "source_shots": [
-    "s7 shots B to I, film frames 847 to 992 (35.292 to 41.375 s)"
-   ],
-   "presets": {
-    "replica-s7-B": "rooftop VELORA, 19 frames; SSIM 0.9865 alone, rel flow 0.032",
-    "replica-s7-C": "wider street, 16 frames; 0.9930 in the B to I run",
-    "replica-s7-D": "Think it on brick, 16 frames; 0.9899 in the run",
-    "replica-s7-E": "bus shelter at night with a car crossing (per-frame cut-outs), 13 frames; SSIM 0.9848 alone, rel flow 0.058",
-    "replica-s7-F": "night poster in a crowd (per-frame cut-outs), 16 frames; 0.9871 in the run",
-    "replica-s7-G": "aerial Own it, 11 frames; 0.9882 in the run",
-    "replica-s7-H": "Own it under the rail bridge, 20 frames; 0.9881 in the run",
-    "replica-s7-I": "the long pull-back on the brownstone, 35 frames; 0.9876 in the run"
-   },
-   "replica_note": "replica builds need --style-dir work/blocks/_style-s67 (s7 small-type faces) and a BT.709 to BT.601 conversion of the render before scoring; the photograph is the shot's own inpainted frames as a photo sequence (real parallax)",
-   "name": "billboard"
-  },
-  "genre-word-card": {
-   "file": "library/genre-word-card.html",
-   "doc": "library/genre-word-card.md",
-   "does": "A run of hard-cut cards: one serif word centred between four selection-handle chips over a full-bleed picture; on each cut the picture and word change together, the letters snap from crowded or spread to their set spacing over six frames, and the handles glide to the new word's box with a segmented streak. Optional step-up nests a second handle set on a bigger word. Steps on the 16 fps cadence.",
-   "slots": [
-    {
-     "name": "cards[].image (images[], or image in a one-shot preset)",
-     "kind": "image",
-     "notes": "{src, fit, focal [x,y], zoom, scrim, label} or {seq: [{f|t, src}]}; full bleed or imageBox [x,y,w,h] shares; crop and focal are code; placeholder when no src"
-    }
-   ],
-   "text": [
-    {
-     "name": "cards[].word (words[])",
-     "face": "ES Serif",
-     "notes": "any length, laid out from glyph metrics; cap 102 px at 1080; wordX/wordY place ink centre and baseline (never x/y); tracking in em; color token (type-light) per card"
-    }
-   ],
-   "duration": {
-    "min": 0.3,
-    "max": 0.9,
-    "default": 0.54,
-    "unit": "per card; a run of 5 or 6 cards lasts 2.5 to 4 s"
-   },
-   "timing": {
-    "durScale": "multiplies the cut lengths (default cycle 10,14,13,15,12,8 frames)",
-    "beats": "cut times in seconds",
-    "enter": "entry spread, default clamp((prevInk/ink)^0.3, 0.7, 1.27)",
-    "step": "{at, scale} per card",
-    "cadence": "16 | twos | ones",
-    "exitAt": "hard out"
-   },
-   "signature": true,
-   "source_shots": [
-    "s1 shots 1 to 7, film frames 0-78 (0.000-3.292 s): Art, Design, Photography, Editorial, Film, Ecommerce, the Ecommerce step"
-   ],
-   "presets": [
-    "replica-s1-shot1",
-    "replica-s1-shot2",
-    "replica-s1-shot3",
-    "replica-s1-shot4",
-    "replica-s1-shot5",
-    "replica-s1-shot6",
-    "replica-s1-shot7",
-    "replica-s1-cards"
-   ],
-   "uses": [
-    "window.__esSelect (select-handles engine, copied verbatim)"
-   ],
-   "proof": {
-    "replica": {
-     "preset": "replica-s1-shot2",
-     "ssim": 0.992,
-     "ssim_min_frame": 0.991,
-     "flow_rel_epe": 0.077,
-     "moves_within_frame": "1 of 1",
-     "frame_count": "14 of 14",
-     "global_offset": 0,
-     "pass": true,
-     "render": "work/blocks/genre-word-card/replica-2/render.mp4",
-     "report": "work/blocks/genre-word-card/replica-2/cmp/report.md",
-     "also": "replica-s1-cards over frames 0-71: 5 of 5 cuts on frame; every shot passes (0.989-0.997, flow <= 0.149) with colour tags matched to the source; as rendered shot 6 reads 0.971 from compare.py's bt709 decode and shot 5 flow 0.153 (work/blocks/genre-word-card/replica-cards-2)"
+    "select-handles": {
+      "file": "library/select-handles.html",
+      "doc": "library/select-handles.md",
+      "does": "The four-chip selection, reusable around any element: chips on a box's corners glide to the next box on the snap ease (from a frame early) as segmented streaks turned along the path, jump to a bigger box while the old set lingers three frames, pop with a landing size, or collapse inward. Every glide is sampled on the 16 fps cadence. The engine is window.__esSelect, shared with any block that draws a selection.",
+      "slots": [],
+      "text": [],
+      "duration": {
+        "min": 0.25,
+        "max": 10,
+        "default": 0.25,
+        "unit": "a glide is 6 frames; a selection holds as long as the plan wants"
+      },
+      "timing": {
+        "keys": "[{t, box|rect+pad, mode pop|glide|jump|collapse, dur, lead, linger, settle, chip, chip_from, color(s)}]",
+        "durScale": "multiplies every time",
+        "beats": "key times when keys give none",
+        "cadence": "16 | twos | ones",
+        "streak": "false or {pieces}",
+        "exitAt": "hard out"
+      },
+      "signature": true,
+      "source_shots": [
+        "s1 shots 1 to 7, film frames 0-78 (chip-rects): glide frames 9-15, streak pieces on frames 10 and 12, nested jump on frame 72"
+      ],
+      "presets": [
+        "replica-s1-shot1",
+        "replica-s1-shot2",
+        "replica-s1-shot3",
+        "replica-s1-shot4",
+        "replica-s1-shot5",
+        "replica-s1-shot6",
+        "replica-s1-shot7",
+        "replica-s1-cards"
+      ],
+      "proof": {
+        "replica": {
+          "preset": "replica-s1-shot3",
+          "ssim": 0.99,
+          "ssim_min_frame": 0.99,
+          "flow_rel_epe": 0.054,
+          "moves_within_frame": "2 of 2",
+          "frame_count": "13 of 13",
+          "global_offset": 0,
+          "pass": true,
+          "render": "work/blocks/select-handles/replica-2/render.mp4",
+          "report": "work/blocks/select-handles/replica-2/cmp/report.md",
+          "note": "picture and word from genre-word-card with handles off; every handle pixel is this block's"
+        },
+        "demo": {
+          "render": "work/blocks/select-handles/demo/render.mp4",
+          "format": "1080x1080",
+          "verdict": "Violet handles select a picture, streak to the word under it, nest onto the word as it steps up, glide back and collapse as four streaks pointing at the centre; reads as the film's selection."
+        }
+      },
+      "limits": "Chips land and hold (the film's keep creeping); sampled chip colours must be passed in; the two-piece streak approximates the measured per-frame streak shapes.",
+      "name": "select-handles"
     },
-    "demo": {
-     "render": "work/blocks/genre-word-card/demo/render.mp4",
-     "format": "1080x1920",
-     "verdict": "Reads as the film's genre run in portrait: five new words over stand-in pictures cut on the tightening rhythm, letters snap, handles glide and streak, and the last word steps up with nested handles; light pictures needed a scrim or ink type to stay legible."
-    }
-   },
-   "limits": "Chip colours sampled from the picture must be passed in (render cannot read pixels); chips land and hold instead of creeping between cuts; the film's letterpress speckle is matched only as a mean fill tone in the preset.",
-   "name": "genre-word-card"
-  },
-  "select-handles": {
-   "file": "library/select-handles.html",
-   "doc": "library/select-handles.md",
-   "does": "The four-chip selection, reusable around any element: chips on a box's corners glide to the next box on the snap ease (from a frame early) as segmented streaks turned along the path, jump to a bigger box while the old set lingers three frames, pop with a landing size, or collapse inward. Every glide is sampled on the 16 fps cadence. The engine is window.__esSelect, shared with any block that draws a selection.",
-   "slots": [],
-   "text": [],
-   "duration": {
-    "min": 0.25,
-    "max": 10,
-    "default": 0.25,
-    "unit": "a glide is 6 frames; a selection holds as long as the plan wants"
-   },
-   "timing": {
-    "keys": "[{t, box|rect+pad, mode pop|glide|jump|collapse, dur, lead, linger, settle, chip, chip_from, color(s)}]",
-    "durScale": "multiplies every time",
-    "beats": "key times when keys give none",
-    "cadence": "16 | twos | ones",
-    "streak": "false or {pieces}",
-    "exitAt": "hard out"
-   },
-   "signature": true,
-   "source_shots": [
-    "s1 shots 1 to 7, film frames 0-78 (chip-rects): glide frames 9-15, streak pieces on frames 10 and 12, nested jump on frame 72"
-   ],
-   "presets": [
-    "replica-s1-shot1",
-    "replica-s1-shot2",
-    "replica-s1-shot3",
-    "replica-s1-shot4",
-    "replica-s1-shot5",
-    "replica-s1-shot6",
-    "replica-s1-shot7",
-    "replica-s1-cards"
-   ],
-   "proof": {
-    "replica": {
-     "preset": "replica-s1-shot3",
-     "ssim": 0.99,
-     "ssim_min_frame": 0.99,
-     "flow_rel_epe": 0.054,
-     "moves_within_frame": "2 of 2",
-     "frame_count": "13 of 13",
-     "global_offset": 0,
-     "pass": true,
-     "render": "work/blocks/select-handles/replica-2/render.mp4",
-     "report": "work/blocks/select-handles/replica-2/cmp/report.md",
-     "note": "picture and word from genre-word-card with handles off; every handle pixel is this block's"
+    "type-fill-echo": {
+      "name": "type-fill-echo",
+      "file": "library/type-fill-echo.html",
+      "doc": "library/type-fill-echo.md",
+      "what": "Dark serif line glides in from the right, settles centred, creeps, punches up, fills its letters with a frame-fixed picture, then image-filled echo rows at 1.66x land above and below, cropped by the frame.",
+      "slots": {
+        "paper": "background behind the line {src|frames|color}, default --color-paper",
+        "fill": "picture seen only inside the letters {src, fit, focal}, fixed to the frame"
+      },
+      "text": {
+        "text": "any length, ES Serif, centred on its ink from font metrics",
+        "cap": "cap height share of frame height, 0.171",
+        "baseline": "0.594",
+        "maxWidth": "ink share of width at the punch, 0.9",
+        "ink": "--color-ink-grey"
+      },
+      "params": {
+        "echoes": "maximum rows, 2",
+        "echoScale": 1.66,
+        "glide": "travel share of width, 0.19",
+        "speed": "duration scale",
+        "beats": "[punch, creep] seconds from t0",
+        "cadence": "16 | twos | none",
+        "exitAt": "seconds"
+      },
+      "duration": {
+        "min": 1.3,
+        "max": 3.4,
+        "default": 2.08
+      },
+      "signature": true,
+      "source_shots": [
+        "s5 shot 27, frames 637-686 (26.542-28.625 s)"
+      ],
+      "presets": [
+        "replica-s5-shot27"
+      ],
+      "replica": {
+        "range": [
+          637,
+          686
+        ],
+        "ssim": 0.9854,
+        "rel_epe": 0.115,
+        "pass": true,
+        "report": "work/blocks/type-fill-echo/replica/cmp-3/report.md"
+      },
+      "demo": "work/blocks/type-fill-echo/demo/demo.mp4 (1080x1350, 'Ship it now', 3 echoes max, stand-in fill)"
     },
-    "demo": {
-     "render": "work/blocks/select-handles/demo/render.mp4",
-     "format": "1080x1080",
-     "verdict": "Violet handles select a picture, streak to the word under it, nest onto the word as it steps up, glide back and collapse as four streaks pointing at the centre; reads as the film's selection."
+    "icon-tile": {
+      "what": "A violet tile carrying a mark slot arrives on paper with a slow push: notches, mark faint then white then black, a one-frame step to twice the size, four handle chips arriving per corner, gliding out, pressed black and pulled in, out again; lavender step; carried off by the accelerating camera pan.",
+      "file": "library/icon-tile.html",
+      "doc": "library/icon-tile.md",
+      "slots": {
+        "mark": "inline SVG in currentColor or image {src, fit, scale, x, y}; looks faint, white, black; placeholder lobes when empty"
+      },
+      "text_params": {},
+      "params": {
+        "size": "final side px, default 0.3556 H",
+        "cx": "px",
+        "cy": "px",
+        "colors": "tile, fade, chip, chip_fade, chip_press, notch, notch_pale, ink, white (palette names)",
+        "scale": "duration scale",
+        "keys": "white, black, step, chips, press, release, lavender, pan (s from t0, beat-snappable)",
+        "beats": "drive step, chips, press, pan when keys are absent",
+        "pan": "{dx, dy, frames, K} or false; share with giant-type-pass",
+        "chips": "false hides",
+        "cadence": "16fps | twos | ones",
+        "phase": "16 fps grid phase",
+        "duration": "s",
+        "exitAt": "s"
+      },
+      "duration_range_s": [
+        1.3,
+        3.5
+      ],
+      "signature": true,
+      "source_shots": [
+        "s2 shot app tile, source frames 180-218 (7.500-9.125 s)",
+        "s3 shot 1 rush, source frames 219-243 (9.125-10.167 s)"
+      ],
+      "presets": {
+        "replica-s2-tile": "64 frames from source frame 180; alone over 180-215 SSIM 0.9944, rel flow 0.085; composed over 180-243 SSIM 0.9888, rel flow 0.140 (pass)"
+      },
+      "pairs_with": [
+        "giant-type-pass (same pan)"
+      ],
+      "proof": {
+        "replica": "work/blocks/icon-tile/cmp-r2/report.md",
+        "composed": "work/blocks/tile-rush/cmp-r4/report.md",
+        "demo": "work/blocks/icon-tile/render-d2.mp4 (1080x1920, stand-in mark, orchid, scale 1.25, twos, beats, vertical pan)"
+      }
+    },
+    "giant-type-pass": {
+      "what": "A giant serif line rushes past: the first word rises from below on an exponential ease-out under the accelerating camera pan, later words rise in behind it, and as a picture blooms in behind the type the letters turn black to white along a soft 20 degree edge sweeping left to right.",
+      "file": "library/giant-type-pass.html",
+      "doc": "library/giant-type-pass.md",
+      "slots": {
+        "ground": "image or image sequence {src | frames, fit, x, y, at, fps, blur, bloom {x, y, frames}}; general mode reveals it as a radial bloom"
+      },
+      "text_params": {
+        "text": "any words",
+        "font": "default var(--font-serif) (preset uses ES Line)",
+        "size": "font-size px, default 0.62 H",
+        "x": "line start share of W, 0.747",
+        "baseline": "share of H, 0.722",
+        "rise": "0.674 H",
+        "rise_next": "0.343 H",
+        "colors": "black ink, white type-light"
+      },
+      "params": {
+        "keys": "stagger, stagger_next, white, white_end, pan (s from t0, beat-snappable)",
+        "pan": "{dx, dy, frames, K, at}; dx defaults to max(1.088 W, 0.39 x size x chars); share with icon-tile",
+        "white": "false keeps it black",
+        "white_from/white_to/white_soft/axis_deg": "edge",
+        "scale": "duration scale",
+        "cadence": "16fps | twos | ones",
+        "duration": "s",
+        "exitAt": "s"
+      },
+      "duration_range_s": [
+        0.8,
+        2.0
+      ],
+      "signature": true,
+      "source_shots": [
+        "s2 frames 216-218 (9.000-9.125 s)",
+        "s3 shot 1 rush, source frames 219-243 (9.125-10.167 s)"
+      ],
+      "presets": {
+        "replica-s3-rush": "28 frames from source frame 216, measured origins, glyph x, word rise and 2D whiteness fields; own range SSIM 0.9816, rel flow 0.142; composed over 180-243 SSIM 0.9888, rel flow 0.140 (pass)"
+      },
+      "pairs_with": [
+        "icon-tile (same pan)",
+        "chromatic-title (the cut out of the pass lands on its first field)"
+      ],
+      "proof": {
+        "replica": "work/blocks/tile-rush/cmp-r4-216/report.md",
+        "composed": "work/blocks/tile-rush/cmp-r4/report.md",
+        "demo": "work/blocks/giant-type-pass/render-d2.mp4 (1080x1350, 'Every frame', blurred stand-in portrait ground)"
+      }
+    },
+    "giant-word-rise": {
+      "name": "giant-word-rise",
+      "file": "library/giant-word-rise.html",
+      "doc": "library/giant-word-rise.md",
+      "what": "A giant black serif word rises from below the frame over a photograph, cropped and drifting left, then the photograph is printed into a card on paper in two single steps while the word stays full size.",
+      "slots": {
+        "image": "the photograph (src or frames, fit, focal, box)"
+      },
+      "text": {
+        "text": "the word in ES Serif, any length, cropped by the frame",
+        "cap": "cap height, share of the shorter side (0.628)",
+        "left": "first ink edge, share of width (0.134)",
+        "middle": "where the word's middle settles (0.59 of height)",
+        "weight": "ink stroke in em (0.0061)",
+        "glyph": "optional traced outline instead of the text"
+      },
+      "duration": {
+        "min": 0.4,
+        "max": 1.2,
+        "default": 0.5
+      },
+      "signature": true,
+      "source_shots": [
+        "s5 shot 25, film frames 550-562"
+      ],
+      "presets": [
+        "replica-s5-shot25"
+      ],
+      "layers": "layer plate | word lets card-wipe sit between photograph and word",
+      "replica": {
+        "range": [
+          550,
+          561
+        ],
+        "ssim": 0.9882,
+        "rel_epe": 0.041,
+        "pass": true,
+        "note": "with the traced glyph assets/glyphs/wri-s5-561.json; ES Serif alone scores SSIM 0.9636 and fails"
+      }
+    },
+    "card-wipe": {
+      "name": "card-wipe",
+      "file": "library/card-wipe.html",
+      "doc": "library/card-wipe.md",
+      "what": "The next photograph opens as a narrow window around the subject, widens in single steps, the current picture is printed into a card on paper, and the next jumps in front as a big card and grows to fill the frame.",
+      "slots": {
+        "to": "the next picture (required)",
+        "from": "the current picture (optional; omit when another block owns it)"
+      },
+      "text": {},
+      "params": {
+        "focus": "where the window opens [x, y] (0.5, 0.5)",
+        "speed": "duration scale",
+        "beats": "[jump]",
+        "paper": "margin colour token"
+      },
+      "duration": {
+        "min": 0.3,
+        "max": 0.9,
+        "default": 0.375
+      },
+      "signature": true,
+      "source_shots": [
+        "s5 shots 25-26, film frames 556-565"
+      ],
+      "presets": [
+        "replica-s5-shot26"
+      ],
+      "replica": {
+        "range": [
+          556,
+          565
+        ],
+        "ssim": [
+          0.9827,
+          0.9842
+        ],
+        "rel_epe": [
+          0.047,
+          0.106
+        ],
+        "pass": true,
+        "note": "composed with giant-word-rise (plate and word) and a harness glyph for the next shot's line on 562-565"
+      }
+    },
+    "crop-select": {
+      "what": "A photograph is selected as a small tile on paper and its crop grows in steps, each a wider view of the same picture, while violet handles streak to the new corners and the word under the tile steps up and opens its tracking; then a hard cut to the picture full bleed, paper bars closing, a push, an exclamation over the photograph and the pointer sliding in.",
+      "file": "library/crop-select.html",
+      "doc": "library/crop-select.md",
+      "slots": {
+        "photo": "image slot {src, w, h natural px, focal [x,y] for the first tile, focalB for the full-bleed plate, zoomB, cutout for type behind the subject after the cut}",
+        "art": "artwork riding the photo {src (svg or png), rect [x,y,w,h] in photo px or shares, on (s)}",
+        "paper": "ground {src} or a colour token (default --color-paper)"
+      },
+      "text_params": {
+        "word.text": "the growing word, ES Serif measured from glyph metrics (default Bigger)",
+        "word.cap": "102 px at 1080, steps x1.5 on the first widen",
+        "word.tracking": "0.19 em, opens on the last step",
+        "word2.text": "the exclamation after the cut (default Oops...), cap 254 px at 1080 or fitted to 0.86 W, colour type-light",
+        "word2.y": "share of height for its cap centre (0.5)"
+      },
+      "timing": {
+        "scale": "duration multiplier on every frame count",
+        "settle": "tile lands frame 0, settles over 8 frames (bezier 0.444 0.554 0 0.887)",
+        "steps": "default two: frames 9-26 (0.802 0.013 0 1.063) and 29-44 (0.909 -0.045 0 0.991), each a creep then a two-picture jump; any number via steps[]",
+        "cut": "frame 57 (last step end + 13 + hold)",
+        "after_cut": "bars 0.044 H close over 5 frames, es-camera push x1.10 over 12 frames, pointer 9 frames on 0.465 0.352 0 0.744, tail 11 frames",
+        "cadence": "16 fps pictures, local frames 1, 4, 7 repeat (phase 1); twos or ones"
+      },
+      "duration_range_s": [
+        2.4,
+        4.5
+      ],
+      "signature": true,
+      "source_shots": [
+        "s6 shots 3 and 4, film frames 760-827 (31.667-34.500 s), select-grow and the Oops plate"
+      ],
+      "presets": {
+        "replica-s6-3-4": "measured per-frame keys of film 760-827: crop box and photo scale and offset per unique frame, word glyph by glyph in Source Serif 4 (ES Source Serif, from work/blocks/_style-s67), handles as swept chips refitted from the traced shapes, pointer pose; slot fills in work/blocks/crop-select/calibration-only-plates; replica score shot 3 SSIM 0.9846 rel flow 0.121, shot 4 SSIM 0.9822 rel flow 0.100, cut on frame, 4 of 4 moves within a frame"
+      },
+      "needs": [
+        "es-shared (work/blocks/shared)",
+        "es-camera (work/blocks/camera-rig) for the general-mode push"
+      ],
+      "name": "crop-select"
     }
-   },
-   "limits": "Chips land and hold (the film's keep creeping); sampled chip colours must be passed in; the two-piece streak approximates the measured per-frame streak shapes.",
-   "name": "select-handles"
   },
-  "type-fill-echo": {
-   "name": "type-fill-echo",
-   "file": "library/type-fill-echo.html",
-   "doc": "library/type-fill-echo.md",
-   "what": "Dark serif line glides in from the right, settles centred, creeps, punches up, fills its letters with a frame-fixed picture, then image-filled echo rows at 1.66x land above and below, cropped by the frame.",
-   "slots": {
-    "paper": "background behind the line {src|frames|color}, default --color-paper",
-    "fill": "picture seen only inside the letters {src, fit, focal}, fixed to the frame"
-   },
-   "text": {
-    "text": "any length, ES Serif, centred on its ink from font metrics",
-    "cap": "cap height share of frame height, 0.171",
-    "baseline": "0.594",
-    "maxWidth": "ink share of width at the punch, 0.9",
-    "ink": "--color-ink-grey"
-   },
-   "params": {
-    "echoes": "maximum rows, 2",
-    "echoScale": 1.66,
-    "glide": "travel share of width, 0.19",
-    "speed": "duration scale",
-    "beats": "[punch, creep] seconds from t0",
-    "cadence": "16 | twos | none",
-    "exitAt": "seconds"
-   },
-   "duration": {
-    "min": 1.3,
-    "max": 3.4,
-    "default": 2.08
-   },
-   "signature": true,
-   "source_shots": [
-    "s5 shot 27, frames 637-686 (26.542-28.625 s)"
-   ],
-   "presets": [
-    "replica-s5-shot27"
-   ],
-   "replica": {
-    "range": [
-     637,
-     686
-    ],
-    "ssim": 0.9854,
-    "rel_epe": 0.115,
-    "pass": true,
-    "report": "work/blocks/type-fill-echo/replica/cmp-3/report.md"
-   },
-   "demo": "work/blocks/type-fill-echo/demo/demo.mp4 (1080x1350, 'Ship it now', 3 echoes max, stand-in fill)"
-  },
-  "icon-tile": {
-   "what": "A violet tile carrying a mark slot arrives on paper with a slow push: notches, mark faint then white then black, a one-frame step to twice the size, four handle chips arriving per corner, gliding out, pressed black and pulled in, out again; lavender step; carried off by the accelerating camera pan.",
-   "file": "library/icon-tile.html",
-   "doc": "library/icon-tile.md",
-   "slots": {
-    "mark": "inline SVG in currentColor or image {src, fit, scale, x, y}; looks faint, white, black; placeholder lobes when empty"
-   },
-   "text_params": {},
-   "params": {
-    "size": "final side px, default 0.3556 H",
-    "cx": "px",
-    "cy": "px",
-    "colors": "tile, fade, chip, chip_fade, chip_press, notch, notch_pale, ink, white (palette names)",
-    "scale": "duration scale",
-    "keys": "white, black, step, chips, press, release, lavender, pan (s from t0, beat-snappable)",
-    "beats": "drive step, chips, press, pan when keys are absent",
-    "pan": "{dx, dy, frames, K} or false; share with giant-type-pass",
-    "chips": "false hides",
-    "cadence": "16fps | twos | ones",
-    "phase": "16 fps grid phase",
-    "duration": "s",
-    "exitAt": "s"
-   },
-   "duration_range_s": [
-    1.3,
-    3.5
-   ],
-   "signature": true,
-   "source_shots": [
-    "s2 shot app tile, source frames 180-218 (7.500-9.125 s)",
-    "s3 shot 1 rush, source frames 219-243 (9.125-10.167 s)"
-   ],
-   "presets": {
-    "replica-s2-tile": "64 frames from source frame 180; alone over 180-215 SSIM 0.9944, rel flow 0.085; composed over 180-243 SSIM 0.9888, rel flow 0.140 (pass)"
-   },
-   "pairs_with": [
-    "giant-type-pass (same pan)"
-   ],
-   "proof": {
-    "replica": "work/blocks/icon-tile/cmp-r2/report.md",
-    "composed": "work/blocks/tile-rush/cmp-r4/report.md",
-    "demo": "work/blocks/icon-tile/render-d2.mp4 (1080x1920, stand-in mark, orchid, scale 1.25, twos, beats, vertical pan)"
-   }
-  },
-  "giant-type-pass": {
-   "what": "A giant serif line rushes past: the first word rises from below on an exponential ease-out under the accelerating camera pan, later words rise in behind it, and as a picture blooms in behind the type the letters turn black to white along a soft 20 degree edge sweeping left to right.",
-   "file": "library/giant-type-pass.html",
-   "doc": "library/giant-type-pass.md",
-   "slots": {
-    "ground": "image or image sequence {src | frames, fit, x, y, at, fps, blur, bloom {x, y, frames}}; general mode reveals it as a radial bloom"
-   },
-   "text_params": {
-    "text": "any words",
-    "font": "default var(--font-serif) (preset uses ES Line)",
-    "size": "font-size px, default 0.62 H",
-    "x": "line start share of W, 0.747",
-    "baseline": "share of H, 0.722",
-    "rise": "0.674 H",
-    "rise_next": "0.343 H",
-    "colors": "black ink, white type-light"
-   },
-   "params": {
-    "keys": "stagger, stagger_next, white, white_end, pan (s from t0, beat-snappable)",
-    "pan": "{dx, dy, frames, K, at}; dx defaults to max(1.088 W, 0.39 x size x chars); share with icon-tile",
-    "white": "false keeps it black",
-    "white_from/white_to/white_soft/axis_deg": "edge",
-    "scale": "duration scale",
-    "cadence": "16fps | twos | ones",
-    "duration": "s",
-    "exitAt": "s"
-   },
-   "duration_range_s": [
-    0.8,
-    2.0
-   ],
-   "signature": true,
-   "source_shots": [
-    "s2 frames 216-218 (9.000-9.125 s)",
-    "s3 shot 1 rush, source frames 219-243 (9.125-10.167 s)"
-   ],
-   "presets": {
-    "replica-s3-rush": "28 frames from source frame 216, measured origins, glyph x, word rise and 2D whiteness fields; own range SSIM 0.9816, rel flow 0.142; composed over 180-243 SSIM 0.9888, rel flow 0.140 (pass)"
-   },
-   "pairs_with": [
-    "icon-tile (same pan)",
-    "chromatic-title (the cut out of the pass lands on its first field)"
-   ],
-   "proof": {
-    "replica": "work/blocks/tile-rush/cmp-r4-216/report.md",
-    "composed": "work/blocks/tile-rush/cmp-r4/report.md",
-    "demo": "work/blocks/giant-type-pass/render-d2.mp4 (1080x1350, 'Every frame', blurred stand-in portrait ground)"
-   }
-  }
- },
- "about": "Reusable blocks of the editorial-select hand. Each is library/<name>.html (CONTRACT.md) with library/<name>.md; plan new pieces from this list first and from the grammar second."
+  "about": "Reusable blocks of the editorial-select hand. Each is library/<name>.html (CONTRACT.md) with library/<name>.md; plan new pieces from this list first and from the grammar second."
 }

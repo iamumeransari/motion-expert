@@ -1,0 +1,245 @@
+{
+ "file": "bed-01.wav",
+ "model_id": "music_v2_5",
+ "endpoint": "https://api.elevenlabs.io/v1/music",
+ "song_id": "r36LBOLhZUIons6dPAk1",
+ "request": {
+  "composition_plan": {
+   "chunks": [
+    {
+     "text": "[Instrumental Intro]",
+     "duration_ms": 5500,
+     "positive_styles": [
+      "140 BPM",
+      "in G minor",
+      "electronic",
+      "drum-led",
+      "punchy, tight drums",
+      "busy rhythm",
+      "mid-focused",
+      "modern product launch film score",
+      "instrumental",
+      "clean modern mix",
+      "great production quality",
+      "staccato broadband percussive hits",
+      "one hit every half second",
+      "then sparse high clicky ticks",
+      "no kick drum yet"
+     ],
+     "negative_styles": [
+      "vocals",
+      "singing",
+      "lyrics",
+      "spoken word",
+      "choir",
+      "vocal chops",
+      "fade out"
+     ]
+    },
+    {
+     "text": "[Instrumental Build]",
+     "duration_ms": 7640,
+     "positive_styles": [
+      "140 BPM",
+      "in G minor",
+      "electronic",
+      "drum-led",
+      "punchy, tight drums",
+      "busy rhythm",
+      "driving four-on-the-floor kick",
+      "punchy electronic groove",
+      "short synth stabs"
+     ],
+     "negative_styles": [
+      "vocals",
+      "singing",
+      "lyrics",
+      "spoken word",
+      "choir",
+      "vocal chops",
+      "fade out"
+     ]
+    },
+    {
+     "text": "[Instrumental Breakdown]",
+     "duration_ms": 8560,
+     "positive_styles": [
+      "140 BPM",
+      "in G minor",
+      "electronic",
+      "drum-led",
+      "punchy, tight drums",
+      "busy rhythm",
+      "breakdown",
+      "drums drop out completely",
+      "sustained airy synth pads",
+      "calm",
+      "sparse"
+     ],
+     "negative_styles": [
+      "vocals",
+      "singing",
+      "lyrics",
+      "spoken word",
+      "choir",
+      "vocal chops",
+      "fade out"
+     ]
+    },
+    {
+     "text": "[Instrumental Build]",
+     "duration_ms": 6850,
+     "positive_styles": [
+      "140 BPM",
+      "in G minor",
+      "electronic",
+      "drum-led",
+      "punchy, tight drums",
+      "busy rhythm",
+      "sparse dry percussion returns",
+      "bass enters",
+      "building tension",
+      "rising noise swell in the last second"
+     ],
+     "negative_styles": [
+      "vocals",
+      "singing",
+      "lyrics",
+      "spoken word",
+      "choir",
+      "vocal chops",
+      "fade out"
+     ]
+    },
+    {
+     "text": "[Instrumental Drop]",
+     "duration_ms": 13350,
+     "positive_styles": [
+      "140 BPM",
+      "in G minor",
+      "electronic",
+      "drum-led",
+      "punchy, tight drums",
+      "busy rhythm",
+      "full energy drop",
+      "dense driving drums",
+      "all elements in",
+      "punchy kick and snare"
+     ],
+     "negative_styles": [
+      "vocals",
+      "singing",
+      "lyrics",
+      "spoken word",
+      "choir",
+      "vocal chops",
+      "fade out"
+     ]
+    },
+    {
+     "text": "[Instrumental Outro]",
+     "duration_ms": 3750,
+     "positive_styles": [
+      "140 BPM",
+      "in G minor",
+      "electronic",
+      "drum-led",
+      "punchy, tight drums",
+      "busy rhythm",
+      "one short punchy final phrase",
+      "ends on a hard stop",
+      "no fade out",
+      "no reverb tail"
+     ],
+     "negative_styles": [
+      "vocals",
+      "singing",
+      "lyrics",
+      "spoken word",
+      "choir",
+      "vocal chops",
+      "fade out"
+     ]
+    }
+   ]
+  },
+  "model_id": "music_v2_5"
+ },
+ "profile": "work/sound-replica/music.json (music.py measure of the Ideogram 4.5 film)",
+ "arc": ", from the plate's energy and music.json's sections):\n  0 to 5.5     staccato hits under the title cards, thinning to high ticks\n  5.5 to 13.14 four-on-the-floor drive\n  13.14 to 21.7 breakdown, drums out, sustained pads\n  21.7 to 28.55 sparse percussion and bass, swell into the drop\n  28.55 to 41.9 full drop\n  41.9 to 42.55 dead stop (cut in post: a 0.65 s gap is under the 3 s chunk minimum)\n  42.55 to 45.65 end-card phrase, then a hard stop into silence to 47.333",
+ "post": {
+  "dead_stop_s": [
+   41.9,
+   42.55
+  ],
+  "hard_stop_s": 45.65,
+  "edge_ms": 6,
+  "why": "the source drops dead for 0.65 s at 41.9 s and stops hard at 45.65 s; ElevenLabs chunks are at least 3 s, so both edges are cut at the measured times"
+ },
+ "format": {
+  "sample_rate": 48000,
+  "channels": 2,
+  "samples": 2272000,
+  "seconds": 47.333333333333336
+ },
+ "score": {
+  "total": 0.7893719221396438,
+  "parts": {
+   "tempo": 0.9570524136893414,
+   "key": 1.0,
+   "arc": 0.38612364538393057,
+   "timbre": 0.7786043543026996,
+   "density": 0.8038038038038038
+  },
+  "tempo_bpm": 139.8717955736395,
+  "key": "G minor"
+ },
+ "score_before_sculpt": {
+  "total": 0.7976484788990825,
+  "parts": {
+   "tempo": 0.9567653011307907,
+   "key": 1.0,
+   "arc": 0.4840516931153818,
+   "timbre": 0.7557534105466606,
+   "density": 0.7487019730010385
+  },
+  "tempo_bpm": 139.8695687063792,
+  "key": "G minor"
+ },
+ "candidates": [
+  {
+   "i": 1,
+   "total": 0.7893719221396438,
+   "parts": {
+    "tempo": 0.9570524136893414,
+    "key": 1.0,
+    "arc": 0.38612364538393057,
+    "timbre": 0.7786043543026996,
+    "density": 0.8038038038038038
+   }
+  },
+  {
+   "i": 2,
+   "total": 0.6992272163619774,
+   "parts": {
+    "tempo": 0.9591300435885317,
+    "key": 1.0,
+    "arc": 0.4656242419012663,
+    "timbre": 0.3070870532542919,
+    "density": 0.9159159159159159
+   }
+  },
+  {
+   "i": 0,
+   "total": 0.6947240620364782,
+   "parts": {
+    "tempo": 0.9573533953956764,
+    "key": 1.0,
+    "arc": 0.3791603418331888,
+    "timbre": 0.5974145708752205,
+    "density": 0.3233233233233235
+   }
+  }
+ ],
+ "use": "a fully generated bed for new pieces in this style; never the source's music"
+}
