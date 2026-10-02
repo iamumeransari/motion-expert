@@ -46,7 +46,12 @@ export function resolveMedia(value, bases) {
 // props.tweens is skipped because it holds GSAP vars, never files.
 export function propMediaStrings(props, path = [], out = []) {
   if (Array.isArray(props)) {
-    props.forEach((v, i) => propMediaStrings(v, [...path, i], out));
+    props.forEach((v, i) => {
+      // a plain string inside an array (a frame list, say) is media when its extension says so
+      if (typeof v === "string") {
+        if (MEDIA_EXT.test(v.trim()) && !REMOTE.test(v.trim())) out.push({ path: [...path, i], value: v, keyed: false });
+      } else propMediaStrings(v, [...path, i], out);
+    });
   } else if (props && typeof props === "object") {
     for (const [k, v] of Object.entries(props)) {
       if (path.length === 0 && k === "tweens") continue;
