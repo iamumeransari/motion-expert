@@ -1,4 +1,4 @@
-@font-face { font-family: "ES Serif"; src: url("assets/fonts/SourceSerif4-Variable.woff2") format("woff2"); font-weight: 200 900; font-display: block; }
+@font-face { font-family: "ES Serif"; src: url("assets/fonts/EditorialSelect-Serif.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
 @font-face { font-family: "ES Mono"; src: url("assets/fonts/IBMPlexMono-Regular.woff2") format("woff2"); font-weight: 400; font-display: block; }
 @font-face { font-family: "ES Mono Light"; src: url("assets/fonts/IBMPlexMono-Light.woff2") format("woff2"); font-weight: 300; font-display: block; }
 @font-face { font-family: "ES Pixel"; src: url("assets/fonts/GeistPixel-Square.woff2") format("woff2"); font-display: block; }
@@ -30,14 +30,18 @@
   --color-orchid: #CF83B5;
   --color-moss: #475E31;
 
-  /* The serif stands in for Exposure at about -20 on its axis: Source Serif 4
-     at opsz 20 and weight 400 with a 0.02em stroke in its own colour, which
-     spreads the ink the way the negative axis does (sources.md, Gaps). Cap
-     height is 0.69 of the font size with the stroke, so a cap height of C px
-     is a font-size of C / 0.69. */
+  /* The film's serif is 205TF Exposure at about -20 on its exposure axis
+     (sources.md, Gaps). ES Serif is EditorialSelect Serif, built for this
+     style: 36 glyphs traced from the film at that weight and the rest filled
+     from Source Serif 4, so it needs no stroke and no axis settings. Cap
+     height is exactly 690 of 1000 units, so a cap height of C px is a
+     font-size of C / 0.69. Two lines in the film are lighter, near Exposure 0
+     ("Big" and "Try it now at ideogram.ai"): about 9 units thinner per edge
+     than this font, which CSS cannot thin, so new work sets everything at
+     the main weight. */
   --font-serif: "ES Serif", Georgia, serif;
-  --serif-opsz: "opsz" 20;
-  --serif-stroke: 0.02em;
+  --serif-opsz: normal;
+  --serif-stroke: 0em;
   --cap-ratio: 0.69;
   --font-mono: "ES Mono", ui-monospace, monospace;
   --font-pixel: "ES Pixel", monospace;
