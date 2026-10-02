@@ -1,0 +1,272 @@
+<style>
+  /* chromatic-title. One serif line that slides in and settles word by word
+     over a run of colour fields cut on a 16 fps picture cadence, then lands
+     on a paper card where every word takes its own gradient while a slow
+     exponential push carries the frame in.
+     Source: replica section s3, shots 2 to 9 (source frames 244 to 339,
+     10.167 to 14.167 s), strip assets/frames/chromatic-cycle-dense.jpg and
+     gradient-footage-dense.jpg. Measured at 1920 x 1080 (work/replica/s3,
+     fits in work/blocks/chromatic-title/tools/fit.py):
+     cadence: pictures hold on local frames 3k+1 and 3k+2 (16 fps in 24);
+     slide: the line enters 147.2 px (0.0767 W) right of rest and glides home
+     on g(u) = 0.80 (e^(-17.04u) - e^-17.04) / (1 - e^-17.04) + 0.20 (1 - u)
+     over 48.3 frames (rms 0.98 px), so a fast exponential settle rides a
+     slow linear drift that stops dead;
+     settle: each word rises from below on its own exponential, amplitude and
+     rate set by the word's centre along the line (0, 0.017, 0.143, 0.569,
+     0.937 of the font size at centres 0.05, 0.23, 0.46, 0.67, 0.88; rates
+     0.41, 0.41, 0.196, 0.145, 0.152 per frame), so the right end trails;
+     card: hard cut to paper, the words in per-word horizontal gradients, scale
+     s(m) = 1.0162 - 0.0405 e^(-0.1336 m) about (962.7, 544.2), the frame
+     centre, rms 0.0005;
+     fields: hard cuts on whole frames, one two-frame dissolve where the
+     incoming field sits at 0.4 over the frozen outgoing picture.
+     Preset replica-s3-line replays the measured per-frame keys in the traced
+     "ES Line" face; general mode rebuilds every curve above from props. */
+  .el-chromatic-title { position: absolute; left: 0; top: 0; overflow: hidden; background: var(--color-paper); }
+  .el-chromatic-title .ct-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .el-chromatic-title .ct-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; opacity: 0; object-fit: cover; }
+  .el-chromatic-title .ct-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+  .el-chromatic-title .ct-letters { font-kerning: none; white-space: pre; }
+  .el-chromatic-title .ct-line { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .el-chromatic-title .ct-row { position: absolute; left: 0; width: 100%; display: flex; justify-content: center; white-space: nowrap; line-height: 1; }
+  .el-chromatic-title .ct-w { display: inline-block; white-space: nowrap; font-kerning: normal; }
+</style>
+<script>
+  window.__elements = window.__elements || {};
+  window.__elements["chromatic-title"] = (function () {
+    var NS = "http://www.w3.org/2000/svg";
+    var PRESETS = { "replica-s3-line": {"frames":96,"size":125.73,"white":"#F0ECF0","font":"\"ES Line\", serif","words":[{"t":"The","xs":[-4.125,81.5,158.0]},{"t":"most","xs":[243.25,359.25,433.375,485.75]},{"t":"precise","xs":[543.75,620.75,673.477,738.0,798.75,836.172,890.014]},{"t":"edit","xs":[979.717,1044.0,1117.264,1150.272]},{"t":"model","xs":[1223.517,1339.546,1412.493,1488.481,1549.5]}],"grads":[{"x1":-6.0,"x2":212.0,"stops":[[0.0,"#a0a7d0"],[0.083,"#8e94d2"],[0.167,"#8b92d2"],[0.25,"#8f93d0"],[0.333,"#8b91d1"],[0.417,"#9394cb"],[0.5,"#8d92d0"],[0.583,"#808ad0"],[0.667,"#818cd2"],[0.75,"#7a8dc7"],[0.833,"#667ab6"],[0.917,"#666fa2"],[1.0,"#9f9ab6"]]},{"x1":246.0,"x2":526.0,"stops":[[0.0,"#b891b4"],[0.083,"#d0659a"],[0.167,"#d6628f"],[0.25,"#d76992"],[0.333,"#de5d85"],[0.417,"#db6f90"],[0.5,"#dd67a8"],[0.583,"#de65a1"],[0.667,"#d976b4"],[0.75,"#da6dc2"],[0.833,"#d27fc0"],[0.917,"#d076d2"],[1.0,"#b094cc"]]},{"x1":555.0,"x2":953.0,"stops":[[0.0,"#a7a5cb"],[0.083,"#999bd7"],[0.167,"#8a9bd4"],[0.25,"#6ba3d4"],[0.333,"#499bcd"],[0.417,"#2894bf"],[0.5,"#1c88a9"],[0.583,"#20777d"],[0.667,"#1b634f"],[0.75,"#20604f"],[0.833,"#40797f"],[0.917,"#267692"],[1.0,"#629ec0"]]},{"x1":983.0,"x2":1191.0,"stops":[[0.0,"#72aad0"],[0.083,"#3e93cd"],[0.167,"#4f9ed1"],[0.25,"#68a2cf"],[0.333,"#71abd2"],[0.417,"#79b4d0"],[0.5,"#89abc9"],[0.583,"#95b2cc"],[0.667,"#abb4c7"],[0.75,"#adb3cb"],[0.833,"#b6a2b5"],[0.917,"#cb8caf"],[1.0,"#ca98b2"]]},{"x1":1225.0,"x2":1579.0,"stops":[[0.0,"#d2a5b5"],[0.083,"#dd859e"],[0.167,"#df7294"],[0.25,"#de7194"],[0.333,"#dd7997"],[0.417,"#d779a8"],[0.5,"#d87b98"],[0.583,"#de7fb9"],[0.667,"#e281b4"],[0.75,"#df93c9"],[0.833,"#d690cf"],[0.917,"#c698c8"],[1.0,"#b6a8cc"]]}],"keys":[[0,302.218,587.6,1,0.008,2.025,16.909,69.178,119.5],[0,302.218,587.6,1,0.008,2.025,16.909,69.178,119.5],[0,245.147,587.6,1,0.058,1.107,13.298,55.762,88.146],[0,218.864,587.6,1,0.047,0.55,10.355,45.248,69.318],[0,218.864,587.6,1,0.047,0.55,10.355,45.248,69.318],[0,203.786,587.6,1,0.013,0.156,7.839,36.932,55.841],[0,194.295,587.6,1,0.014,0.059,5.753,30.16,45.36],[0,194.295,587.6,1,0.014,0.059,5.753,30.16,45.36],[0,188.041,587.6,1,0.008,0.041,4.018,24.522,37.013],[0,183.746,587.6,1,-0.001,0.03,2.684,19.683,30.2],[0,183.746,587.6,1,-0.001,0.03,2.684,19.683,30.2],[0,180.687,587.6,1,-0.001,0.04,1.648,15.677,24.474],[0,178.49,587.6,1,-0.037,0.082,0.828,12.224,19.742],[0,178.49,587.6,1,-0.037,0.082,0.828,12.224,19.742],[0,176.894,587.6,1,0.009,0.036,0.273,9.47,15.71],[0,175.604,587.6,1,0.01,0.062,0.016,7.076,12.28],[0,175.604,587.6,1,0.01,0.062,0.016,7.076,12.28],[0,174.546,587.6,1,0.052,0.002,-0.053,5.127,9.476],[0,173.616,587.6,1,0.057,0.011,-0.039,3.605,7.073],[0,173.616,587.6,1,0.057,0.011,-0.039,3.605,7.073],[0,172.67,587.6,1,0.047,0.021,-0.042,2.295,5.122],[0,171.758,587.6,1,0.03,0.017,-0.089,1.297,3.646],[0,171.758,587.6,1,0.03,0.017,-0.089,1.297,3.646],[0,170.841,587.6,1,-0.011,0.007,-0.092,0.683,3.277],[0,170.017,587.6,1,0.028,0.059,-0.103,0.192,2.908],[0,170.017,587.6,1,0.028,0.059,-0.103,0.192,2.908],[0,169.026,587.6,1,0.026,0.039,-0.089,0.023,2.17],[0,168.109,587.6,1,-0.005,0.026,-0.094,-0.078,1.8],[0,168.109,587.6,1,-0.005,0.026,-0.094,-0.078,1.8],[0,167.229,587.6,1,-0.004,0.026,-0.09,-0.021,1.062],[0,166.332,587.6,1,0.012,0.03,-0.093,-0.016,0.693],[0,166.332,587.6,1,0.012,0.03,-0.093,-0.016,0.693],[0,165.378,587.6,1,0.027,0.04,-0.073,-0.06,-0.045],[0,164.528,587.6,1,0.048,-0.015,-0.056,-0.016,-0.049],[0,164.528,587.6,1,0.048,-0.015,-0.056,-0.016,-0.049],[0,163.559,587.6,1,0.036,0.042,-0.057,-0.021,-0.037],[0,162.64,587.6,1,0.035,0.025,-0.073,-0.041,0.012],[0,162.64,587.6,1,0.035,0.025,-0.073,-0.041,0.012],[0,161.756,587.6,1,0.031,-0.01,-0.077,-0.062,0.023],[0,160.856,587.6,1,0.033,-0.019,-0.089,-0.042,0.005],[0,160.856,587.6,1,0.033,-0.019,-0.089,-0.042,0.005],[0,159.897,587.6,1,0.033,-0.029,-0.073,-0.044,-0.004],[0,159.024,587.6,1,0.052,0.026,-0.073,-0.066,-0.012],[0,159.024,587.6,1,0.052,0.026,-0.073,-0.066,-0.012],[0,158.083,587.6,1,0.01,0.033,-0.093,-0.071,-0.049],[0,157.168,587.6,1,0.061,0.051,-0.069,-0.056,-0.047],[0,157.168,587.6,1,0.061,0.051,-0.069,-0.056,-0.047],[0,156.258,587.6,1,0.048,0.036,-0.064,-0.046,-0.037],[0,155.314,587.6,1,0.056,0.046,-0.075,-0.072,-0.016],[0,155.314,587.6,1,0.056,0.046,-0.075,-0.072,-0.016],[0,155.34,587.6,1,0.063,0.033,-0.069,-0.059,-0.034],[0,155.341,587.6,1,0.054,-0.006,-0.107,-0.092,-0.024],[0,155.341,587.6,1,0.054,-0.006,-0.107,-0.092,-0.024],[0,155.324,587.6,1,0.104,0.024,-0.087,-0.087,-0.043],[0,155.32,587.6,1,0.088,0.033,-0.094,-0.088,-0.024],[0,155.32,587.6,1,0.088,0.033,-0.094,-0.088,-0.024],[0,155.315,587.6,1,0.043,0.056,-0.095,-0.08,-0.013],[0,155.328,587.6,1,0.048,0.018,-0.073,-0.06,-0.028],[0,155.328,587.6,1,0.048,0.018,-0.073,-0.06,-0.028],[0,155.334,587.6,1,0.042,0.02,-0.08,-0.05,-0.042],[0,155.321,587.6,1,0.062,0.044,-0.081,-0.068,-0.057],[0,155.321,587.6,1,0.062,0.044,-0.081,-0.068,-0.057],[0,155.33,587.6,1,0.076,0.04,-0.091,-0.058,-0.029],[0,155.333,587.6,1,0.034,0.019,-0.083,-0.048,-0.058],[0,155.333,587.6,1,0.034,0.019,-0.083,-0.048,-0.058],[0,155.323,587.6,1,-0.011,0.05,-0.102,-0.102,-0.08],[0,155.312,587.6,1,0.007,0.052,-0.113,-0.107,-0.067],[0,155.312,587.6,1,0.007,0.052,-0.113,-0.107,-0.067],[1,184.339,586.68,0.975,0,0,0,0,0],[1,178.415,587.004,0.982,0,0,0,0,0],[1,178.415,587.004,0.982,0,0,0,0,0],[1,173.547,587.27,0.988,0,0,0,0,0],[1,169.547,587.488,0.993,0,0,0,0,0],[1,169.547,587.488,0.993,0,0,0,0,0],[1,166.261,587.668,0.997,0,0,0,0,0],[1,163.56,587.815,1.001,0,0,0,0,0],[1,163.56,587.815,1.001,0,0,0,0,0],[1,161.342,587.937,1.004,0,0,0,0,0],[1,159.519,588.036,1.006,0,0,0,0,0],[1,159.519,588.036,1.006,0,0,0,0,0],[1,158.021,588.118,1.008,0,0,0,0,0],[1,156.79,588.185,1.009,0,0,0,0,0],[1,156.79,588.185,1.009,0,0,0,0,0],[1,155.779,588.24,1.01,0,0,0,0,0],[1,154.948,588.286,1.012,0,0,0,0,0],[1,154.948,588.286,1.012,0,0,0,0,0],[1,154.265,588.323,1.012,0,0,0,0,0],[1,153.704,588.354,1.013,0,0,0,0,0],[1,153.704,588.354,1.013,0,0,0,0,0],[1,153.243,588.379,1.014,0,0,0,0,0],[1,152.865,588.4,1.014,0,0,0,0,0],[1,152.865,588.4,1.014,0,0,0,0,0],[1,152.554,588.417,1.015,0,0,0,0,0],[1,152.298,588.431,1.015,0,0,0,0,0],[1,152.298,588.431,1.015,0,0,0,0,0],[1,152.088,588.442,1.015,0,0,0,0,0]],"fields":[{"items":[0,7],"at":0,"rate":"frame"},{"items":[8,16],"at":8,"rate":"frame"},{"items":[17,20],"at":17,"rate":"frame"},{"items":[21,29],"at":21,"rate":"frame"},{"items":[30,33],"at":30,"rate":"frame","dissolve":{"frames":2,"op":[0.4,0.4]}},{"items":[34,65],"at":36,"rate":"frame"}],"card_at":68,"paper":"#EDEDED","cuts":[8,17,21,30,32,36,68]} };
+    /* Fitted curves, measured at 1920 x 1080 (see header). */
+    var FIT = {
+      slide: { dist: 0.07669, frames: 48.34, a: 0.8017, b: 17.04 },
+      settle: { at: [0.05, 0.23, 0.46, 0.67, 0.88], amp: [0, 0.0165, 0.1433, 0.5691, 0.937], rate: [0.41, 0.41, 0.196, 0.145, 0.152] },
+      push: { to: 1.01618, by: 0.04051, k: 0.1336, ox: 0.5014, oy: 0.5039 },
+      size: 125.73, fill: 0.84, y: 0.5039, hold: 28
+    };
+    var PALETTE = ["var(--color-steel-blue)", "var(--color-violet)", "var(--color-orchid)", "var(--color-lavender)"];
+    function svgEl(tag, attrs) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
+    function div(cls) { var d = document.createElement("div"); d.className = cls; return d; }
+    function lerpTab(xs, ys, x) {
+      if (x <= xs[0]) return ys[0];
+      for (var i = 1; i < xs.length; i++) if (x <= xs[i]) { var u = (x - xs[i - 1]) / (xs[i] - xs[i - 1]); return ys[i - 1] + u * (ys[i] - ys[i - 1]); }
+      return ys[ys.length - 1];
+    }
+    function slideG(u) {
+      var a = FIT.slide.a, b = FIT.slide.b; u = u < 0 ? 0 : u > 1 ? 1 : u;
+      return a * (Math.exp(-b * u) - Math.exp(-b)) / (1 - Math.exp(-b)) + (1 - a) * (1 - u);
+    }
+    /* An image slot: a url string or { src, fit, focal: [x, y] } (0 to 1). */
+    function slot(it, dflt) {
+      if (typeof it === "string") it = { src: it };
+      it = Object.assign({ fit: "cover", focal: [0.5, 0.5] }, dflt || {}, it || {});
+      return it;
+    }
+    function imgNode(it) {
+      var im = document.createElement("img"); im.className = "ct-img"; im.src = it.src; im.alt = "";
+      im.style.objectFit = it.fit; im.style.objectPosition = (it.focal[0] * 100) + "% " + (it.focal[1] * 100) + "%";
+      return im;
+    }
+    /* Normalise the fields into [{ items: [slot], at (frame), rate, dissolve }]
+       on the 24 fps grid. General props give seconds; the preset gives frames. */
+    function fieldsOf(props, P, sc) {
+      var out = [];
+      if (P) {
+        var imgs = props.images || [];
+        P.fields.forEach(function (f) {
+          out.push({ items: imgs.slice(f.items[0], f.items[1] + 1).map(function (s) { return slot(s); }), at: f.at, rate: f.rate, dissolve: f.dissolve });
+        });
+        return out;
+      }
+      var fs = props.fields || [], beats = props.beats, t = 0;
+      fs.forEach(function (f, j) {
+        var items = (f.frames || (f.src ? [f.src] : [])).map(function (s) { return slot(s, { fit: f.fit, focal: f.focal }); });
+        var at = f.at != null ? f.at : (beats && j > 0 && beats[j - 1] != null ? beats[j - 1] : t);
+        var dz = f.dissolve ? { frames: Math.max(1, Math.round(f.dissolve.dur * sc * 24)), op: f.dissolve.op == null ? 0.4 : f.dissolve.op } : null;
+        out.push({ items: items, at: Math.round(at * 24), rate: f.rate || "picture", dissolve: dz, loop: !!f.loop });
+        t = at + (f.dur == null ? 0.5 : f.dur) * sc;
+      });
+      out.end = Math.round(t * 24);
+      return out;
+    }
+    function lineFont(props) { return props.font || '"ES Serif", Georgia, serif'; }
+    function rowsOf(props) {
+      var txt = props.words == null ? "The most precise edit model" : props.words;
+      if (Array.isArray(txt)) txt = txt.join(" ");
+      return String(txt).split("\n").map(function (r) { return r.trim().split(/\s+/).filter(Boolean); });
+    }
+    /* Font size: props.size (px at the frame's own width), or the largest size
+       that keeps the widest row inside FIT.fill of the width, capped at the
+       source's size scaled to the frame. Measured from glyph metrics; re-run
+       when the face arrives, and only ever writes sizes, never timing. */
+    function measureSize(props, W) {
+      if (props.size) return props.size;
+      var H = (props.frame && props.frame.h) || 1080, cap = FIT.size * Math.max(W / 1920, H / 1080) * (props.size_scale || 1);
+      try {
+        var c = document.createElement("canvas").getContext("2d");
+        c.font = "100px " + lineFont(props);
+        var widest = 0;
+        rowsOf(props).forEach(function (r) { widest = Math.max(widest, c.measureText(r.join(" ")).width / 100); });
+        return widest > 0 ? Math.min(cap, W * (props.fill || FIT.fill) / widest) : cap;
+      } catch (e) { return cap; }
+    }
+    return {
+      /* props: see library/chromatic-title.md. */
+      render: function (props) {
+        var W = (props.frame && props.frame.w) || 1920, H = (props.frame && props.frame.h) || 1080;
+        var P = props.preset ? PRESETS[props.preset] : null;
+        var sc = props.scale || 1;
+        var el = div("el-chromatic-title");
+        el.style.width = W + "px"; el.style.height = H + "px";
+        /* paper / card slot, under everything */
+        var paper = div("ct-layer ct-paper");
+        var card = props.card || {};
+        paper.style.background = card.color || (P ? P.paper : "var(--color-paper)");
+        if (card.src) { var ci = imgNode(slot(card)); ci.style.opacity = 1; paper.appendChild(ci); }
+        el.appendChild(paper);
+        /* the field images, one node per sequence item */
+        var fl = div("ct-layer ct-fields"), F = fieldsOf(props, P, sc);
+        F.forEach(function (f, j) { f.items.forEach(function (it, i) { var im = imgNode(it); im.setAttribute("data-f", j + ":" + i); fl.appendChild(im); }); });
+        el.appendChild(fl);
+        var lineLayer = div("ct-line"); lineLayer.setAttribute("data-layout-ignore", "");
+        if (P) {
+          /* preset: the measured line, per-letter x in the traced face */
+          var k1920 = W / 1920;
+          var svg = svgEl("svg", { "class": "ct-svg", viewBox: "0 0 1920 1080", width: 1920 * k1920, height: 1080 * k1920 });
+          var defs = svgEl("defs", {}); svg.appendChild(defs);
+          var gW = svgEl("g", { "class": "ct-white" }), gC = svgEl("g", { "class": "ct-card" });
+          P.words.forEach(function (w, k) {
+            var tw = svgEl("text", { "class": "ct-letters", x: w.xs.join(" "), y: 0, "font-size": P.size, fill: props.white || P.white, "font-family": P.font });
+            tw.textContent = w.t; gW.appendChild(tw);
+            var g = P.grads[k], gid = "ct-g-" + (props.target || "x") + "-" + k;
+            var gr = svgEl("linearGradient", { id: gid, gradientUnits: "userSpaceOnUse", x1: g.x1, x2: g.x2, y1: 0, y2: 0 });
+            g.stops.forEach(function (st) { gr.appendChild(svgEl("stop", { offset: st[0], "stop-color": st[1] })); });
+            defs.appendChild(gr);
+            var tc = svgEl("text", { "class": "ct-letters", x: w.xs.join(" "), y: 0, "font-size": P.size, fill: "url(#" + gid + ")", "font-family": P.font });
+            tc.textContent = w.t; gC.appendChild(tc);
+          });
+          svg.appendChild(gW); svg.appendChild(gC); lineLayer.appendChild(svg);
+        } else {
+          /* general: the words as live type, laid out by the browser */
+          var size = measureSize(props, W), rows = rowsOf(props), lh = (props.leading || 1.12);
+          var box = div("ct-box"); box.style.position = "absolute"; box.style.left = "0"; box.style.top = "0"; box.style.width = W + "px"; box.style.height = H + "px";
+          var cy = (props.y == null ? FIT.y : props.y) * H, n = rows.length, wi = 0;
+          rows.forEach(function (r, ri) {
+            var row = div("ct-row");
+            row.style.fontFamily = lineFont(props); row.style.fontSize = size + "px";
+            row.style.top = (cy - size * 0.5 + (ri - (n - 1) / 2) * size * lh) + "px";
+            r.forEach(function (w, k) {
+              var s = document.createElement("span"); s.className = "ct-w"; s.textContent = w;
+              s.setAttribute("data-w", wi++); s.setAttribute("data-row", ri);
+              if (k < r.length - 1) s.style.marginRight = "0.25em";
+              row.appendChild(s);
+            });
+            box.appendChild(row);
+          });
+          lineLayer.appendChild(box);
+          if (!props.size && document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(function () {
+              if (el.__sized) return; el.__sized = true;
+              var s2 = measureSize(props, W);
+              var rs = el.querySelectorAll(".ct-row");
+              for (var q = 0; q < rs.length; q++) { rs[q].style.fontSize = s2 + "px"; rs[q].style.top = (cy - s2 * 0.5 + (q - (n - 1) / 2) * s2 * lh) + "px"; }
+            });
+          }
+        }
+        el.appendChild(lineLayer);
+        return el;
+      },
+      animate: function (tl, el, t0, props) {
+        var W = (props.frame && props.frame.w) || 1920, H = (props.frame && props.frame.h) || 1080;
+        var P = props.preset ? PRESETS[props.preset] : null;
+        var sc = props.scale || 1, FR = 1 / 24;
+        var F = fieldsOf(props, P, sc);
+        var imgs = el.querySelectorAll(".ct-fields .ct-img"), byKey = {};
+        for (var q = 0; q < imgs.length; q++) byKey[imgs[q].getAttribute("data-f")] = imgs[q];
+        var card = props.card || {};
+        var cardAt = P ? P.card_at : (card.at != null ? Math.round(card.at * 24) : (props.beats && props.beats[F.length - 1] != null ? Math.round(props.beats[F.length - 1] * 24) : F.end));
+        var N = P ? P.frames : cardAt + Math.round((card.hold != null ? card.hold : FIT.hold / 24) * sc * 24);
+        var phase = props.cadence_phase == null ? 1 : props.cadence_phase;
+        var held = function (f) { return props.cadence === false ? f : (((f + phase) % 3 + 3) % 3 === 2 ? f - 1 : f); };
+        var lineIn = Math.round((props.line_in || 0) * 24), SF = props.slide_dur ? props.slide_dur * 24 / sc : FIT.slide.frames;
+        /* which field items show on frame f, with opacity */
+        function fieldState(f) {
+          var j = -1;
+          for (var i = 0; i < F.length; i++) if (F[i].at <= f) j = i;
+          if (j < 0 || f >= cardAt) return [];
+          var fj = F[j], dz = fj.dissolve, idx = function (fld, from, ff) {
+            if (!fld.items.length) return 0;
+            var d = (fld.rate === "frame" ? ff : held(ff)) - from;
+            if (typeof fld.rate === "number") d = Math.floor(d * fld.rate / 24);
+            return fld.loop ? ((d % fld.items.length) + fld.items.length) % fld.items.length : Math.max(0, Math.min(fld.items.length - 1, d));
+          };
+          if (dz && f < fj.at + dz.frames && j > 0) {
+            var pv = F[j - 1], k = f - fj.at, op = Array.isArray(dz.op) ? dz.op[Math.min(k, dz.op.length - 1)] : (dz.op === "ramp" ? (k + 1) / (dz.frames + 1) : dz.op);
+            return [[j - 1, idx(pv, pv.at, fj.at - 1), 1], [j, 0, op]];
+          }
+          return [[j, idx(fj, dz ? fj.at + dz.frames : fj.at, f), 1]];
+        }
+        var lineEls, wordEls, gW, gC, words = [];
+        if (P) { gW = el.querySelector(".ct-white"); gC = el.querySelector(".ct-card"); }
+        else {
+          wordEls = el.querySelectorAll(".ct-w");
+          var nW = wordEls.length, rowsN = {};
+          for (var w = 0; w < nW; w++) { var ri = wordEls[w].getAttribute("data-row"); (rowsN[ri] = rowsN[ri] || []).push(w); }
+          /* word centre along its row from character counts, so no layout read */
+          Object.keys(rowsN).forEach(function (ri) {
+            var ids = rowsN[ri], lens = ids.map(function (i) { return wordEls[i].textContent.length + 1; }), tot = lens.reduce(function (a, b) { return a + b; }, 0) - 1, acc = 0;
+            ids.forEach(function (i, k) { var c = (acc + (lens[k] - 1) / 2) / tot; acc += lens[k]; words[i] = c; });
+          });
+          var pal = card.palette || PALETTE, grads = card.gradients;
+          for (var g = 0; g < nW; g++) {
+            var stops = grads && grads[g] ? grads[g] : [pal[g % pal.length], pal[(g + 1) % pal.length]];
+            wordEls[g].__grad = "linear-gradient(90deg, " + stops.map(function (s) { return Array.isArray(s) ? s[1] + " " + (s[0] * 100) + "%" : s; }).join(", ") + ")";
+          }
+          lineEls = el.querySelector(".ct-box");
+        }
+        var white = props.white || "var(--color-type-light)";
+        var sz = (function () { var r = el.querySelector(".ct-row"); return r ? parseFloat(r.style.fontSize) : FIT.size; })();
+        var last = -1, lastMode = null;
+        function apply(f) {
+          if (f === last) return; last = f;
+          for (var q = 0; q < imgs.length; q++) imgs[q].style.opacity = 0;
+          fieldState(f).forEach(function (s) { var n = byKey[s[0] + ":" + s[1]]; if (n) n.style.opacity = s[2]; });
+          var exit = props.exitAt != null && f >= Math.round(props.exitAt * 24);
+          if (P) {
+            var K = P.keys[Math.max(0, Math.min(P.keys.length - 1, f))], cardMode = K[0] === 1;
+            gW.style.display = !exit && !cardMode ? "" : "none"; gC.style.display = !exit && cardMode ? "" : "none";
+            var gg = cardMode ? gC : gW, ts = gg.querySelectorAll("text");
+            gg.setAttribute("transform", "translate(" + K[1] + " " + K[2] + ") scale(" + K[3] + ")");
+            for (var k = 0; k < ts.length; k++) ts[k].setAttribute("transform", "translate(0 " + (cardMode ? 0 : K[4 + k]) + ")");
+            el.querySelector(".ct-fields").style.display = cardMode ? "none" : "";
+            return;
+          }
+          var hf = held(f), onCard = f >= cardAt, sz2 = (function () { var r = el.querySelector(".ct-row"); return r ? parseFloat(r.style.fontSize) : sz; })();
+          lineEls.style.display = exit || f < lineIn ? "none" : "";
+          el.querySelector(".ct-fields").style.display = onCard ? "none" : "";
+          var n = (hf - lineIn) / sc, tx = W * (props.slide_dist == null ? FIT.slide.dist : props.slide_dist) * slideG(n / SF), s = 1;
+          if (onCard) { var m = (held(f) - cardAt) / sc; s = FIT.push.to - FIT.push.by * Math.exp(-FIT.push.k * m); tx = 0; }
+          if (props.push === false && onCard) s = 1;
+          lineEls.style.transformOrigin = (FIT.push.ox * 100) + "% " + (FIT.push.oy * 100) + "%";
+          lineEls.style.transform = "translate(" + tx.toFixed(2) + "px, 0px) scale(" + s.toFixed(5) + ")";
+          var mode = onCard ? "c" : "w";
+          for (var k2 = 0; k2 < wordEls.length; k2++) {
+            var we = wordEls[k2], c = words[k2];
+            var dy = onCard ? 0 : sz2 * (props.settle_amp == null ? 1 : props.settle_amp) * lerpTab(FIT.settle.at, FIT.settle.amp, c) * Math.exp(-lerpTab(FIT.settle.at, FIT.settle.rate, c) * Math.max(0, n));
+            we.style.transform = "translate(0px, " + dy.toFixed(2) + "px)";
+            if (mode !== lastMode) {
+              if (onCard) { we.style.color = "transparent"; we.style.backgroundImage = we.__grad; we.style.webkitBackgroundClip = "text"; we.style.backgroundClip = "text"; }
+              else { we.style.color = white; we.style.backgroundImage = "none"; }
+            }
+          }
+          lastMode = mode;
+        }
+        var drv = { f: 0 };
+        apply(0);
+        tl.fromTo(drv, { f: 0 }, { f: N, duration: N * FR, ease: "none", immediateRender: false,
+          modifiers: { f: function (v) { apply(Math.max(0, Math.min(N - 1, Math.floor(parseFloat(v) + 1e-3)))); return v; } } }, t0);
+        return t0 + (P ? N * FR : Math.min(N, lineIn + SF * sc) * FR);
+      }
+    };
+  })();
+</script>

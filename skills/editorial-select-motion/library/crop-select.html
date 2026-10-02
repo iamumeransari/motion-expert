@@ -1,0 +1,704 @@
+<style>
+  /* crop-select. A photograph is selected as a small tile on paper and its
+     crop grows in steps, wider each time, taking a wider view of the same
+     picture rather than stretching it, while violet handles streak out to the
+     new corners and the word under the tile steps up in size and then opens
+     its tracking. Then a hard cut to the picture full bleed, paper bars
+     closing, a push, an exclamation set over the photograph and the pointer
+     sliding in. Source: s6 shots 3 and 4, film frames 760 to 827
+     (assets/frames/select-grow-dense.jpg), rebuilt in work/replica/s6.
+     Measured at 1920 x 1080: tile 524 x 632 settling to 573 x 694 over 8
+     frames, first widen to 1134 over 17 frames and second to 1724 x 599
+     (98 px margins) over 15, both on a slow creep then a two-picture jump
+     (fitted beziers 0.802 0.013 0 1.063 and 0.909 -0.045 0 0.991); photo
+     zoom 1.162, 1.176, 1.216 then 1.0 of its final cover scale; chips 24 px,
+     their inner corner 7 px off the crop corner, arriving as diagonal
+     streaks; word cap 102 px stepping to 153 px with the first widen, then
+     tracking opening to 0.19 em with the second; cut at frame 57, bars of
+     0.044 H closing over 5 frames, exclamation cap 254 px, pointer 9 frames
+     on the fitted curve 0.465 0.352 0 0.744 rolling +10 to -15 degrees.
+     Everything steps on the film's 16 fps cadence. */
+  .el-crop-select { position: absolute; left: 0; top: 0; overflow: hidden; pointer-events: none; }
+  .el-crop-select .cs-ground { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: var(--color-paper); }
+  .el-crop-select .cs-ground img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+  .el-crop-select .cs-crop { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: hidden; opacity: 0; }
+  .el-crop-select .cs-cam { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .el-crop-select .cs-pic { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .el-crop-select .cs-art { position: absolute; opacity: 0; display: block; max-width: none; }
+  .el-crop-select .cs-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .el-crop-select .cs-layer span { position: absolute; left: 0; top: 0; line-height: 1; white-space: pre; transform-origin: 0 0; font-kerning: none; opacity: 0; }
+  .el-crop-select .cs-handles { position: absolute; left: 0; top: 0; overflow: visible; }
+  .el-crop-select .cs-cursor { position: absolute; left: 0; top: 0; width: 1px; height: 1px; transform-origin: 0 0; opacity: 0; }
+  .el-crop-select .cs-cursor svg { position: absolute; left: 0; top: 0; overflow: visible; }
+</style>
+<script>
+/* BEGIN es-shared */
+  /* es-shared. The helpers every editorial-select block uses: frame scale,
+     the film's picture cadence, zero-duration steps, a seeded PRNG, ES Serif
+     glyph metrics for arithmetic text layout, and the image slot. Copied
+     verbatim into every block file between the BEGIN and END markers by
+     work/blocks/shared/inject.py; the first copy in a document wins, so
+     change es-shared.src.js and re-inject rather than editing a copy. */
+  window.__esShared = window.__esShared || (function () {
+    var METRICS = { serif: {"cap":0.69,"x":0.499,"asc":0.802,"desc":-0.284,"adv":{" ":0.238,"!":0.312,"\"":0.402,"#":0.557,"$":0.54,"%":0.952,"&":0.759,"'":0.2,"(":0.374,")":0.374,"*":0.468,"+":0.56,",":0.315,"-":0.336,".":0.236,"/":0.36,"0":0.545,"1":0.545,"2":0.545,"3":0.545,"4":0.535,"5":0.515,"6":0.545,"7":0.545,"8":0.545,"9":0.545,":":0.315,";":0.315,"<":0.56,"=":0.56,">":0.56,"?":0.44,"@":0.884,"A":0.732,"B":0.635,"C":0.675,"D":0.774,"E":0.661,"F":0.678,"G":0.734,"H":0.834,"I":0.334,"J":0.399,"K":0.725,"L":0.617,"M":0.911,"N":0.783,"O":0.756,"P":0.592,"Q":0.755,"R":0.707,"S":0.557,"T":0.676,"U":0.776,"V":0.721,"W":1.12,"X":0.692,"Y":0.678,"Z":0.596,"[":0.349,"\\":0.36,"]":0.349,"^":0.561,"_":0.542,"`":0.418,"a":0.502,"b":0.596,"c":0.495,"d":0.597,"e":0.504,"f":0.339,"g":0.558,"h":0.57,"i":0.261,"j":0.273,"k":0.549,"l":0.263,"m":0.886,"n":0.587,"o":0.564,"p":0.602,"q":0.561,"r":0.401,"s":0.434,"t":0.345,"u":0.582,"v":0.522,"w":0.791,"x":0.531,"y":0.582,"z":0.451,"{":0.368,"|":0.307,"}":0.368,"~":0.56},"kern":{"Fi":0.021,"Tr":-0.016,"al":0.026,"ap":-0.009,"at":-0.008,"el":0.013,"gh":-0.012,"ho":0.009,"hy":-0.029,"id":0.015,"il":-0.028,"ll":-0.011,"lm":0.021,"rt":0.011,"ry":0.021},"ink":{"!":[0.081,-0.014,0.231,0.705],"\"":[0.04,0.437,0.361,0.762],"#":[0.025,0.0,0.533,0.671],"$":[0.053,-0.118,0.501,0.776],"%":[0.04,-0.028,0.912,0.701],"&":[0.026,-0.014,0.717,0.706],"'":[0.04,0.437,0.16,0.762],"(":[0.083,-0.195,0.34,0.77],")":[0.034,-0.195,0.291,0.77],"*":[0.019,0.363,0.45,0.771],"+":[0.032,0.077,0.53,0.595],",":[0.045,-0.186,0.234,0.137],"-":[0.042,0.224,0.294,0.301],".":[0.044,-0.015,0.191,0.135],"/":[0.004,-0.166,0.356,0.734],"0":[0.04,-0.014,0.506,0.68],"1":[0.082,-0.001,0.477,0.673],"2":[0.047,-0.001,0.502,0.68],"3":[0.046,-0.014,0.504,0.68],"4":[0.024,-0.009,0.542,0.696],"5":[0.024,-0.011,0.473,0.738],"6":[0.039,-0.014,0.504,0.68],"7":[0.052,0.0,0.504,0.666],"8":[0.044,-0.014,0.501,0.68],"9":[0.032,-0.016,0.501,0.68],":":[0.079,-0.013,0.237,0.496],";":[0.045,-0.185,0.237,0.496],"<":[0.058,0.081,0.503,0.596],"=":[0.032,0.201,0.53,0.477],">":[0.059,0.083,0.504,0.598],"?":[0.068,-0.014,0.376,0.707],"@":[0.039,-0.162,0.847,0.682],"A":[0.009,0.0,0.728,0.701],"B":[0.041,-0.009,0.593,0.698],"C":[0.047,-0.017,0.636,0.707],"D":[0.041,0.0,0.716,0.683],"E":[0.042,-0.003,0.618,0.689],"F":[0.042,0.001,0.59,0.691],"G":[0.047,-0.017,0.715,0.707],"H":[0.041,0.0,0.794,0.69],"I":[0.041,0.0,0.315,0.686],"J":[-0.028,-0.14,0.368,0.69],"K":[0.041,0.0,0.717,0.69],"L":[0.042,-0.002,0.591,0.684],"M":[0.036,-0.009,0.899,0.686],"N":[0.038,-0.007,0.747,0.69],"O":[0.047,-0.004,0.708,0.704],"P":[0.041,0.002,0.567,0.691],"Q":[0.047,-0.223,0.709,0.707],"R":[0.041,-0.011,0.694,0.69],"S":[0.041,-0.017,0.515,0.707],"T":[0.021,-0.003,0.664,0.682],"U":[0.036,-0.016,0.746,0.69],"V":[0.014,-0.006,0.714,0.69],"W":[0.014,-0.007,1.11,0.707],"X":[0.01,0.0,0.683,0.69],"Y":[0.021,0.0,0.67,0.69],"Z":[0.023,0.0,0.574,0.69],"[":[0.108,-0.165,0.317,0.739],"\\":[0.004,-0.166,0.356,0.734],"]":[0.032,-0.165,0.242,0.739],"^":[0.081,0.204,0.481,0.506],"_":[0.042,-0.072,0.5,0.005],"`":[0.078,0.579,0.275,0.791],"a":[0.028,-0.014,0.504,0.511],"b":[0.026,-0.012,0.565,0.751],"c":[0.029,-0.012,0.475,0.512],"d":[0.03,-0.012,0.597,0.762],"e":[0.027,-0.012,0.474,0.508],"f":[0.017,0.0,0.432,0.764],"g":[0.017,-0.254,0.544,0.511],"h":[0.005,0.001,0.571,0.758],"i":[0.01,0.001,0.268,0.715],"j":[-0.098,-0.25,0.217,0.748],"k":[0.0,0.001,0.544,0.762],"l":[-0.014,0.002,0.239,0.76],"m":[0.013,0.0,0.882,0.507],"n":[0.017,0.001,0.585,0.511],"o":[0.026,-0.013,0.534,0.506],"p":[0.01,-0.241,0.568,0.515],"q":[0.026,-0.24,0.562,0.514],"r":[0.01,0.0,0.405,0.507],"s":[0.038,-0.013,0.402,0.511],"t":[0.011,-0.012,0.339,0.596],"u":[-0.002,-0.011,0.573,0.511],"v":[-0.007,-0.012,0.55,0.496],"w":[-0.016,-0.008,0.796,0.498],"x":[-0.001,-0.001,0.529,0.5],"y":[0.011,-0.253,0.576,0.501],"z":[0.013,-0.001,0.437,0.5],"{":[0.047,-0.165,0.335,0.739],"|":[0.117,-0.25,0.19,0.773],"}":[0.034,-0.165,0.322,0.739],"~":[0.05,0.27,0.512,0.442]}} };
+
+    /* Scale from the 1920x1080 source to this frame. The short side carries
+       it, so a portrait or square frame keeps the source's type size. */
+    function k(props) { var f = (props && props.frame) || { w: 1920, h: 1080 }; return Math.min(f.w, f.h) / 1080; }
+    function fw(props) { return ((props && props.frame) || { w: 1920 }).w; }
+    function fh(props) { return ((props && props.frame) || { h: 1080 }).h; }
+
+    /* The film updates its picture 16 times a second inside 24 fps (frame f
+       with f mod 3 = 2 repeats f - 1), and parts of it run on twos. quant(t)
+       moves a time to the start of the picture it falls in, so any tween or
+       step placed through it lands on a picture the film could show.
+       cadence: "16" (default), "twos", "ones". */
+    function quant(t, cadence, fps) {
+      fps = fps || 24; var f = Math.round(t * fps * 1000) / 1000, fl = Math.floor(f + 1e-6);
+      if (cadence === "ones") return fl / fps;
+      if (cadence === "twos") return (fl - (fl % 2)) / fps;
+      return (fl % 3 === 2 ? fl - 1 : fl) / fps;
+    }
+    /* Sample a tween as held pictures: returns the list of times at which the
+       picture changes between t0 and t1 on the cadence. */
+    function pictures(t0, t1, cadence, fps) {
+      fps = fps || 24; var out = [], f0 = Math.ceil(t0 * fps - 1e-6), f1 = Math.floor(t1 * fps + 1e-6), last = null;
+      for (var f = f0; f <= f1; f++) { var q = quant(f / fps, cadence, fps); if (q !== last && q >= t0 - 1e-6) { out.push(q); last = q; } }
+      if (!out.length || out[out.length - 1] < t1 - 1e-6) out.push(t1);
+      return out;
+    }
+
+    /* A zero-duration step, the film's way of changing a picture. Steps after
+       the first on a node carry immediateRender false (CONTRACT.md). */
+    function step(tl, node, from, to, t, first) {
+      var v = {}; for (var p in to) v[p] = to[p];
+      v.duration = 0.0001; v.ease = "none"; if (!first) v.immediateRender = false;
+      tl.fromTo(node, from, v, Math.max(0, t));
+    }
+
+    function rng(seed) {
+      var s = (seed >>> 0) || 1;
+      return function () { s = (s + 0x6D2B79F5) >>> 0; var t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }
+
+    /* Lay out a string in ES Serif from its glyph metrics: returns pen x per
+       character (from the run's left edge, px), the advance width and the ink
+       box, at a font size in px and tracking in em. Pure arithmetic, so it is
+       right before the webfont arrives and render() never reads layout. */
+    function layout(text, size, tracking, face) {
+      var m = METRICS[face || "serif"], pens = [], x = 0, tr = (tracking || 0) * size;
+      var inkL = Infinity, inkR = -Infinity;
+      for (var i = 0; i < text.length; i++) {
+        var ch = text[i], a = m.adv[ch] != null ? m.adv[ch] : 0.5;
+        pens.push(x);
+        var b = m.ink[ch];
+        if (b) { inkL = Math.min(inkL, x + b[0] * size); inkR = Math.max(inkR, x + b[2] * size); }
+        x += a * size;
+        if (i + 1 < text.length) { x += tr; var kp = m.kern[ch + text[i + 1]]; if (kp) x += kp * size; }
+      }
+      if (inkL === Infinity) { inkL = 0; inkR = x; }
+      return { pens: pens, width: x, inkL: inkL, inkR: inkR, ink: inkR - inkL, cap: m.cap * size, xh: m.x * size, size: size };
+    }
+    /* The font size whose cap height is cap px. */
+    function sizeForCap(cap, face) { return cap / METRICS[face || "serif"].cap; }
+    /* Where the baseline sits below the top of a line-height:1 box, as a
+       share of the font size, so a glyph node can be placed by its baseline. */
+    function baseFrac(face) { var m = METRICS[face || "serif"]; return (1 - (m.asc - m.desc)) / 2 + m.asc; }
+
+    /* An image slot: a box that crops its picture by code. spec is
+         { src, fit: "cover" | "contain", focal: [x, y] (0..1), zoom (1),
+           cutout: src of the subject on transparency, label }
+       or a string src. Without a src it draws a labelled placeholder, which is
+       the code-and-slots view of the block. Returns the slot node; the picture
+       is its first child (class es-pic) so a block can move it inside the box. */
+    function slot(spec, w, h, name) {
+      if (typeof spec === "string") spec = { src: spec };
+      spec = spec || {};
+      var box = document.createElement("div");
+      box.className = "es-slot"; box.setAttribute("data-slot", name || "image");
+      box.style.cssText = "position:absolute;overflow:hidden;width:" + w + "px;height:" + h + "px;";
+      var fx = spec.focal ? spec.focal[0] : 0.5, fy = spec.focal ? spec.focal[1] : 0.5;
+      if (spec.src) {
+        var pic = document.createElement("div");
+        pic.className = "es-pic";
+        var z = spec.zoom || 1;
+        pic.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;background-image:url(\"" + spec.src + "\");background-repeat:no-repeat;background-size:" +
+          (spec.fit === "contain" ? "contain" : (z === 1 ? "cover" : (z * 100) + "% auto")) + ";background-position:" + (fx * 100) + "% " + (fy * 100) + "%;transform-origin:" + (fx * 100) + "% " + (fy * 100) + "%;";
+        box.appendChild(pic);
+      } else {
+        box.style.background = "repeating-linear-gradient(45deg, var(--color-mist) 0 2px, var(--color-ghost) 2px 14px)";
+        box.style.outline = "2px solid var(--color-ink-grey)"; box.style.outlineOffset = "-2px";
+        var lab = document.createElement("div");
+        lab.className = "es-slot-label"; lab.textContent = spec.label || name || "image";
+        lab.style.cssText = "position:absolute;left:8px;top:6px;font:500 " + Math.max(10, Math.min(18, h / 8)) + "px/1 var(--font-mono);color:var(--color-ink-grey);white-space:nowrap;";
+        box.appendChild(lab);
+      }
+      return box;
+    }
+    /* The cut-out layer for type-behind-subject: the same crop as slot(spec)
+       but showing spec.cutout, to sit above the type. Null when there is none. */
+    function cutout(spec, w, h, name) {
+      if (!spec || typeof spec === "string" || !spec.cutout) return null;
+      var c = {}; for (var p in spec) c[p] = spec[p]; c.src = spec.cutout;
+      var n = slot(c, w, h, (name || "image") + "-cutout"); n.classList.add("es-cutout"); return n;
+    }
+
+    /* A token colour by name ("violet" -> var(--color-violet)); any other
+       CSS colour passes through. */
+    function color(c, dflt) { c = c || dflt; return /^[a-z-]+$/.test(c) && c !== "white" && c !== "black" && c !== "transparent" ? "var(--color-" + c + ")" : c; }
+
+    return { METRICS: METRICS, k: k, fw: fw, fh: fh, quant: quant, pictures: pictures, step: step, rng: rng,
+             layout: layout, sizeForCap: sizeForCap, baseFrac: baseFrac, slot: slot, cutout: cutout, color: color, FR: 1 / 24 };
+  })();
+  /* END es-shared */
+/* BEGIN es-camera */
+  /* es-camera v1: the film's camera moves as presets for any image slot or
+     container, copied verbatim into every block that moves a picture; the
+     first copy in a document wins. Source: work/blocks/camera-rig/es-camera.src.js,
+     injected between the BEGIN and END es-camera markers by
+     work/blocks/camera-rig/inject.py, so change the source and re-inject.
+
+     A move is a scale about an origin plus a travel and a roll, run on one of
+     the film's cadences. Scale interpolates in log space, which is how every
+     preset below was fitted, so a pull from 1 to 0.4 reads as an even camera
+     move rather than a slowing one. Every preset is measured from the source:
+       push         film 822 to 834 (shots 34 and 35, the lying model), the push
+                    with its cut punch removed: x1.100 over 12 frames, fitted
+                    bezier 0.587 -0.033 0.263 1.135 (rms 0.026), 16 fps cadence
+       punch        the punch-in on the cut at film 828: x1.097 in one frame
+       push-soft    fingerprint move 52 (film 600 on): x1.34 over 13 frames, push curve
+       push-hard    fingerprint move 48 (film 522 on): x1.47 over 13 frames, push-hard curve
+       pull-back    s7 shot I (film 958 to 992), tracked board plane: x0.407 over
+                    35 frames, log-scale bezier 0.473 0.464 0.332 0.974 (rms 0.003),
+                    centre travel -33, +26 px, on ones (real footage)
+       pull-steady  s7 shots B to H, the median steady pull: -1.99 percent per
+                    frame (range -0.92 to -2.39), linear, on ones
+       pull-settle  fingerprint move 67 (shot 38): x0.82 over 13 frames, settle curve
+       drift        fingerprint move 29 (shot 14 studio drift): 0.035 W by 0.025 H
+                    over 20 frames, drift curve, on ones
+       tilt         fingerprint move 66 (shot 37): -0.06 H over 13 frames,
+                    bezier 1.0 0.937 0.874 0.965, on ones
+       hold         no motion
+     cam = { preset, at (s after t0), dur (s) or frames, scale (duration
+             multiplier), from, to (scale), dx, dy (px at 1920, or "0.05W",
+             "-0.03H"), r (deg), origin [fx, fy] (0..1 of the node box),
+             ease (token name or bezier), cadence "16" | "twos" | "ones",
+             phase (which frame of three repeats, default 2),
+             keys: [[frame, s, x, y, r], ...] exact per-frame states, or
+             mats: [[frame, m0..m8], ...] exact per-frame homographies (row
+             major, frame px), both stepped on their frames }
+     or an array of such moves, each starting from where the last one ended. */
+  window.__esCamera = window.__esCamera || (function () {
+    var FPS = 24, EPS = 0.0001;
+    var CURVE = { snap: [0.33, 1, 0.68, 1], drift: [0.15, 0.11, 0.614, 0.796], "drift-linear": [0.385, 0.326, 0.732, 0.781],
+      push: [0.336, -0.065, 0, 0.821], "push-hard": [0.772, 0.446, 0.15, 0.453], pull: [0.924, 0.668, 0.604, 0.958],
+      glide: [0.034, 0.665, 0.702, 1.023], reveal: [0.081, -0.525, 0, 0.951], rise: [0.15, 0.85, 0.3, 1],
+      pass: [0.45, 0.05, 0.55, 0.95], settle: [0.42, 0.543, 1, 1.076], linear: [0, 0, 1, 1],
+      "film-push": [0.587, -0.033, 0.263, 1.135], "film-pull": [0.473, 0.464, 0.332, 0.974], "film-tilt": [1.0, 0.937, 0.874, 0.965] };
+    var PRESETS = {
+      push: { to: 1.100, frames: 12, ease: "film-push", cadence: "16" },
+      punch: { to: 1.097, frames: 0, cadence: "16" },
+      "push-soft": { to: 1.34, frames: 13, ease: "push", cadence: "16" },
+      "push-hard": { to: 1.47, frames: 13, ease: "push-hard", cadence: "16" },
+      "pull-back": { to: 0.407, frames: 35, ease: "film-pull", cadence: "ones", dx: -33, dy: 26 },
+      "pull-steady": { rate: -0.0199, frames: 16, ease: "linear", cadence: "ones" },
+      "pull-settle": { to: 0.82, frames: 13, ease: "settle", cadence: "ones" },
+      drift: { dx: "0.035W", dy: "0.025H", frames: 20, ease: "drift", cadence: "ones" },
+      tilt: { dy: "-0.06H", frames: 13, ease: "film-tilt", cadence: "ones" },
+      hold: { frames: 0 }
+    };
+    function bez(e) {
+      var x1 = e[0], y1 = e[1], x2 = e[2], y2 = e[3];
+      var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+      return function (p) {
+        if (p <= 0) return 0; if (p >= 1) return 1;
+        var lo = 0, hi = 1, t = p, x, i;
+        for (i = 0; i < 40; i++) { x = ((ax * t + bx) * t + cx) * t; if (Math.abs(x - p) < 1e-7) break; if (x < p) lo = t; else hi = t; t = (lo + hi) / 2; }
+        return ((ay * t + by) * t + cy) * t;
+      };
+    }
+    function curve(c) { return bez(typeof c === "string" ? (CURVE[c] || CURVE.linear) : (c || CURVE.linear)); }
+    function fsz(props) { var f = (props && props.frame) || {}; return { w: f.w || 1920, h: f.h || 1080 }; }
+    function len(v, props, axis) {
+      if (v == null) return 0;
+      var F = fsz(props);
+      if (typeof v === "string") { var m = /^(-?\d*\.?\d+)([HW])$/.exec(v.trim()); if (m) return Number(m[1]) * (m[2] === "H" ? F.h : F.w); return Number(v) || 0; }
+      return v * F.w / 1920;
+    }
+    /* The time of the picture a frame shows: on the 16 fps cadence frame f with
+       (f - phase + 2) mod 3 == 2 repeats f - 1 (phase 2 is the film's own). */
+    function shown(t, cad, phase) {
+      if (!cad || cad === "ones") return t;
+      var f = Math.floor(t * FPS + 1e-4), g = f, p = phase == null ? 2 : phase;
+      if (cad === "16" || cad === 16) { if ((((f - p) % 3) + 3) % 3 === 0) g = f - 1; }
+      else if (cad === "twos" || cad === 12) { if ((((f - (p % 2)) % 2) + 2) % 2 === 1) g = f - 1; }
+      return g / FPS;
+    }
+    /* Resolve one move into numbers: start time, duration, the scale ratio,
+       travel and roll, the curve, cadence and origin. */
+    function resolve(c, props) {
+      var P = PRESETS[c.preset || "hold"] || PRESETS.hold, k = c.scale || 1;
+      var frames = c.frames != null ? c.frames : (c.dur != null ? c.dur * FPS : P.frames * k);
+      var dur = Math.max(0, frames / FPS);
+      var ratio;
+      if (c.to != null && c.from != null) ratio = c.to / c.from;
+      else if (c.to != null) ratio = c.to;
+      else if (P.rate != null) ratio = Math.exp(P.rate * frames);
+      else ratio = P.to != null ? P.to : 1;
+      return { at: c.at || 0, dur: dur, from: c.from != null ? c.from : 1, ratio: ratio,
+        dx: len(c.dx != null ? c.dx : P.dx, props), dy: len(c.dy != null ? c.dy : P.dy, props),
+        r: c.r != null ? c.r : (P.r || 0), ease: curve(c.ease || P.ease || "linear"),
+        cadence: c.cadence || P.cadence || "16", phase: c.phase, origin: c.origin || [0.5, 0.5] };
+    }
+    function list(cam) { return !cam ? [] : (Array.isArray(cam) ? cam : [cam]); }
+    /* The state at t seconds after t0, pure, for anything that must follow the
+       camera (an overlay, a label) without being inside the moved node. */
+    function sample(cam, t, props) {
+      var st = { s: 1, x: 0, y: 0, r: 0 }, L = list(cam);
+      for (var i = 0; i < L.length; i++) {
+        var c = L[i];
+        if (c.keys) { var kk = null; for (var j = 0; j < c.keys.length; j++) if (c.keys[j][0] / FPS <= t + 1e-6) kk = c.keys[j]; if (kk) st = { s: kk[1], x: kk[2], y: kk[3], r: kk[4] || 0 }; continue; }
+        var m = resolve(c, props); if (i === 0 && c.from != null) st.s = m.from;
+        var q = m.dur > 0 ? (shown(t, m.cadence, m.phase) - m.at) / m.dur : (t >= m.at ? 1 : 0);
+        var e = m.ease(q < 0 ? 0 : q > 1 ? 1 : q);
+        if (t < m.at) break;
+        st = { s: st.s * Math.pow(m.ratio, e), x: st.x + m.dx * e, y: st.y + m.dy * e, r: st.r + m.r * e };
+        if (q < 1) break;
+      }
+      return st;
+    }
+    /* A GSAP ease that holds pictures on the cadence and maps progress so a
+       linear tween from a to b lands on the curve (log space for scale). */
+    function stepper(m, t0, map) {
+      return function (p) {
+        if (p >= 1) return 1; if (p <= 0) return 0;
+        var t = t0 + m.at + p * m.dur, q = (shown(t + 1e-6, m.cadence, m.phase) - t0 - m.at) / m.dur;
+        return map(m.ease(q < 0 ? 0 : q > 1 ? 1 : q));
+      };
+    }
+    /* Tween node (a picture or a container) through the move(s). Returns the
+       time the camera settles. box = { w, h } of the node, for the origin. */
+    function apply(tl, node, t0, cam, props) {
+      var L = list(cam), st = { s: 1, x: 0, y: 0, r: 0 }, end = t0, first = true;
+      if (!L.length) return t0;
+      if (L[0].origin) node.style.transformOrigin = (L[0].origin[0] * 100) + "% " + (L[0].origin[1] * 100) + "%";
+      for (var i = 0; i < L.length; i++) {
+        var c = L[i];
+        if (c.mats) { applyMats(tl, node, t0, c.mats); end = Math.max(end, t0 + c.mats[c.mats.length - 1][0] / FPS); first = false; continue; }
+        if (c.keys) {
+          for (var j = 0; j < c.keys.length; j++) {
+            var kk = c.keys[j], f = kk[0], to = { s: kk[1], x: kk[2], y: kk[3], r: kk[4] || 0 };
+            var t = f <= 0 ? t0 : t0 + (f - 0.25) / FPS;
+            var v = { scale: to.s, x: to.x, y: to.y, rotation: to.r, duration: EPS, ease: "none" };
+            if (!first) v.immediateRender = false;
+            tl.fromTo(node, { scale: st.s, x: st.x, y: st.y, rotation: st.r }, v, t);
+            st = to; first = false; end = Math.max(end, t);
+          }
+          continue;
+        }
+        var m = resolve(c, props);
+        if (i === 0 && c.from != null) st.s = m.from;
+        var nx = { s: st.s * m.ratio, x: st.x + m.dx, y: st.y + m.dy, r: st.r + m.r };
+        var a = st.s, b = nx.s, lr = Math.log(m.ratio);
+        var scaleMap = function (a, b, lr) { return function (e) { return Math.abs(b - a) < 1e-9 ? e : (a * Math.exp(lr * e) - a) / (b - a); }; }(a, b, lr);
+        var lin = function (e) { return e; };
+        var t1 = t0 + m.at;
+        if (m.dur <= 0) {
+          var v0 = { scale: nx.s, x: nx.x, y: nx.y, rotation: nx.r, duration: EPS, ease: "none" };
+          if (!first) v0.immediateRender = false;
+          tl.fromTo(node, { scale: st.s, x: st.x, y: st.y, rotation: st.r }, v0, t1);
+        } else {
+          var vs = { scale: nx.s, duration: m.dur, ease: stepper(m, t0, scaleMap) };
+          var vt = { x: nx.x, y: nx.y, rotation: nx.r, duration: m.dur, ease: stepper(m, t0, lin) };
+          if (!first) { vs.immediateRender = false; vt.immediateRender = false; }
+          tl.fromTo(node, { scale: st.s }, vs, t1);
+          tl.fromTo(node, { x: st.x, y: st.y, rotation: st.r }, vt, t1);
+        }
+        st = nx; first = false; end = Math.max(end, t1 + m.dur);
+      }
+      return end;
+    }
+    /* Exact per-frame homographies (row-major 3x3 in frame px), written as CSS
+       variables under a matrix3d so GSAP never decomposes them. */
+    function matVars(m) {
+      return { "--c0": m[0], "--c1": m[3], "--c3": m[6] * 1e6, "--c4": m[1], "--c5": m[4], "--c7": m[7] * 1e6, "--c12": m[2], "--c13": m[5], "--c15": m[8] };
+    }
+    function matStyle(node, m) {
+      node.style.transformOrigin = "0 0";
+      node.style.transform = "matrix3d(var(--c0), var(--c1), 0, calc(var(--c3) / 1000000), var(--c4), var(--c5), 0, calc(var(--c7) / 1000000), 0, 0, 1, 0, var(--c12), var(--c13), 0, var(--c15))";
+      var v = matVars(m); for (var k in v) node.style.setProperty(k, v[k]);
+    }
+    function applyMats(tl, node, t0, mats) {
+      matStyle(node, mats[0][1]);
+      for (var j = 1; j < mats.length; j++) {
+        var f = mats[j][0], v = matVars(mats[j][1]); v.duration = EPS; v.ease = "none";
+        if (j > 1) v.immediateRender = false;
+        tl.fromTo(node, matVars(mats[j - 1][1]), v, t0 + (f - 0.25) / FPS);
+      }
+    }
+    return { PRESETS: PRESETS, CURVE: CURVE, curve: curve, sample: sample, apply: apply, shown: shown, resolve: resolve, matStyle: matStyle, FPS: FPS };
+  })();
+  /* END es-camera */
+  window.__elements = window.__elements || {};
+  window.__elements["crop-select"] = (function () {
+    /* Replica presets: per source frame keys measured in work/replica/s6, written
+       by work/blocks/crop-select/tools/preset.py through shared/put_presets.py. */
+    /* BEGIN presets */
+    var PRESETS = {"replica-s6-3-4":{"about":"s6 shots 3 and 4, film 760 to 827 (30.542 s + 27 frames), measured per source frame","frames":68,"cut":57,"plate":[2692,1144],"crop":[[0,706.88,228.49,522.94,630.9,0.757359,-451.142,130.459],[2,694.34,212.53,549.3,664.84,0.762607,-458.47,127.436],[3,688.47,204.64,561.96,680.12,0.764422,-460.862,126.615],[5,685.24,200.51,568.39,688.82,0.765379,-462.154,125.941],[6,684.21,199.16,570.3,692.07,0.765893,-462.94,125.745],[8,684.03,199.14,572.0,692.42,0.766242,-463.24,125.498],[9,682.04,199.14,576.07,692.17,0.76591,-461.325,125.749],[11,678.31,199.14,583.38,692.07,0.766832,-460.664,125.264],[12,671.16,199.14,596.89,691.94,0.767231,-457.026,125.029],[14,658.96,199.14,620.27,690.81,0.768314,-451.504,124.491],[15,634.49,199.16,669.89,690.72,0.771037,-441.424,122.911],[17,469.13,199.32,1000.29,690.48,0.786396,-366.853,114.595],[18,434.29,199.31,1070.23,690.47,0.789305,-350.289,113.084],[20,419.14,199.35,1100.06,690.44,0.790819,-344.015,112.287],[21,411.13,199.37,1116.07,690.31,0.79155,-340.227,111.866],[23,406.26,199.41,1126.18,690.33,0.79209,-338.263,111.514],[24,404.22,199.41,1130.22,690.35,0.792504,-337.428,111.328],[26,402.7,199.41,1132.53,690.36,0.792657,-337.212,111.219],[27,402.8,199.42,1132.45,690.32,0.792643,-337.151,111.186],[29,402.84,199.42,1133.69,690.29,0.792134,-335.935,111.576],[30,401.23,199.42,1135.98,690.29,0.792001,-335.017,111.65],[32,396.48,200.65,1145.76,688.07,0.789547,-327.868,113.088],[33,386.5,201.33,1164.73,686.08,0.785323,-315.027,115.563],[35,367.32,204.5,1201.92,679.12,0.776078,-287.651,120.435],[36,250.71,219.35,1427.62,644.45,0.722017,-126.411,149.606],[38,134.4,234.54,1652.88,610.25,0.668214,34.12,178.514],[39,114.48,237.35,1691.67,604.21,0.659266,61.343,183.456],[41,105.18,239.51,1709.93,600.17,0.654677,74.561,185.958],[42,100.42,240.65,1718.85,598.07,0.652557,81.047,187.134],[44,98.55,240.7,1722.6,598.08,0.651763,83.443,187.584],[45,98.55,240.7,1722.6,598.08,0.651758,83.457,187.582],[47,98.53,240.7,1722.62,598.08,0.651754,83.501,187.562],[48,98.51,240.7,1722.64,598.08,0.651749,83.514,187.555],[50,98.51,240.7,1722.65,598.08,0.651734,83.517,187.575],[51,98.51,240.69,1722.65,598.09,0.651754,83.519,187.576],[53,98.5,240.69,1722.67,598.09,0.651742,83.529,187.575],[54,98.5,240.69,1722.67,598.09,0.65172,83.528,187.588],[56,98.5,240.69,1722.67,598.09,0.651714,83.547,187.545],[57,0.0,47.14,1920.0,984.56,0.881031,-236.812,36.132],[59,0.0,14.6,1920.0,1049.82,0.939438,-316.524,2.859],[60,0.0,0.98,1920.0,1076.86,0.963635,-348.983,-11.063],[62,0.0,0.0,1920.0,1080.0,0.972138,-360.432,-15.952],[63,0.0,0.0,1920.0,1080.0,0.973004,-363.037,-16.802],[65,0.0,0.0,1920.0,1080.0,0.978587,-384.228,-22.842],[66,0.0,0.0,1920.0,1080.0,0.994999,-448.02,-41.204]],"word":{"text":"Bigger","font":{"family":"ES Source Serif","wght":550,"opsz":16,"color":"#0b0a0a"},"states":[[0,[[742.05,771.6,151.887,0.938,1.01],[830.99,777.8,151.887,0.959,0.962],[872.35,773.67,151.887,1.012,0.994],[953.35,773.41,151.887,1.012,0.996],[1034.55,771.34,151.887,0.969,1.012],[1106.85,771.34,151.887,0.969,1.012]]],[2,[[742.05,787.65,152.137,0.936,1.008],[830.99,794.12,152.137,0.959,0.958],[872.1,790.75,152.137,1.013,0.984],[953.1,789.72,152.137,1.013,0.992],[1034.55,787.39,152.137,0.967,1.01],[1106.85,787.65,152.137,0.967,1.008]]],[3,[[742.3,799.75,152.012,0.93,1.01],[830.49,806.21,152.012,0.994,0.96],[871.6,802.59,152.012,1.032,0.988],[952.6,802.59,152.012,1.032,0.988],[1034.8,798.71,152.012,0.964,1.018],[1106.85,799.49,152.012,0.968,1.012]]],[5,[[743.55,808.53,152.262,0.915,1.01],[830.74,815.26,152.262,0.975,0.958],[872.1,811.64,152.262,1.014,0.986],[952.85,811.64,152.262,1.025,0.986],[1035.05,807.76,152.262,0.95,1.016],[1107.35,808.79,152.262,0.95,1.008]]],[6,[[742.3,815.71,151.762,0.931,1.01],[830.99,821.91,151.762,0.98,0.962],[871.85,818.81,151.762,1.024,0.986],[953.1,817.52,151.762,1.017,0.996],[1035.05,815.46,151.762,0.962,1.012],[1107.35,815.46,151.762,0.953,1.012]]],[8,[[742.11,820.72,151.758,0.936,1.01],[830.03,827.43,151.758,1.011,0.958],[871.15,823.82,151.758,1.038,0.986],[952.65,822.78,151.758,1.034,0.994],[1034.36,820.46,151.758,0.975,1.012],[1107.4,820.72,151.758,0.951,1.01]]],[9,[[741.05,824.64,152.137,0.938,1.01],[830.24,831.1,152.137,0.998,0.96],[870.85,827.48,152.137,1.04,0.988],[952.85,827.48,152.137,1.028,0.988],[1035.05,823.86,152.137,0.964,1.016],[1107.6,824.9,152.137,0.952,1.008]]],[11,[[740.3,827.4,153.637,0.926,1.002],[829.24,833.41,153.637,0.991,0.956],[871.1,828.71,153.637,1.017,0.992],[953.1,828.71,153.637,1.015,0.992],[1035.8,826.36,153.637,0.967,1.01],[1109.1,827.14,153.637,0.949,1.004]]],[12,[[736.3,827.71,155.262,0.957,1.01],[826.99,834.57,155.262,1.003,0.958],[869.35,829.55,155.262,1.031,0.996],[952.35,829.55,155.262,1.033,0.996],[1036.3,826.65,155.262,0.967,1.018],[1110.35,827.18,155.262,0.959,1.014]]],[14,[[732.81,827.26,159.027,0.924,1.006],[825.58,834.02,159.027,0.963,0.956],[867.92,829.42,159.027,1.02,0.99],[952.42,829.42,159.027,1.024,0.99],[1038.06,827.26,159.027,0.959,1.006],[1113.67,827.26,159.027,0.952,1.006]]],[15,[[722.76,824.34,165.046,0.938,1.008],[819.87,831.35,165.046,0.965,0.958],[863.95,826.86,165.046,1.026,0.99],[951.95,826.86,165.046,1.032,0.99],[1041.76,824.9,165.046,0.955,1.004],[1119.95,824.62,165.046,0.954,1.006]]],[17,[[659.27,802.87,209.655,0.937,1.008],[783.67,811.07,209.655,0.935,0.962],[838.39,806.08,209.655,1.028,0.99],[950.39,806.08,209.655,1.028,0.99],[1063.02,803.58,209.655,0.976,1.004],[1163.64,802.51,209.655,0.947,1.01]]],[18,[[646.16,797.06,220.803,0.926,1.008],[774.92,806.82,220.803,0.94,0.956],[832.37,801.57,220.803,1.026,0.984],[949.87,801.57,220.803,1.016,0.984],[1068.16,797.44,220.803,0.959,1.006],[1172.87,797.81,220.803,0.942,1.004]]],[20,[[639.42,796.19,224.318,0.941,1.006],[771.01,805.34,224.318,0.951,0.958],[830.44,799.24,224.318,1.019,0.99],[949.44,799.24,224.318,1.021,0.99],[1070.17,796.19,224.318,0.962,1.006],[1176.69,795.8,224.318,0.951,1.008]]],[21,[[638.17,794.88,225.693,0.919,1.008],[769.01,804.47,225.693,0.958,0.958],[829.19,798.72,225.693,1.025,0.988],[949.44,798.72,225.693,1.027,0.988],[1071.42,793.35,225.693,0.962,1.016],[1179.19,795.26,225.693,0.943,1.006]]],[23,[[637.54,794.66,228.185,0.904,1.002],[768.59,803.58,228.185,0.954,0.956],[828.53,798.15,228.185,1.018,0.984],[949.78,798.15,228.185,1.016,0.984],[1072.04,791.56,228.185,0.956,1.018],[1180.53,794.66,228.185,0.94,1.002]]],[24,[[636.04,793.4,227.685,0.914,1.012],[766.84,803.46,227.685,0.974,0.96],[827.78,797.66,227.685,1.026,0.99],[949.28,797.66,227.685,1.028,0.99],[1071.79,793.79,227.685,0.97,1.01],[1180.53,794.56,227.685,0.952,1.006]]],[27,[[634.54,793.62,227.435,0.925,1.012],[767.09,803.67,227.435,0.97,0.96],[827.78,797.87,227.435,1.028,0.99],[949.28,797.87,227.435,1.03,0.99],[1072.29,793.62,227.435,0.968,1.012],[1181.28,794.39,227.435,0.949,1.008]]],[29,[[634.54,793.47,228.185,0.922,1.012],[766.09,803.56,228.185,0.978,0.96],[827.53,797.74,228.185,1.026,0.99],[949.28,797.74,228.185,1.026,0.99],[1072.54,792.69,228.185,0.96,1.016],[1181.28,793.86,228.185,0.946,1.01]]],[30,[[633.54,793.42,230.185,0.916,1.006],[767.84,803.21,230.185,0.927,0.956],[827.53,796.95,230.185,1.017,0.988],[949.78,796.95,230.185,1.009,0.988],[1073.04,791.86,230.185,0.949,1.014],[1182.53,793.03,230.185,0.931,1.008]]],[32,[[633.99,793.59,227.454,0.911,1.012],[766.88,803.26,227.454,0.936,0.962],[827.3,797.85,227.454,1.028,0.99],[950.05,797.85,227.454,1.026,0.99],[1073.49,793.98,227.454,0.972,1.01],[1183.55,793.98,227.454,0.946,1.01]]],[33,[[628.74,793.44,228.954,0.918,1.01],[764.88,803.17,228.954,0.93,0.96],[826.55,797.34,228.954,1.022,0.99],[950.3,797.34,228.954,1.024,0.99],[1075.99,792.28,228.954,0.954,1.016],[1187.55,793.05,228.954,0.938,1.012]]],[35,[[621.74,793.1,228.454,0.919,1.014],[759.88,803.19,228.454,0.949,0.962],[825.3,796.98,228.454,1.02,0.994],[952.05,797.37,228.454,1.022,0.992],[1079.99,792.32,228.454,0.964,1.018],[1194.55,793.1,228.454,0.939,1.014]]],[36,[[581.43,793.44,228.958,0.903,1.01],[734.84,803.17,228.958,0.949,0.96],[817.01,796.94,228.958,1.02,0.992],[960.26,796.94,228.958,1.018,0.992],[1105.18,792.27,228.958,0.951,1.016],[1235.51,793.44,228.958,0.941,1.01]]],[38,[[538.74,793.3,229.579,0.911,1.008],[709.88,802.67,229.579,0.937,0.96],[809.05,797.2,229.579,1.013,0.988],[968.3,797.2,229.579,1.021,0.988],[1130.24,792.52,229.579,0.949,1.012],[1276.55,794.08,229.579,0.943,1.004]]],[39,[[531.49,793.7,227.329,0.927,1.012],[706.88,803.75,227.329,0.935,0.96],[808.3,797.57,227.329,1.015,0.992],[970.3,797.57,227.329,1.025,0.992],[1133.99,794.09,227.329,0.97,1.01],[1284.8,794.09,227.329,0.939,1.01]]],[41,[[527.49,793.42,227.204,0.929,1.014],[703.88,803.47,227.204,0.945,0.962],[807.05,797.67,227.204,1.025,0.992],[970.55,797.67,227.204,1.031,0.992],[1135.99,793.81,227.204,0.971,1.012],[1287.8,794.2,227.204,0.941,1.01]]],[42,[[528.49,793.23,229.954,0.897,1.008],[702.88,803.39,229.954,0.934,0.956],[806.55,797.14,229.954,1.01,0.988],[971.05,796.74,229.954,1.016,0.99],[1137.49,792.05,229.954,0.954,1.014],[1289.8,793.23,229.954,0.928,1.008]]],[44,[[526.74,793.69,228.704,0.911,1.006],[702.88,803.02,228.704,0.931,0.958],[806.8,797.57,228.704,1.014,0.986],[971.3,797.57,228.704,1.02,0.986],[1137.49,794.07,228.704,0.96,1.004],[1290.8,794.07,228.704,0.931,1.004]]],[45,[[526.74,793.48,228.454,0.912,1.012],[702.88,803.19,228.454,0.934,0.962],[806.8,796.98,228.454,1.015,0.994],[971.3,796.98,228.454,1.021,0.994],[1137.99,792.32,228.454,0.955,1.018],[1290.8,793.1,228.454,0.934,1.014]]],[47,[[525.74,793.56,228.079,0.922,1.012],[702.88,803.64,228.079,0.936,0.96],[806.55,797.43,228.079,1.019,0.992],[971.3,797.43,228.079,1.023,0.992],[1137.49,792.78,228.079,0.961,1.016],[1290.8,793.56,228.079,0.934,1.012]]],[48,[[526.99,793.42,227.204,0.915,1.014],[702.88,803.47,227.204,0.938,0.962],[806.55,797.67,227.204,1.024,0.992],[971.3,797.67,227.204,1.026,0.992],[1137.49,793.81,227.204,0.966,1.012],[1290.55,794.2,227.204,0.942,1.01]]],[50,[[527.49,793.48,228.454,0.904,1.012],[702.88,803.19,228.454,0.934,0.962],[806.8,796.98,228.454,1.015,0.994],[971.3,796.98,228.454,1.021,0.994],[1137.99,792.32,228.454,0.955,1.018],[1291.3,793.1,228.454,0.922,1.014]]],[51,[[526.99,793.4,228.579,0.909,1.008],[702.63,803.51,228.579,0.951,0.956],[806.55,797.68,228.579,1.018,0.986],[971.3,797.68,228.579,1.02,0.986],[1137.49,793.79,228.579,0.96,1.006],[1290.8,794.18,228.579,0.933,1.004]]],[53,[[525.49,793.16,228.829,0.923,1.012],[702.63,803.28,228.829,0.951,0.96],[806.55,797.05,228.829,1.016,0.992],[971.3,797.05,228.829,1.018,0.992],[1137.99,792.38,228.829,0.953,1.016],[1290.8,793.16,228.829,0.931,1.012]]],[54,[[526.99,793.42,227.204,0.915,1.014],[702.13,803.47,227.204,0.968,0.962],[806.8,797.67,227.204,1.02,0.992],[971.3,797.67,227.204,1.026,0.992],[1137.49,793.81,227.204,0.966,1.012],[1290.8,793.81,227.204,0.936,1.012]]],[56,[[527.24,793.48,228.454,0.907,1.012],[702.38,803.19,228.454,0.958,0.962],[806.55,797.37,228.454,1.018,0.992],[971.3,796.98,228.454,1.02,0.994],[1137.99,792.32,228.454,0.954,1.018],[1290.55,793.48,228.454,0.939,1.012]]]]},"word2":{"text":"Oops...","font":{"family":"ES Source Serif","wght":450,"opsz":16,"color":"#f6f2ee"},"states":[[57,[[387.054,357.433,378.64,1.07,1.003],[672.657,357.526,378.64,1.036,1.003],[874.814,355.963,378.64,1.051,1.008],[1111.884,359.177,378.64,0.98,0.998],[1256.577,370.209,378.64,1.039,0.963],[1339.327,369.381,378.64,1.033,0.966],[1420.756,372.143,378.64,1.051,0.957]]]]},"art":{"on":35,"off":57},"handles":[[0,[[1194.6,808.6,1250.1,876.9,22.0],[687.1,877.6,739.1,808.4,21.5],[784.6,743.4,837.4,672.6,21.0],[1086.1,672.4,1143.1,743.6,21.0],[784.6,330.6,837.1,397.4,21.0],[1086.4,397.1,1143.1,330.4,21.0],[1194.6,272.6,1251.1,206.9,21.5],[687.1,207.1,740.1,272.4,22.0]]],[2,[[1233.1,855.6,1264.4,894.4,23.0],[674.6,895.6,704.4,855.4,23.0],[1233.6,227.9,1264.6,190.9,23.0],[674.9,189.9,704.4,228.4,22.5]]],[3,[[668.4,903.9,681.4,887.1,23.0],[1257.9,887.1,1271.6,903.4,23.5],[1257.6,199.9,1272.1,183.4,23.0],[668.4,183.1,680.1,198.1,23.5]]],[5,[[1267.9,899.6,1274.1,907.4,23.5],[665.6,907.9,671.6,899.9,23.5],[1267.9,186.4,1274.1,179.4,23.5],[665.4,179.1,671.9,186.9,23.0]]],[6,[[1272.9,905.1,1276.1,908.6,22.5],[665.1,908.1,667.6,905.9,23.5],[1273.4,181.1,1275.9,177.6,23.0],[664.9,177.4,667.9,181.4,22.5]]],[8,[[1275.4,908.1,1275.9,907.6,23.5],[663.6,908.9,666.4,907.4,22.5],[1275.1,178.9,1275.9,177.6,23.0],[662.6,180.6,666.9,176.6,21.0]]],[9,[[1275.4,907.9,1277.6,908.1,23.5],[662.4,907.1,666.4,908.9,22.5],[1275.6,178.6,1277.9,177.9,23.5],[661.9,177.1,666.4,179.4,22.0]]],[11,[[1276.1,907.9,1281.6,908.1,23.5],[658.6,907.6,664.4,908.6,23.0],[1276.1,178.9,1281.9,177.9,23.5],[658.6,177.4,664.9,178.9,22.5]]],[12,[[1279.6,907.9,1288.1,908.1,23.5],[652.1,907.9,661.4,907.9,24.0],[1279.6,178.6,1288.4,177.9,23.5],[651.4,177.6,661.6,178.6,23.0]]],[14,[[1285.1,908.4,1300.1,907.6,23.5],[640.1,907.9,655.9,907.9,24.0],[1284.4,178.1,1300.1,178.4,24.0],[639.6,177.9,656.4,178.4,23.5]]],[15,[[1293.6,907.9,1325.4,908.1,23.5],[615.6,907.9,647.6,908.1,23.5],[1293.6,178.4,1325.4,177.9,23.5],[615.4,178.6,647.9,177.6,23.0]]],[17,[[1455.1,907.9,1489.9,907.9,24.0],[1309.6,908.1,1400.1,907.6,23.5],[539.6,907.6,631.6,908.1,23.5],[450.4,907.9,485.1,908.4,24.0],[539.1,178.9,632.1,177.6,22.5],[450.4,178.4,485.4,178.4,24.0],[1455.6,177.9,1489.9,178.6,23.5],[1309.6,177.9,1400.4,178.9,23.5]]],[18,[[1452.4,907.6,1525.4,908.1,23.5],[1352.4,907.9,1391.4,907.9,24.0],[549.4,907.9,588.1,908.4,23.5],[415.9,908.4,487.6,907.9,24.0],[1351.4,178.9,1392.1,179.4,23.0],[548.9,179.1,588.6,177.9,23.0],[415.6,178.9,488.1,178.1,23.5],[1453.6,178.1,1525.1,178.4,24.0]]],[20,[[400.9,907.6,429.9,908.4,23.0],[1511.9,907.9,1539.9,907.9,24.0],[400.1,178.9,429.6,178.1,23.5],[1511.4,178.9,1540.1,178.1,23.5]]],[21,[[392.1,907.9,407.6,908.1,23.5],[1533.1,907.9,1547.9,907.9,24.0],[391.9,179.4,407.9,177.9,23.0],[1532.6,178.4,1547.9,178.9,24.0]]],[23,[[387.4,907.9,396.4,908.1,23.5],[1544.1,907.9,1551.9,908.1,24.0],[387.4,178.9,396.6,178.1,23.5],[1543.9,177.9,1553.6,178.4,23.5]]],[24,[[385.4,908.1,390.1,908.4,23.5],[1550.4,907.9,1555.4,908.1,24.0],[384.4,178.9,390.1,177.9,23.0],[1550.1,178.1,1555.9,178.1,23.5]]],[26,[[383.4,908.6,386.6,907.6,23.0],[1553.6,908.4,1556.1,907.6,23.5],[383.1,179.1,387.1,177.6,22.5],[1553.4,178.6,1556.4,177.6,23.0]]],[27,[[1555.1,909.1,1556.9,907.1,22.0],[383.1,908.9,384.9,907.4,22.5],[382.6,179.6,385.6,177.1,21.5],[1555.4,177.9,1556.6,178.6,23.0]]],[29,[[1555.1,908.9,1556.6,907.4,22.5],[382.9,909.1,384.9,906.9,22.0],[382.6,179.6,385.6,177.1,21.5],[1554.9,177.4,1557.1,179.1,22.0]]],[30,[[1555.6,908.4,1558.1,907.6,23.5],[381.6,907.4,384.6,908.6,23.0],[381.1,179.4,385.1,177.6,22.5],[1555.4,177.6,1558.1,178.6,23.0]]],[32,[[1557.6,907.6,1562.6,907.9,23.5],[377.4,907.9,383.6,908.1,23.5],[1557.1,177.9,1562.6,179.6,23.5],[377.9,179.6,383.4,178.1,24.0]]],[33,[[1559.6,907.9,1571.9,905.9,23.5],[367.6,905.6,379.9,907.9,23.5],[367.6,180.4,380.1,178.1,23.5],[1560.6,178.6,1570.9,179.4,25.0]]],[35,[[1565.6,906.6,1590.4,901.6,23.0],[347.9,901.9,373.9,907.4,23.5],[347.6,183.6,373.9,179.9,23.5],[1565.4,179.4,1590.1,183.9,23.0]]],[36,[[277.6,890.9,361.1,904.4,22.5],[1577.4,904.6,1655.9,890.6,22.5],[1698.4,884.4,1700.6,882.6,21.5],[231.1,884.1,232.4,882.9,22.5],[1698.6,197.1,1700.4,198.6,22.0],[230.1,199.6,233.4,196.4,20.5],[1577.6,181.1,1655.9,192.1,23.0],[279.1,192.4,360.4,181.1,23.0]]],[38,[[256.9,886.9,330.9,900.1,22.0],[1606.1,900.9,1676.1,886.4,21.5],[115.1,863.6,188.1,876.1,23.0],[1739.6,875.9,1808.6,863.1,23.0],[115.4,213.9,188.1,203.6,23.0],[1739.4,203.4,1808.4,214.4,23.0],[257.4,195.6,330.4,185.6,23.0],[1606.6,184.9,1674.6,195.9,22.5]]],[39,[[1787.6,867.6,1826.9,859.6,23.5],[95.9,859.6,137.9,867.6,23.5],[95.6,216.4,137.6,211.1,23.5],[1787.9,210.4,1826.6,216.4,24.0]]],[41,[[1817.6,861.6,1835.9,857.9,23.5],[85.6,857.9,104.1,861.9,23.5],[85.9,218.1,104.4,215.4,23.0],[1817.6,214.1,1835.9,218.4,23.0]]],[42,[[1830.4,859.9,1840.4,857.6,23.0],[81.1,857.4,90.4,859.6,23.0],[81.4,218.1,90.1,217.1,23.5],[1831.6,216.9,1839.9,218.4,23.5]]],[44,[[1837.6,857.6,1842.1,858.1,23.5],[79.9,857.6,83.4,857.9,24.0],[79.6,217.6,83.9,218.4,23.5],[1836.1,219.4,1843.1,216.4,21.5]]],[45,[[1839.1,857.4,1842.4,858.1,23.0],[79.6,858.4,80.1,857.1,23.0],[78.6,219.1,82.4,216.6,21.5],[1840.1,219.9,1842.9,216.4,21.5]]],[47,[[1840.1,857.4,1842.1,858.1,23.0],[79.6,858.1,80.1,857.1,23.0],[79.4,219.1,80.1,217.4,22.5],[1840.9,217.4,1842.6,219.4,22.5]]],[48,[[1840.1,857.1,1842.4,858.4,22.5],[79.6,858.1,80.1,857.1,23.0],[1841.6,218.9,1842.1,217.9,23.5],[78.9,219.6,80.6,217.1,22.0]]],[50,[[1840.1,857.1,1842.4,858.4,22.5],[79.6,858.1,80.1,857.1,23.0],[1841.6,218.9,1842.1,217.9,23.5],[78.9,219.6,80.6,217.1,22.0]]],[51,[[1840.1,857.1,1842.4,858.4,22.5],[78.9,858.4,80.4,856.9,22.5],[1841.6,218.9,1842.1,217.9,23.5],[78.9,219.6,80.6,217.1,22.0]]],[53,[[1840.1,857.1,1842.4,858.4,22.5],[79.6,858.1,80.1,857.1,23.0],[1841.6,218.9,1842.1,217.9,23.5],[78.9,219.6,80.6,217.1,22.0]]],[54,[[1840.1,857.1,1842.4,858.4,22.5],[79.6,858.1,80.1,857.1,23.0],[1841.6,218.9,1842.1,217.9,23.5],[78.9,219.6,80.6,217.1,22.0]]],[56,[[1840.1,857.1,1842.4,858.4,22.5],[79.6,858.1,80.1,857.1,23.0],[1841.6,218.9,1842.1,217.9,23.5],[78.9,219.6,80.6,217.1,22.0]]]],"handleColor":"#a17ae7","cursor":[[57,486,320,0.95,10.0],[59,782,579,0.95,10.0],[60,1186,793,1.0,5.0],[62,1415,866,1.0,0.0],[63,1557,894,1.0,-5.0],[65,1644,906,1.0,-10.0],[66,1682,908,1.0,-15.0]]}};
+    /* END presets */
+    /* The film's pointer, traced at film 822 with its origin at its centre. */
+    /* BEGIN cursor-art */
+    var CURSOR_ART = {"paths":["M8.68 -59.79 L5.93 -59.04 L4.55 -58.17 L3.43 -57.92 L1.80 -56.79 L-0.57 -54.04 L-2.70 -50.42 L-6.70 -45.04 L-7.20 -43.67 L-10.45 -39.79 L-10.95 -38.29 L-14.70 -33.54 L-15.20 -32.42 L-16.32 -31.29 L-16.45 -30.29 L-17.45 -29.42 L-17.82 -28.42 L-24.57 -19.04 L-25.95 -16.54 L-27.45 -15.04 L-29.95 -11.04 L-32.32 -8.17 L-33.20 -6.29 L-34.20 -5.29 L-35.95 -2.17 L-37.70 -0.17 L-38.57 1.46 L-41.20 4.83 L-43.20 8.33 L-43.95 8.96 L-45.45 11.46 L-47.95 14.71 L-49.45 17.08 L-50.82 20.21 L-51.07 21.58 L-50.95 25.46 L-49.20 29.71 L-47.07 32.46 L-44.95 34.21 L-43.20 34.96 L-40.95 35.46 L-35.45 35.21 L-34.32 34.46 L-31.45 33.83 L-28.20 32.46 L-26.57 32.21 L-25.07 31.46 L-19.82 29.96 L-18.32 29.21 L-15.70 28.58 L-11.45 26.96 L-6.70 26.58 L-3.57 27.33 L0.30 29.83 L8.05 37.33 L13.18 41.71 L15.18 43.96 L18.93 47.08 L21.05 48.33 L23.55 49.21 L28.43 49.33 L30.55 48.58 L34.05 46.58 L35.93 44.71 L37.80 41.58 L38.30 39.33 L38.43 36.33 L37.05 27.33 L36.05 23.96 L33.18 7.21 L32.55 5.58 L31.43 -1.54 L30.55 -4.79 L30.43 -7.17 L28.18 -16.79 L28.18 -19.04 L26.80 -24.54 L26.18 -29.67 L25.05 -34.04 L23.93 -41.04 L23.30 -42.54 L22.05 -51.04 L21.18 -52.42 L21.05 -53.42 L20.43 -54.42 L16.68 -57.92 L14.43 -59.04 L12.43 -59.54 Z","M5.80 -61.67 L2.30 -59.92 L1.55 -59.79 L0.30 -58.17 L-1.32 -57.29 L-1.57 -56.17 L-2.32 -55.29 L-2.70 -54.17 L-4.07 -53.04 L-6.57 -49.29 L-6.95 -48.29 L-8.32 -47.04 L-8.57 -46.04 L-10.57 -43.67 L-10.82 -42.17 L-12.32 -41.04 L-12.57 -40.17 L-15.20 -37.04 L-16.82 -34.29 L-18.57 -32.17 L-19.32 -30.29 L-20.95 -29.17 L-20.95 -28.42 L-24.82 -23.29 L-26.45 -20.29 L-28.95 -17.29 L-29.20 -16.04 L-30.20 -15.04 L-30.70 -14.04 L-31.95 -13.04 L-33.57 -10.29 L-34.57 -9.17 L-35.07 -7.79 L-37.20 -5.29 L-37.45 -4.29 L-38.70 -3.17 L-38.95 -1.92 L-40.07 -1.17 L-40.45 -0.17 L-41.20 0.58 L-43.20 3.96 L-44.20 4.71 L-44.32 5.46 L-45.57 7.46 L-47.07 8.83 L-47.45 10.08 L-48.32 10.96 L-49.82 13.58 L-51.20 14.96 L-53.07 19.08 L-53.57 21.46 L-53.57 25.83 L-52.20 29.58 L-50.95 30.96 L-50.45 32.33 L-47.32 35.71 L-45.57 36.21 L-43.20 37.46 L-40.45 38.08 L-35.45 37.96 L-34.32 37.21 L-33.32 37.08 L-32.20 36.46 L-31.45 36.46 L-30.20 35.71 L-27.57 35.08 L-26.20 34.33 L-23.57 33.71 L-20.57 32.46 L-18.95 32.21 L-14.32 30.33 L-9.95 29.21 L-5.82 29.21 L-4.32 29.96 L-3.32 30.08 L-0.32 32.96 L2.30 34.96 L3.80 36.58 L4.93 37.21 L7.18 39.71 L8.43 40.58 L17.43 49.08 L19.30 50.21 L23.18 51.58 L28.43 51.71 L31.05 50.58 L33.05 50.08 L37.18 46.83 L40.30 41.71 L40.80 39.21 L40.80 36.58 L39.43 26.96 L38.43 23.46 L37.43 16.96 L36.80 15.58 L36.68 13.33 L36.05 11.21 L35.55 6.83 L35.05 5.71 L34.93 3.96 L33.68 -0.67 L33.55 -3.04 L33.18 -4.04 L32.93 -6.92 L31.93 -10.42 L31.68 -13.29 L30.30 -18.17 L29.93 -22.17 L29.30 -24.29 L28.55 -29.92 L27.43 -35.17 L26.80 -36.67 L26.05 -43.29 L25.05 -45.92 L24.55 -51.04 L23.68 -52.54 L23.05 -54.67 L21.55 -56.92 L19.05 -59.42 L17.68 -59.92 L16.68 -60.92 L14.68 -61.54 L13.68 -61.54 L12.43 -62.29 L8.93 -62.17 Z M8.68 -59.79 L5.93 -59.04 L4.55 -58.17 L3.43 -57.92 L1.80 -56.79 L-0.57 -54.04 L-2.70 -50.42 L-6.70 -45.04 L-7.20 -43.67 L-10.45 -39.79 L-10.95 -38.29 L-14.70 -33.54 L-15.20 -32.42 L-16.32 -31.29 L-16.45 -30.29 L-17.45 -29.42 L-17.82 -28.42 L-24.57 -19.04 L-25.95 -16.54 L-27.45 -15.04 L-29.95 -11.04 L-32.32 -8.17 L-33.20 -6.29 L-34.20 -5.29 L-35.95 -2.17 L-37.70 -0.17 L-38.57 1.46 L-41.20 4.83 L-43.20 8.33 L-43.95 8.96 L-45.45 11.46 L-47.95 14.71 L-49.45 17.08 L-50.82 20.21 L-51.07 21.58 L-50.95 25.46 L-49.20 29.71 L-47.07 32.46 L-44.95 34.21 L-43.20 34.96 L-40.95 35.46 L-35.45 35.21 L-34.32 34.46 L-31.45 33.83 L-28.20 32.46 L-26.57 32.21 L-25.07 31.46 L-19.82 29.96 L-18.32 29.21 L-15.70 28.58 L-11.45 26.96 L-6.70 26.58 L-3.57 27.33 L0.30 29.83 L8.05 37.33 L13.18 41.71 L15.18 43.96 L18.93 47.08 L21.05 48.33 L23.55 49.21 L28.43 49.33 L30.55 48.58 L34.05 46.58 L35.93 44.71 L37.80 41.58 L38.30 39.33 L38.43 36.33 L37.05 27.33 L36.05 23.96 L33.18 7.21 L32.55 5.58 L31.43 -1.54 L30.55 -4.79 L30.43 -7.17 L28.18 -16.79 L28.18 -19.04 L26.80 -24.54 L26.18 -29.67 L25.05 -34.04 L23.93 -41.04 L23.30 -42.54 L22.05 -51.04 L21.18 -52.42 L21.05 -53.42 L20.43 -54.42 L16.68 -57.92 L14.43 -59.04 L12.43 -59.54 Z"],"fills":["rgba(52,52,52,0.302)","#f7f4f2"]};
+    /* END cursor-art */
+
+    var FPS = 24, EPS = 0.0001;
+    /* Fitted from the replica keys (see the header). */
+    var CURVE = { settle: [0.444, 0.554, 0, 0.887], grow1: [0.802, 0.013, 0, 1.063], grow: [0.909, -0.045, 0, 0.991], cursor: [0.465, 0.352, 0, 0.744] };
+    var BARS = [[0, 0], [2, 0.69], [3, 0.979], [5, 1]];
+    /* The handles' arrival, frames 0 to 6 of the source: each corner's pieces as
+       swept chips [from x, from y, to x, to y, side], in shares of the chip box's
+       half size from its centre (bottom right corner; mirrored for the others). */
+    var ARRIVE = [[0, [[0.734, 0.72, 0.916, 0.907, 22], [0.379, 0.348, 0.566, 0.542, 21]]], [2, [[0.86, 0.848, 0.963, 0.954, 23]]],
+      [3, [[0.941, 0.935, 0.986, 0.979, 23.5]]], [5, [[0.974, 0.969, 0.994, 0.99, 23.5]]], [6, [[0.99, 0.984, 1.0, 0.993, 22.5]]]];
+    var SIGNS = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+    var ES_BASE = 0.759; /* ES Serif baseline below the line box top at line-height 1, in em */
+
+    function bez(e) {
+      var x1 = e[0], y1 = e[1], x2 = e[2], y2 = e[3];
+      var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+      return function (p) {
+        if (p <= 0) return 0; if (p >= 1) return 1;
+        var lo = 0, hi = 1, t = p, x, i;
+        for (i = 0; i < 40; i++) { x = ((ax * t + bx) * t + cx) * t; if (Math.abs(x - p) < 1e-7) break; if (x < p) lo = t; else hi = t; t = (lo + hi) / 2; }
+        return ((ay * t + by) * t + cy) * t;
+      };
+    }
+    function table(T, x) {
+      if (x <= T[0][0]) return T[0][1];
+      for (var i = 1; i < T.length; i++) if (x <= T[i][0]) { var a = T[i - 1], b = T[i]; return a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]); }
+      return T[T.length - 1][1];
+    }
+    function lerp(a, b, e) { return a + (b - a) * e; }
+    function len(v, total, k) {
+      if (v == null) return null;
+      if (typeof v === "string") { var m = /^(-?\d*\.?\d+)([HW]|%)$/.exec(v.trim()); if (m) return Number(m[1]) * total[m[2] === "H" ? 1 : 0]; return Number(v); }
+      return v * k;
+    }
+    /* Is local frame f a new picture? 16 fps: frame f with (f - phase) mod 3 = 0
+       repeats f - 1 (phase 1, the default, is the source's: its frames 1, 4, 7
+       repeat). twos: every odd frame repeats. ones: every frame is new. */
+    function isPic(f, cad, ph) {
+      if (f <= 0 || cad === "ones") return true;
+      if (cad === "twos") return f % 2 === 0;
+      return ((f - ph) % 3 + 3) % 3 !== 0;
+    }
+
+    /* A swept chip: the convex hull of a square of side c dragged from a to b. */
+    function sweepPath(p) {
+      var ax = p[0], ay = p[1], bx = p[2], by = p[3], h = p[4] / 2, pts = [], i;
+      var c = [[ax - h, ay - h], [ax + h, ay - h], [ax + h, ay + h], [ax - h, ay + h], [bx - h, by - h], [bx + h, by - h], [bx + h, by + h], [bx - h, by + h]];
+      c.sort(function (u, v) { return u[0] - v[0] || u[1] - v[1]; });
+      function cr(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+      var lo = [], up = [];
+      for (i = 0; i < c.length; i++) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], c[i]) <= 0) lo.pop(); lo.push(c[i]); }
+      for (i = c.length - 1; i >= 0; i--) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], c[i]) <= 0) up.pop(); up.push(c[i]); }
+      pts = lo.slice(0, -1).concat(up.slice(0, -1));
+      var d = "M";
+      for (i = 0; i < pts.length; i++) d += (i ? " L" : "") + pts[i][0].toFixed(2) + " " + pts[i][1].toFixed(2);
+      return d + " Z";
+    }
+
+    /* ---------------------------------------------------------------------
+       General mode: the replica's measurements as shares, fitted curves and
+       defaults, built into the same per-picture tables a preset carries.
+       ------------------------------------------------------------------- */
+    function general(props) {
+      var SH = window.__esShared, W = SH.fw(props), Hh = SH.fh(props), k = SH.k(props), FT = [W, Hh];
+      var sc = props.scale || 1, cad = props.cadence || "16", ph = props.phase == null ? 1 : props.phase;
+      var F = function (f) { return Math.round(f * sc); };
+      var photo = props.photo || {}, pw = photo.w || 3000, phh = photo.h || 2000;
+      var focal = photo.focal || [0.5, 0.5], focalB = photo.focalB || focal;
+      var cx = W * (props.center ? props.center[0] : 0.5), cy = Hh * (props.center ? props.center[1] : 0.5);
+      var M = 98 * k, wF = W - 2 * M;
+      var steps = props.steps || [{}, {}], n = Math.max(1, steps.length);
+      /* stage boxes: 0 the tile as it lands, 1 settled, 2.. one per step */
+      var BW = [524 * k, 524 * k * 1.094], BH = [632 * k, 632 * k * 1.097];
+      for (var i = 0; i < n; i++) {
+        var last = i === n - 1, frac = last ? 1 : (n === 2 ? 0.49 : (i + 1) / n);
+        var dw = BW[1] + (wF - BW[1]) * frac, dh = last ? 599 * k : BH[1];
+        BW.push(Math.min(W, len(steps[i].w, FT, k) || dw)); BH.push(Math.min(Hh, len(steps[i].h, FT, k) || dh));
+      }
+      var Z = [1.162, 1.176], CAP = [102 * k, 102 * k], TR = [0, 0], OV = [0.6, 0.36], AN = [focal, focal];
+      var cap1 = (props.word && props.word.cap ? props.word.cap * k : 102 * k);
+      CAP[0] = CAP[1] = cap1;
+      for (i = 0; i < n; i++) {
+        var lst = i === n - 1;
+        Z.push(steps[i].zoom != null ? steps[i].zoom : (lst ? 1.0 : 1.216));
+        CAP.push(i === 0 ? cap1 * 1.5 : CAP[CAP.length - 1]);
+        TR.push(lst ? (props.word && props.word.tracking != null ? props.word.tracking : 0.19) : 0);
+        OV.push(lst ? 0.03 : 0.37);
+        var fr = lst ? 1 : (i + 1) / n;
+        AN.push([lerp(focal[0], 0.5, fr), lerp(focal[1], 0.5, fr)]);
+      }
+      var sFinal = Math.max(BW[BW.length - 1] / pw, BH[BH.length - 1] / phh);
+      /* step timing in base frames, measured: 9 to 26 and 29 to 44 */
+      var ST = [], at = 9;
+      for (i = 0; i < n; i++) { var du = steps[i].frames || (i === 0 && n > 1 ? 17 : 15); ST.push([at + (steps[i].delay || 0), du, i === 0 && n > 1 ? CURVE.grow1 : CURVE.grow]); at = ST[i][0] + du + 3; }
+      var lastS = ST[ST.length - 1];
+      var cut = F(lastS[0] + lastS[1] + 13 + (props.hold || 0));
+      var tail = F(props.tail != null ? props.tail : 11), N = cut + tail;
+      var artOn = F(lastS[0] + 6);
+      var ease = {}; function E(c) { var key = c.join(","); return ease[key] || (ease[key] = bez(c)); }
+
+      function stageAt(fb) { /* fb in base frames */
+        var j0 = 0, j1 = 1, e;
+        if (fb < 8) e = E(CURVE.settle)(Math.max(0, fb) / 8);
+        else {
+          j0 = 1; j1 = 1; e = 1;
+          for (var s = 0; s < ST.length; s++) {
+            if (fb >= ST[s][0] + ST[s][1]) { j0 = s + 2; j1 = s + 2; e = 1; }
+            else if (fb >= ST[s][0]) { j0 = s + 1; j1 = s + 2; e = E(ST[s][2])((fb - ST[s][0]) / ST[s][1]); break; }
+            else break;
+          }
+        }
+        return { w: lerp(BW[j0], BW[j1], e), h: lerp(BH[j0], BH[j1], e), z: Z[j0] * Math.pow(Z[j1] / Z[j0], e),
+                 cap: lerp(CAP[j0], CAP[j1], e), tr: lerp(TR[j0], TR[j1], e), ov: lerp(OV[j0], OV[j1], e),
+                 a: [lerp(AN[j0][0], AN[j1][0], e), lerp(AN[j0][1], AN[j1][1], e)] };
+      }
+      function place(bx, by, bw, bh, s, a) {
+        var tx = bx + bw / 2 - a[0] * pw * s, ty = by + bh / 2 - a[1] * phh * s;
+        tx = Math.min(bx, Math.max(bx + bw - pw * s, tx)); ty = Math.min(by, Math.max(by + bh - phh * s, ty));
+        return [tx, ty];
+      }
+      function cropAt(fb) {
+        var st = stageAt(fb), bx = cx - st.w / 2, by = cy - st.h / 2;
+        var s = Math.max(st.z * sFinal, st.w / pw, st.h / phh), t = place(bx, by, st.w, st.h, s, st.a);
+        return { st: st, row: [bx, by, st.w, st.h, s, t[0], t[1]] };
+      }
+      var crop = [], word = [], handles = [], cursor = [], chip = 24 * k, gap = 7 * k;
+      var text = (props.word && props.word.text) || "Bigger";
+      function chipPos(fb) { var c = cropAt(fb).row; var hx = c[2] / 2 + gap + chip / 2, hy = c[3] / 2 + gap + chip / 2; return [c[0] + c[2] / 2, c[1] + c[3] / 2, hx, hy]; }
+      for (var f = 0; f < N; f++) {
+        if (!isPic(f, cad, ph)) continue;
+        if (f < cut) {
+          var fb = f / sc, C = cropAt(fb), r = C.row, st = C.st;
+          crop.push([f].concat(r));
+          var size = st.cap / 0.69, L = SH.layout(text, size, st.tr);
+          var x0 = r[0] + r[2] / 2 - (L.inkL + L.inkR) / 2, base = r[1] + r[3] + (1 - st.ov) * st.cap, top = base - ES_BASE * size;
+          word.push([f, L.pens.map(function (p) { return [x0 + p, top, size, 1, 1]; })]);
+          /* handles */
+          var pieces = [], cp = chipPos(fb);
+          if (fb < 8) {
+            var tpl = null; for (var q = 0; q < ARRIVE.length; q++) if (F(ARRIVE[q][0]) <= f) tpl = ARRIVE[q][1];
+            if (tpl) for (var c4 = 0; c4 < 4; c4++) for (var pi = 0; pi < tpl.length; pi++) {
+              var T = tpl[pi], sx = SIGNS[c4][0], sy = SIGNS[c4][1];
+              pieces.push([cp[0] + sx * T[0] * cp[2], cp[1] + sy * T[1] * cp[3], cp[0] + sx * T[2] * cp[2], cp[1] + sy * T[3] * cp[3], T[4] * k]);
+            } else for (c4 = 0; c4 < 4; c4++) pieces.push([cp[0] + SIGNS[c4][0] * cp[2], cp[1] + SIGNS[c4][1] * cp[3], cp[0] + SIGNS[c4][0] * cp[2], cp[1] + SIGNS[c4][1] * cp[3], chip]);
+          } else {
+            /* a leading piece over the last half frame and a trailing smear from
+               0.75 to 1.5 frames back, sampled on the continuous curve */
+            var A = chipPos(fb), Bh = chipPos(fb - 0.5 / sc), Ct = chipPos(fb - 0.75 / sc), Dt = chipPos(fb - 1.5 / sc);
+            for (c4 = 0; c4 < 4; c4++) {
+              var s0 = SIGNS[c4];
+              var pa = [A[0] + s0[0] * A[2], A[1] + s0[1] * A[3]], pb = [Bh[0] + s0[0] * Bh[2], Bh[1] + s0[1] * Bh[3]];
+              var pc = [Ct[0] + s0[0] * Ct[2], Ct[1] + s0[1] * Ct[3]], pd = [Dt[0] + s0[0] * Dt[2], Dt[1] + s0[1] * Dt[3]];
+              pieces.push([pa[0], pa[1], pb[0], pb[1], chip]);
+              if (Math.hypot(pc[0] - pd[0], pc[1] - pd[1]) >= 1.5) pieces.push([pc[0], pc[1], pd[0], pd[1], chip]);
+            }
+          }
+          handles.push([f, pieces]);
+        } else {
+          var fbB = (f - cut) / sc, pbar = table(BARS, fbB), inset = 0.0437 * Hh * (1 - pbar);
+          var hB = Hh - 2 * inset, sB = Math.max(W / pw, hB / phh) * (photo.zoomB || 1), tB = place(0, inset, W, hB, sB, focalB);
+          crop.push([f, 0, inset, W, hB, sB, tB[0], tB[1]]);
+          var cf = props.cursor === false ? null : (props.cursor || {});
+          if (cf) {
+            var from = cf.from || [0.253, 0.296], to = cf.to || [0.876, 0.841], cd = F(cf.frames || 9);
+            var pc2 = E(CURVE.cursor)(Math.min(1, (f - cut) / cd));
+            var rot = Math.round((10 - 25 * pc2) / 5) * 5;
+            cursor.push([f, lerp(from[0], to[0], pc2) * W, lerp(from[1], to[1], pc2) * Hh, (f - cut < F(3) ? 0.95 : 1) * k * (cf.size || 1), rot]);
+          }
+        }
+      }
+      var w2 = props.word2 || {}, t2 = w2.text || "Oops...", unit = SH.layout(t2, 1, 0);
+      var size2 = Math.min((w2.cap ? w2.cap * k : 254 * k) / 0.69, 0.86 * W / Math.max(0.01, unit.inkR - unit.inkL));
+      var L2 = SH.layout(t2, size2, 0), x2 = W / 2 - (L2.inkL + L2.inkR) / 2, base2 = Hh * (w2.y || 0.5) + size2 * 0.69 / 2;
+      var word2 = [[cut, L2.pens.map(function (p) { return [x2 + p, base2 - ES_BASE * size2, size2, 1, 1]; })]];
+      var wf = props.word || {}, wf2 = props.word2 || {};
+      var art = props.art ? { on: props.art.on != null ? F(props.art.on * FPS) : artOn, off: cut } : null;
+      var camB = props.push === false ? null : (props.push || { preset: "push" });
+      return {
+        frames: N, cut: cut, plate: [pw, phh], crop: crop, art: art,
+        word: { text: text, font: { family: wf.family || "ES Serif", color: wf.color || "ink" }, states: word },
+        word2: { text: t2, font: { family: wf2.family || "ES Serif", color: wf2.color || "type-light" }, states: word2 },
+        handles: handles, handleColor: props.handleColor || "violet", cursor: cursor,
+        cam: camB, focalB: focalB
+      };
+    }
+
+    function plan(props) {
+      if (props.__cs) return props.__cs;
+      var P;
+      if (props.preset && PRESETS[props.preset]) {
+        P = {}; var src = PRESETS[props.preset];
+        for (var key in src) P[key] = src[key];
+        if (props.word && props.word.text && props.word.text.length === P.word.text.length) P.word = { text: props.word.text, font: P.word.font, states: P.word.states };
+      } else P = general(props);
+      props.__cs = P;
+      return P;
+    }
+
+    function spans(layer, word) {
+      var SH = window.__esShared, f = word.font || {};
+      for (var i = 0; i < word.text.length; i++) {
+        var sp = document.createElement("span");
+        sp.textContent = word.text[i];
+        sp.style.fontFamily = f.family === "ES Serif" ? "var(--font-serif)" : '"' + f.family + '"';
+        if (f.wght) { sp.style.fontWeight = String(f.wght); sp.style.fontVariationSettings = "'opsz' " + (f.opsz || 20) + ", 'wght' " + f.wght; }
+        sp.style.color = SH.color(f.color, "ink");
+        layer.appendChild(sp);
+      }
+    }
+
+    return {
+      /* props (crop-select.md lists them in full):
+           preset   "replica-s6-3-4" for the exact source keys; absent for the general mode
+           photo    { src, w, h (natural px), focal [x, y], focalB, zoomB, cutout }  the image slot
+           paper    { src } or a colour token; the ground (default --color-paper)
+           art      { src, rect [x, y, w, h] in photo px or shares, on (s) }  artwork riding the photo
+           word     { text, cap (px at 1080), tracking (em, final step), color, family }
+           word2    { text, cap, y (share of height), color, family }  the exclamation after the cut
+           steps    [{ w, h, zoom, frames, delay }, ...]  the crop's growth (default two steps)
+           scale    duration multiplier; hold, tail (frames); cadence "16" | "twos" | "ones"; phase
+           cursor   false, or { from [x, y], to [x, y] shares, frames, size }
+           push     false, or an es-camera move for the full-bleed plate (default { preset: "push" })
+           exitAt   seconds after t0 when the block is gone */
+      render: function (props) {
+        var SH = window.__esShared, P = plan(props), W = SH.fw(props), Hh = SH.fh(props);
+        var el = document.createElement("div");
+        el.className = "el-crop-select";
+        el.setAttribute("data-layout-allow-overflow", "");
+        el.style.width = W + "px"; el.style.height = Hh + "px";
+        var g = document.createElement("div"); g.className = "cs-ground";
+        var paper = props.paper;
+        if (paper && (paper.src || typeof paper === "string" && /\.(png|jpe?g|webp)$/i.test(paper))) { var gi = document.createElement("img"); gi.src = paper.src || paper; g.appendChild(gi); }
+        else if (paper) g.style.background = SH.color(paper.color || paper, "paper");
+        el.appendChild(g);
+        var photo = props.photo || {}, pw = P.plate[0], phh = P.plate[1];
+        function stack(cut) {
+          var crop = document.createElement("div"); crop.className = "cs-crop" + (cut ? " cs-cutcrop" : "");
+          var cam = document.createElement("div"); cam.className = "cs-cam";
+          var pic = document.createElement("div"); pic.className = "cs-pic";
+          pic.style.width = pw + "px"; pic.style.height = phh + "px";
+          var spec = {}; for (var k2 in photo) spec[k2] = photo[k2];
+          if (cut) spec.src = photo.cutout;
+          spec.fit = "cover"; spec.focal = [0.5, 0.5]; spec.zoom = 1;
+          var box;
+          if (spec.src) {
+            /* an img, not the slot's background: the picture is pre-sized to its own pixels,
+               so cover is exact, and an img resamples steadily under the per-frame scale */
+            box = document.createElement("img"); box.src = spec.src; box.setAttribute("data-slot", cut ? "photo-cutout" : "photo");
+            box.style.cssText = "position:absolute;left:0;top:0;width:" + pw + "px;height:" + phh + "px;max-width:none;display:block;";
+          } else { box = SH.slot({ label: "photo" }, pw, phh, "photo"); box.style.left = "0px"; box.style.top = "0px"; }
+          pic.appendChild(box);
+          if (!cut && props.art && props.art.src) {
+            var a = document.createElement("img"); a.className = "cs-art"; a.src = props.art.src;
+            var R = props.art.rect || [0, 0, 1, 1], sx = R[2] <= 1 ? pw : 1, sy = R[3] <= 1 ? phh : 1;
+            a.style.left = (R[0] * (R[0] <= 1 ? pw : 1)) + "px"; a.style.top = (R[1] * (R[1] <= 1 ? phh : 1)) + "px";
+            a.style.width = (R[2] * sx) + "px"; a.style.height = (R[3] * sy) + "px";
+            pic.appendChild(a);
+          }
+          cam.appendChild(pic); crop.appendChild(cam);
+          return crop;
+        }
+        el.appendChild(stack(false));
+        var w1 = document.createElement("div"); w1.className = "cs-layer cs-word"; spans(w1, P.word); el.appendChild(w1);
+        var NS = "http://www.w3.org/2000/svg", hs = document.createElementNS(NS, "svg");
+        hs.setAttribute("class", "cs-handles"); hs.setAttribute("width", W); hs.setAttribute("height", Hh); hs.setAttribute("viewBox", "0 0 " + W + " " + Hh);
+        var pool = 0; for (var i = 0; i < P.handles.length; i++) pool = Math.max(pool, P.handles[i][1].length);
+        for (i = 0; i < pool; i++) { var p = document.createElementNS(NS, "path"); p.setAttribute("d", "M0 0"); p.setAttribute("fill", SH.color(P.handleColor, "violet")); hs.appendChild(p); }
+        el.appendChild(hs);
+        var w2 = document.createElement("div"); w2.className = "cs-layer cs-word2"; spans(w2, P.word2); el.appendChild(w2);
+        if (photo.cutout) el.appendChild(stack(true));
+        if (P.cursor && P.cursor.length) {
+          var cu = document.createElement("div"); cu.className = "cs-cursor";
+          var svg = document.createElementNS(NS, "svg"); svg.setAttribute("width", "1"); svg.setAttribute("height", "1");
+          for (i = 0; i < CURSOR_ART.paths.length; i++) { var cp = document.createElementNS(NS, "path"); cp.setAttribute("d", CURSOR_ART.paths[i]); cp.setAttribute("fill", CURSOR_ART.fills[i]); cp.setAttribute("fill-rule", "evenodd"); svg.appendChild(cp); }
+          cu.appendChild(svg); el.appendChild(cu);
+        }
+        return el;
+      },
+
+      animate: function (tl, el, t0, props) {
+        var P = plan(props);
+        function at(f) { return f <= 0 ? t0 : t0 + (f - 0.25) / FPS; }
+        var started = [];
+        function step(node, from, to, f) {
+          var a = {}, b = {}, key;
+          for (key in from) a[key] = from[key];
+          for (key in to) b[key] = to[key];
+          b.duration = EPS; b.ease = "none";
+          var first = started.indexOf(node) < 0;
+          if (!first) b.immediateRender = false; else started.push(node);
+          tl.fromTo(node, a, b, first ? t0 : at(f));
+        }
+        function run(node, rows, fn) {
+          var prev = null;
+          for (var i = 0; i < rows.length; i++) {
+            var cur = fn(rows[i]);
+            if (prev && JSON.stringify(prev) === JSON.stringify(cur)) continue;
+            step(node, prev || cur, cur, rows[i][0]);
+            prev = cur;
+          }
+        }
+        var crops = el.querySelectorAll(".cs-crop"), cut = P.cut;
+        for (var c = 0; c < crops.length; c++) {
+          var isCut = crops[c].classList.contains("cs-cutcrop"), pic = crops[c].querySelector(".cs-pic");
+          run(crops[c], P.crop, function (r) { return { left: r[1], top: r[2], width: r[3], height: r[4], opacity: isCut ? (r[0] >= cut ? 1 : 0) : 1 }; });
+          run(pic, P.crop, function (r) { return { x: r[6] - r[1], y: r[7] - r[2], scale: r[5] }; });
+          if (P.cam && window.__esCamera) {
+            var lastA = P.crop[P.crop.length - 1], fx = P.focalB || [0.5, 0.5];
+            var cam = {}; for (var kc in P.cam) cam[kc] = P.cam[kc];
+            if (!cam.origin) cam.origin = [(lastA[6] + fx[0] * P.plate[0] * lastA[5] - lastA[1]) / lastA[3], (lastA[7] + fx[1] * P.plate[1] * lastA[5] - lastA[2]) / lastA[4]];
+            if (cam.phase == null) cam.phase = ((Math.round(t0 * FPS) + (props.phase == null ? 1 : props.phase)) % 3 + 3) % 3;
+            window.__esCamera.apply(tl, crops[c].querySelector(".cs-cam"), t0 + cut / FPS, cam, props);
+          }
+        }
+        var art = el.querySelector(".cs-art");
+        if (art && P.art) run(art, [[0], [P.art.on], [P.art.off]], function (r) { return { opacity: r[0] >= P.art.on && r[0] < P.art.off ? 1 : 0 }; });
+        function glyphs(layer, W, hideAt, showFrom) {
+          var sp = layer.children, rows = W.states.slice();
+          if (hideAt != null) rows.push([hideAt, null]);
+          for (var i = 0; i < sp.length; i++) {
+            run(sp[i], rows, function (r) {
+              var g = r[1] && r[1][i];
+              if (!g) return { x: 0, y: 0, fontSize: "10px", scaleX: 1, scaleY: 1, opacity: 0 };
+              return { x: g[0], y: g[1], fontSize: g[2] + "px", scaleX: g[3] == null ? 1 : g[3], scaleY: g[4] == null ? 1 : g[4], opacity: 1 };
+            });
+          }
+        }
+        glyphs(el.querySelector(".cs-word"), P.word, cut);
+        var w2 = el.querySelector(".cs-word2"), rows2 = [[0, null]].concat(P.word2.states);
+        for (var i = 0; i < w2.children.length; i++) (function (i) {
+          run(w2.children[i], rows2, function (r) {
+            var g = r[1] && r[1][i];
+            if (!g) return { x: 0, y: 0, fontSize: "10px", scaleX: 1, scaleY: 1, opacity: 0 };
+            return { x: g[0], y: g[1], fontSize: g[2] + "px", scaleX: g[3] == null ? 1 : g[3], scaleY: g[4] == null ? 1 : g[4], opacity: 1 };
+          });
+        })(i);
+        var paths = el.querySelectorAll(".cs-handles path"), hrows = P.handles.slice();
+        if (!hrows.length || hrows[0][0] > 0) hrows.unshift([0, []]);
+        if (hrows[hrows.length - 1][0] < cut) hrows.push([cut, []]);
+        for (var j = 0; j < paths.length; j++) (function (j) {
+          run(paths[j], hrows, function (r) { var pc = r[1][j]; return { attr: { d: pc ? sweepPath(pc) : "M0 0" } }; });
+        })(j);
+        var cu = el.querySelector(".cs-cursor");
+        if (cu) run(cu, [[0, null]].concat(P.cursor.map(function (r) { return [r[0], r]; })), function (r) {
+          var k = r[1]; return k ? { x: k[1], y: k[2], scale: k[3], rotation: k[4], opacity: 1 } : { x: 0, y: 0, scale: 1, rotation: 0, opacity: 0 };
+        });
+        if (props.exitAt != null) tl.fromTo(el, { opacity: 1 }, { opacity: 0, duration: EPS, ease: "none", immediateRender: false }, t0 + props.exitAt);
+        return t0 + P.frames / FPS;
+      }
+    };
+  })();
+</script>

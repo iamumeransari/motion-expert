@@ -1,0 +1,601 @@
+<style>
+  /* billboard. Artwork carried onto a flat plane inside a photograph: a logotype (a word
+     set in ES Serif, or a traced path set), small type lines and rules, laid out in the
+     board's own flat space and mapped onto the plane by a homography written as matrix3d,
+     with the ink colour, a soft glow and an edge blur matched to the plate, and optional
+     foreground cut-outs drawn over the type so a passer-by or a car crosses in front of it.
+     Source: s7 of the replica, shots B to I (film frames 847 to 992, 35.292 to 41.375 s),
+     assets/frames/print-shrink-billboard-dense.jpg. Measured there: the board's plane is
+     tracked per frame (SIFT chain then ECC against the flat median); the footage runs on
+     ones (every frame unique, real camera moves); the type takes the plate's light per
+     frame (ink about rgb(229, 215, 192) on the pink boards); glow 6 px at 0.45 (8 at 0.6
+     on the night shelter); traced paths and set type are softened by about 0.6 px of blur
+     in board space and small type by its own measured blur. The pull-backs lose 0.9 to 2.4
+     percent of scale per frame, and the long one (shot I) falls to 0.407 over 35 frames.
+     Two modes: preset "replica-s7-<shot>" replays those keys exactly over the shot's own
+     inpainted frames; the general mode computes the plane from four corners and lays the
+     artwork out from glyph metrics. */
+  .el-billboard { position: absolute; left: 0; top: 0; overflow: hidden; pointer-events: none; --f: 0.5; }
+  .el-billboard .bb-cam { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 50% 50%; }
+  .el-billboard .bb-fr { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+  .el-billboard .bb-bd { position: absolute; left: 0; top: 0; transform-origin: 0 0;
+    transform: matrix3d(var(--a), var(--b), 0, calc(var(--c) / 1000000), var(--d), var(--e), 0, calc(var(--g) / 1000000), 0, 0, 1, 0, var(--h), var(--i), 0, 1); }
+  .el-billboard .bb-bd svg { position: absolute; left: 0; top: 0; overflow: visible; }
+  .el-billboard .bb-panel { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+</style>
+<script>
+  /* BEGIN es-shared */
+  /* es-shared. The helpers every editorial-select block uses: frame scale,
+     the film's picture cadence, zero-duration steps, a seeded PRNG, ES Serif
+     glyph metrics for arithmetic text layout, and the image slot. Copied
+     verbatim into every block file between the BEGIN and END markers by
+     work/blocks/shared/inject.py; the first copy in a document wins, so
+     change es-shared.src.js and re-inject rather than editing a copy. */
+  window.__esShared = window.__esShared || (function () {
+    var METRICS = { serif: {"cap":0.69,"x":0.499,"asc":0.802,"desc":-0.284,"adv":{" ":0.238,"!":0.312,"\"":0.402,"#":0.557,"$":0.54,"%":0.952,"&":0.759,"'":0.2,"(":0.374,")":0.374,"*":0.468,"+":0.56,",":0.315,"-":0.336,".":0.236,"/":0.36,"0":0.545,"1":0.545,"2":0.545,"3":0.545,"4":0.535,"5":0.515,"6":0.545,"7":0.545,"8":0.545,"9":0.545,":":0.315,";":0.315,"<":0.56,"=":0.56,">":0.56,"?":0.44,"@":0.884,"A":0.732,"B":0.635,"C":0.675,"D":0.774,"E":0.661,"F":0.678,"G":0.734,"H":0.834,"I":0.334,"J":0.399,"K":0.725,"L":0.617,"M":0.911,"N":0.783,"O":0.756,"P":0.592,"Q":0.755,"R":0.707,"S":0.557,"T":0.676,"U":0.776,"V":0.721,"W":1.12,"X":0.692,"Y":0.678,"Z":0.596,"[":0.349,"\\":0.36,"]":0.349,"^":0.561,"_":0.542,"`":0.418,"a":0.502,"b":0.596,"c":0.495,"d":0.597,"e":0.504,"f":0.339,"g":0.558,"h":0.57,"i":0.261,"j":0.273,"k":0.549,"l":0.263,"m":0.886,"n":0.587,"o":0.564,"p":0.602,"q":0.561,"r":0.401,"s":0.434,"t":0.345,"u":0.582,"v":0.522,"w":0.791,"x":0.531,"y":0.582,"z":0.451,"{":0.368,"|":0.307,"}":0.368,"~":0.56},"kern":{"Fi":0.021,"Tr":-0.016,"al":0.026,"ap":-0.009,"at":-0.008,"el":0.013,"gh":-0.012,"ho":0.009,"hy":-0.029,"id":0.015,"il":-0.028,"ll":-0.011,"lm":0.021,"rt":0.011,"ry":0.021},"ink":{"!":[0.081,-0.014,0.231,0.705],"\"":[0.04,0.437,0.361,0.762],"#":[0.025,0.0,0.533,0.671],"$":[0.053,-0.118,0.501,0.776],"%":[0.04,-0.028,0.912,0.701],"&":[0.026,-0.014,0.717,0.706],"'":[0.04,0.437,0.16,0.762],"(":[0.083,-0.195,0.34,0.77],")":[0.034,-0.195,0.291,0.77],"*":[0.019,0.363,0.45,0.771],"+":[0.032,0.077,0.53,0.595],",":[0.045,-0.186,0.234,0.137],"-":[0.042,0.224,0.294,0.301],".":[0.044,-0.015,0.191,0.135],"/":[0.004,-0.166,0.356,0.734],"0":[0.04,-0.014,0.506,0.68],"1":[0.082,-0.001,0.477,0.673],"2":[0.047,-0.001,0.502,0.68],"3":[0.046,-0.014,0.504,0.68],"4":[0.024,-0.009,0.542,0.696],"5":[0.024,-0.011,0.473,0.738],"6":[0.039,-0.014,0.504,0.68],"7":[0.052,0.0,0.504,0.666],"8":[0.044,-0.014,0.501,0.68],"9":[0.032,-0.016,0.501,0.68],":":[0.079,-0.013,0.237,0.496],";":[0.045,-0.185,0.237,0.496],"<":[0.058,0.081,0.503,0.596],"=":[0.032,0.201,0.53,0.477],">":[0.059,0.083,0.504,0.598],"?":[0.068,-0.014,0.376,0.707],"@":[0.039,-0.162,0.847,0.682],"A":[0.009,0.0,0.728,0.701],"B":[0.041,-0.009,0.593,0.698],"C":[0.047,-0.017,0.636,0.707],"D":[0.041,0.0,0.716,0.683],"E":[0.042,-0.003,0.618,0.689],"F":[0.042,0.001,0.59,0.691],"G":[0.047,-0.017,0.715,0.707],"H":[0.041,0.0,0.794,0.69],"I":[0.041,0.0,0.315,0.686],"J":[-0.028,-0.14,0.368,0.69],"K":[0.041,0.0,0.717,0.69],"L":[0.042,-0.002,0.591,0.684],"M":[0.036,-0.009,0.899,0.686],"N":[0.038,-0.007,0.747,0.69],"O":[0.047,-0.004,0.708,0.704],"P":[0.041,0.002,0.567,0.691],"Q":[0.047,-0.223,0.709,0.707],"R":[0.041,-0.011,0.694,0.69],"S":[0.041,-0.017,0.515,0.707],"T":[0.021,-0.003,0.664,0.682],"U":[0.036,-0.016,0.746,0.69],"V":[0.014,-0.006,0.714,0.69],"W":[0.014,-0.007,1.11,0.707],"X":[0.01,0.0,0.683,0.69],"Y":[0.021,0.0,0.67,0.69],"Z":[0.023,0.0,0.574,0.69],"[":[0.108,-0.165,0.317,0.739],"\\":[0.004,-0.166,0.356,0.734],"]":[0.032,-0.165,0.242,0.739],"^":[0.081,0.204,0.481,0.506],"_":[0.042,-0.072,0.5,0.005],"`":[0.078,0.579,0.275,0.791],"a":[0.028,-0.014,0.504,0.511],"b":[0.026,-0.012,0.565,0.751],"c":[0.029,-0.012,0.475,0.512],"d":[0.03,-0.012,0.597,0.762],"e":[0.027,-0.012,0.474,0.508],"f":[0.017,0.0,0.432,0.764],"g":[0.017,-0.254,0.544,0.511],"h":[0.005,0.001,0.571,0.758],"i":[0.01,0.001,0.268,0.715],"j":[-0.098,-0.25,0.217,0.748],"k":[0.0,0.001,0.544,0.762],"l":[-0.014,0.002,0.239,0.76],"m":[0.013,0.0,0.882,0.507],"n":[0.017,0.001,0.585,0.511],"o":[0.026,-0.013,0.534,0.506],"p":[0.01,-0.241,0.568,0.515],"q":[0.026,-0.24,0.562,0.514],"r":[0.01,0.0,0.405,0.507],"s":[0.038,-0.013,0.402,0.511],"t":[0.011,-0.012,0.339,0.596],"u":[-0.002,-0.011,0.573,0.511],"v":[-0.007,-0.012,0.55,0.496],"w":[-0.016,-0.008,0.796,0.498],"x":[-0.001,-0.001,0.529,0.5],"y":[0.011,-0.253,0.576,0.501],"z":[0.013,-0.001,0.437,0.5],"{":[0.047,-0.165,0.335,0.739],"|":[0.117,-0.25,0.19,0.773],"}":[0.034,-0.165,0.322,0.739],"~":[0.05,0.27,0.512,0.442]}} };
+
+    /* Scale from the 1920x1080 source to this frame. The short side carries
+       it, so a portrait or square frame keeps the source's type size. */
+    function k(props) { var f = (props && props.frame) || { w: 1920, h: 1080 }; return Math.min(f.w, f.h) / 1080; }
+    function fw(props) { return ((props && props.frame) || { w: 1920 }).w; }
+    function fh(props) { return ((props && props.frame) || { h: 1080 }).h; }
+
+    /* The film updates its picture 16 times a second inside 24 fps (frame f
+       with f mod 3 = 2 repeats f - 1), and parts of it run on twos. quant(t)
+       moves a time to the start of the picture it falls in, so any tween or
+       step placed through it lands on a picture the film could show.
+       cadence: "16" (default), "twos", "ones". */
+    function quant(t, cadence, fps) {
+      fps = fps || 24; var f = Math.round(t * fps * 1000) / 1000, fl = Math.floor(f + 1e-6);
+      if (cadence === "ones") return fl / fps;
+      if (cadence === "twos") return (fl - (fl % 2)) / fps;
+      return (fl % 3 === 2 ? fl - 1 : fl) / fps;
+    }
+    /* Sample a tween as held pictures: returns the list of times at which the
+       picture changes between t0 and t1 on the cadence. */
+    function pictures(t0, t1, cadence, fps) {
+      fps = fps || 24; var out = [], f0 = Math.ceil(t0 * fps - 1e-6), f1 = Math.floor(t1 * fps + 1e-6), last = null;
+      for (var f = f0; f <= f1; f++) { var q = quant(f / fps, cadence, fps); if (q !== last && q >= t0 - 1e-6) { out.push(q); last = q; } }
+      if (!out.length || out[out.length - 1] < t1 - 1e-6) out.push(t1);
+      return out;
+    }
+
+    /* A zero-duration step, the film's way of changing a picture. Steps after
+       the first on a node carry immediateRender false (CONTRACT.md). */
+    function step(tl, node, from, to, t, first) {
+      var v = {}; for (var p in to) v[p] = to[p];
+      v.duration = 0.0001; v.ease = "none"; if (!first) v.immediateRender = false;
+      tl.fromTo(node, from, v, Math.max(0, t));
+    }
+
+    function rng(seed) {
+      var s = (seed >>> 0) || 1;
+      return function () { s = (s + 0x6D2B79F5) >>> 0; var t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }
+
+    /* Lay out a string in ES Serif from its glyph metrics: returns pen x per
+       character (from the run's left edge, px), the advance width and the ink
+       box, at a font size in px and tracking in em. Pure arithmetic, so it is
+       right before the webfont arrives and render() never reads layout. */
+    function layout(text, size, tracking, face) {
+      var m = METRICS[face || "serif"], pens = [], x = 0, tr = (tracking || 0) * size;
+      var inkL = Infinity, inkR = -Infinity;
+      for (var i = 0; i < text.length; i++) {
+        var ch = text[i], a = m.adv[ch] != null ? m.adv[ch] : 0.5;
+        pens.push(x);
+        var b = m.ink[ch];
+        if (b) { inkL = Math.min(inkL, x + b[0] * size); inkR = Math.max(inkR, x + b[2] * size); }
+        x += a * size;
+        if (i + 1 < text.length) { x += tr; var kp = m.kern[ch + text[i + 1]]; if (kp) x += kp * size; }
+      }
+      if (inkL === Infinity) { inkL = 0; inkR = x; }
+      return { pens: pens, width: x, inkL: inkL, inkR: inkR, ink: inkR - inkL, cap: m.cap * size, xh: m.x * size, size: size };
+    }
+    /* The font size whose cap height is cap px. */
+    function sizeForCap(cap, face) { return cap / METRICS[face || "serif"].cap; }
+    /* Where the baseline sits below the top of a line-height:1 box, as a
+       share of the font size, so a glyph node can be placed by its baseline. */
+    function baseFrac(face) { var m = METRICS[face || "serif"]; return (1 - (m.asc - m.desc)) / 2 + m.asc; }
+
+    /* An image slot: a box that crops its picture by code. spec is
+         { src, fit: "cover" | "contain", focal: [x, y] (0..1), zoom (1),
+           cutout: src of the subject on transparency, label }
+       or a string src. Without a src it draws a labelled placeholder, which is
+       the code-and-slots view of the block. Returns the slot node; the picture
+       is its first child (class es-pic) so a block can move it inside the box. */
+    function slot(spec, w, h, name) {
+      if (typeof spec === "string") spec = { src: spec };
+      spec = spec || {};
+      var box = document.createElement("div");
+      box.className = "es-slot"; box.setAttribute("data-slot", name || "image");
+      box.style.cssText = "position:absolute;overflow:hidden;width:" + w + "px;height:" + h + "px;";
+      var fx = spec.focal ? spec.focal[0] : 0.5, fy = spec.focal ? spec.focal[1] : 0.5;
+      if (spec.src) {
+        var pic = document.createElement("div");
+        pic.className = "es-pic";
+        var z = spec.zoom || 1;
+        pic.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;background-image:url(\"" + spec.src + "\");background-repeat:no-repeat;background-size:" +
+          (spec.fit === "contain" ? "contain" : (z === 1 ? "cover" : (z * 100) + "% auto")) + ";background-position:" + (fx * 100) + "% " + (fy * 100) + "%;transform-origin:" + (fx * 100) + "% " + (fy * 100) + "%;";
+        box.appendChild(pic);
+      } else {
+        box.style.background = "repeating-linear-gradient(45deg, var(--color-mist) 0 2px, var(--color-ghost) 2px 14px)";
+        box.style.outline = "2px solid var(--color-ink-grey)"; box.style.outlineOffset = "-2px";
+        var lab = document.createElement("div");
+        lab.className = "es-slot-label"; lab.textContent = spec.label || name || "image";
+        lab.style.cssText = "position:absolute;left:8px;top:6px;font:500 " + Math.max(10, Math.min(18, h / 8)) + "px/1 var(--font-mono);color:var(--color-ink-grey);white-space:nowrap;";
+        box.appendChild(lab);
+      }
+      return box;
+    }
+    /* The cut-out layer for type-behind-subject: the same crop as slot(spec)
+       but showing spec.cutout, to sit above the type. Null when there is none. */
+    function cutout(spec, w, h, name) {
+      if (!spec || typeof spec === "string" || !spec.cutout) return null;
+      var c = {}; for (var p in spec) c[p] = spec[p]; c.src = spec.cutout;
+      var n = slot(c, w, h, (name || "image") + "-cutout"); n.classList.add("es-cutout"); return n;
+    }
+
+    /* A token colour by name ("violet" -> var(--color-violet)); any other
+       CSS colour passes through. */
+    function color(c, dflt) { c = c || dflt; return /^[a-z-]+$/.test(c) && c !== "white" && c !== "black" && c !== "transparent" ? "var(--color-" + c + ")" : c; }
+
+    return { METRICS: METRICS, k: k, fw: fw, fh: fh, quant: quant, pictures: pictures, step: step, rng: rng,
+             layout: layout, sizeForCap: sizeForCap, baseFrac: baseFrac, slot: slot, cutout: cutout, color: color, FR: 1 / 24 };
+  })();
+  /* END es-shared */
+  /* BEGIN es-camera */
+  /* es-camera v1: the film's camera moves as presets for any image slot or
+     container, copied verbatim into every block that moves a picture; the
+     first copy in a document wins. Source: work/blocks/camera-rig/es-camera.src.js,
+     injected between the BEGIN and END es-camera markers by
+     work/blocks/camera-rig/inject.py, so change the source and re-inject.
+
+     A move is a scale about an origin plus a travel and a roll, run on one of
+     the film's cadences. Scale interpolates in log space, which is how every
+     preset below was fitted, so a pull from 1 to 0.4 reads as an even camera
+     move rather than a slowing one. Every preset is measured from the source:
+       push         film 822 to 834 (shots 34 and 35, the lying model), the push
+                    with its cut punch removed: x1.100 over 12 frames, fitted
+                    bezier 0.587 -0.033 0.263 1.135 (rms 0.026), 16 fps cadence
+       punch        the punch-in on the cut at film 828: x1.097 in one frame
+       push-soft    fingerprint move 52 (film 600 on): x1.34 over 13 frames, push curve
+       push-hard    fingerprint move 48 (film 522 on): x1.47 over 13 frames, push-hard curve
+       pull-back    s7 shot I (film 958 to 992), tracked board plane: x0.407 over
+                    35 frames, log-scale bezier 0.473 0.464 0.332 0.974 (rms 0.003),
+                    centre travel -33, +26 px, on ones (real footage)
+       pull-steady  s7 shots B to H, the median steady pull: -1.99 percent per
+                    frame (range -0.92 to -2.39), linear, on ones
+       pull-settle  fingerprint move 67 (shot 38): x0.82 over 13 frames, settle curve
+       drift        fingerprint move 29 (shot 14 studio drift): 0.035 W by 0.025 H
+                    over 20 frames, drift curve, on ones
+       tilt         fingerprint move 66 (shot 37): -0.06 H over 13 frames,
+                    bezier 1.0 0.937 0.874 0.965, on ones
+       hold         no motion
+     cam = { preset, at (s after t0), dur (s) or frames, scale (duration
+             multiplier), from, to (scale), dx, dy (px at 1920, or "0.05W",
+             "-0.03H"), r (deg), origin [fx, fy] (0..1 of the node box),
+             ease (token name or bezier), cadence "16" | "twos" | "ones",
+             phase (which frame of three repeats, default 2),
+             keys: [[frame, s, x, y, r], ...] exact per-frame states, or
+             mats: [[frame, m0..m8], ...] exact per-frame homographies (row
+             major, frame px), both stepped on their frames }
+     or an array of such moves, each starting from where the last one ended. */
+  window.__esCamera = window.__esCamera || (function () {
+    var FPS = 24, EPS = 0.0001;
+    var CURVE = { snap: [0.33, 1, 0.68, 1], drift: [0.15, 0.11, 0.614, 0.796], "drift-linear": [0.385, 0.326, 0.732, 0.781],
+      push: [0.336, -0.065, 0, 0.821], "push-hard": [0.772, 0.446, 0.15, 0.453], pull: [0.924, 0.668, 0.604, 0.958],
+      glide: [0.034, 0.665, 0.702, 1.023], reveal: [0.081, -0.525, 0, 0.951], rise: [0.15, 0.85, 0.3, 1],
+      pass: [0.45, 0.05, 0.55, 0.95], settle: [0.42, 0.543, 1, 1.076], linear: [0, 0, 1, 1],
+      "film-push": [0.587, -0.033, 0.263, 1.135], "film-pull": [0.473, 0.464, 0.332, 0.974], "film-tilt": [1.0, 0.937, 0.874, 0.965] };
+    var PRESETS = {
+      push: { to: 1.100, frames: 12, ease: "film-push", cadence: "16" },
+      punch: { to: 1.097, frames: 0, cadence: "16" },
+      "push-soft": { to: 1.34, frames: 13, ease: "push", cadence: "16" },
+      "push-hard": { to: 1.47, frames: 13, ease: "push-hard", cadence: "16" },
+      "pull-back": { to: 0.407, frames: 35, ease: "film-pull", cadence: "ones", dx: -33, dy: 26 },
+      "pull-steady": { rate: -0.0199, frames: 16, ease: "linear", cadence: "ones" },
+      "pull-settle": { to: 0.82, frames: 13, ease: "settle", cadence: "ones" },
+      drift: { dx: "0.035W", dy: "0.025H", frames: 20, ease: "drift", cadence: "ones" },
+      tilt: { dy: "-0.06H", frames: 13, ease: "film-tilt", cadence: "ones" },
+      hold: { frames: 0 }
+    };
+    function bez(e) {
+      var x1 = e[0], y1 = e[1], x2 = e[2], y2 = e[3];
+      var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+      return function (p) {
+        if (p <= 0) return 0; if (p >= 1) return 1;
+        var lo = 0, hi = 1, t = p, x, i;
+        for (i = 0; i < 40; i++) { x = ((ax * t + bx) * t + cx) * t; if (Math.abs(x - p) < 1e-7) break; if (x < p) lo = t; else hi = t; t = (lo + hi) / 2; }
+        return ((ay * t + by) * t + cy) * t;
+      };
+    }
+    function curve(c) { return bez(typeof c === "string" ? (CURVE[c] || CURVE.linear) : (c || CURVE.linear)); }
+    function fsz(props) { var f = (props && props.frame) || {}; return { w: f.w || 1920, h: f.h || 1080 }; }
+    function len(v, props, axis) {
+      if (v == null) return 0;
+      var F = fsz(props);
+      if (typeof v === "string") { var m = /^(-?\d*\.?\d+)([HW])$/.exec(v.trim()); if (m) return Number(m[1]) * (m[2] === "H" ? F.h : F.w); return Number(v) || 0; }
+      return v * F.w / 1920;
+    }
+    /* The time of the picture a frame shows: on the 16 fps cadence frame f with
+       (f - phase + 2) mod 3 == 2 repeats f - 1 (phase 2 is the film's own). */
+    function shown(t, cad, phase) {
+      if (!cad || cad === "ones") return t;
+      var f = Math.floor(t * FPS + 1e-4), g = f, p = phase == null ? 2 : phase;
+      if (cad === "16" || cad === 16) { if ((((f - p) % 3) + 3) % 3 === 0) g = f - 1; }
+      else if (cad === "twos" || cad === 12) { if ((((f - (p % 2)) % 2) + 2) % 2 === 1) g = f - 1; }
+      return g / FPS;
+    }
+    /* Resolve one move into numbers: start time, duration, the scale ratio,
+       travel and roll, the curve, cadence and origin. */
+    function resolve(c, props) {
+      var P = PRESETS[c.preset || "hold"] || PRESETS.hold, k = c.scale || 1;
+      var frames = c.frames != null ? c.frames : (c.dur != null ? c.dur * FPS : P.frames * k);
+      var dur = Math.max(0, frames / FPS);
+      var ratio;
+      if (c.to != null && c.from != null) ratio = c.to / c.from;
+      else if (c.to != null) ratio = c.to;
+      else if (P.rate != null) ratio = Math.exp(P.rate * frames);
+      else ratio = P.to != null ? P.to : 1;
+      return { at: c.at || 0, dur: dur, from: c.from != null ? c.from : 1, ratio: ratio,
+        dx: len(c.dx != null ? c.dx : P.dx, props), dy: len(c.dy != null ? c.dy : P.dy, props),
+        r: c.r != null ? c.r : (P.r || 0), ease: curve(c.ease || P.ease || "linear"),
+        cadence: c.cadence || P.cadence || "16", phase: c.phase, origin: c.origin || [0.5, 0.5] };
+    }
+    function list(cam) { return !cam ? [] : (Array.isArray(cam) ? cam : [cam]); }
+    /* The state at t seconds after t0, pure, for anything that must follow the
+       camera (an overlay, a label) without being inside the moved node. */
+    function sample(cam, t, props) {
+      var st = { s: 1, x: 0, y: 0, r: 0 }, L = list(cam);
+      for (var i = 0; i < L.length; i++) {
+        var c = L[i];
+        if (c.keys) { var kk = null; for (var j = 0; j < c.keys.length; j++) if (c.keys[j][0] / FPS <= t + 1e-6) kk = c.keys[j]; if (kk) st = { s: kk[1], x: kk[2], y: kk[3], r: kk[4] || 0 }; continue; }
+        var m = resolve(c, props); if (i === 0 && c.from != null) st.s = m.from;
+        var q = m.dur > 0 ? (shown(t, m.cadence, m.phase) - m.at) / m.dur : (t >= m.at ? 1 : 0);
+        var e = m.ease(q < 0 ? 0 : q > 1 ? 1 : q);
+        if (t < m.at) break;
+        st = { s: st.s * Math.pow(m.ratio, e), x: st.x + m.dx * e, y: st.y + m.dy * e, r: st.r + m.r * e };
+        if (q < 1) break;
+      }
+      return st;
+    }
+    /* A GSAP ease that holds pictures on the cadence and maps progress so a
+       linear tween from a to b lands on the curve (log space for scale). */
+    function stepper(m, t0, map) {
+      return function (p) {
+        if (p >= 1) return 1; if (p <= 0) return 0;
+        var t = t0 + m.at + p * m.dur, q = (shown(t + 1e-6, m.cadence, m.phase) - t0 - m.at) / m.dur;
+        return map(m.ease(q < 0 ? 0 : q > 1 ? 1 : q));
+      };
+    }
+    /* Tween node (a picture or a container) through the move(s). Returns the
+       time the camera settles. box = { w, h } of the node, for the origin. */
+    function apply(tl, node, t0, cam, props) {
+      var L = list(cam), st = { s: 1, x: 0, y: 0, r: 0 }, end = t0, first = true;
+      if (!L.length) return t0;
+      if (L[0].origin) node.style.transformOrigin = (L[0].origin[0] * 100) + "% " + (L[0].origin[1] * 100) + "%";
+      for (var i = 0; i < L.length; i++) {
+        var c = L[i];
+        if (c.mats) { applyMats(tl, node, t0, c.mats); end = Math.max(end, t0 + c.mats[c.mats.length - 1][0] / FPS); first = false; continue; }
+        if (c.keys) {
+          for (var j = 0; j < c.keys.length; j++) {
+            var kk = c.keys[j], f = kk[0], to = { s: kk[1], x: kk[2], y: kk[3], r: kk[4] || 0 };
+            var t = f <= 0 ? t0 : t0 + (f - 0.25) / FPS;
+            var v = { scale: to.s, x: to.x, y: to.y, rotation: to.r, duration: EPS, ease: "none" };
+            if (!first) v.immediateRender = false;
+            tl.fromTo(node, { scale: st.s, x: st.x, y: st.y, rotation: st.r }, v, t);
+            st = to; first = false; end = Math.max(end, t);
+          }
+          continue;
+        }
+        var m = resolve(c, props);
+        if (i === 0 && c.from != null) st.s = m.from;
+        var nx = { s: st.s * m.ratio, x: st.x + m.dx, y: st.y + m.dy, r: st.r + m.r };
+        var a = st.s, b = nx.s, lr = Math.log(m.ratio);
+        var scaleMap = function (a, b, lr) { return function (e) { return Math.abs(b - a) < 1e-9 ? e : (a * Math.exp(lr * e) - a) / (b - a); }; }(a, b, lr);
+        var lin = function (e) { return e; };
+        var t1 = t0 + m.at;
+        if (m.dur <= 0) {
+          var v0 = { scale: nx.s, x: nx.x, y: nx.y, rotation: nx.r, duration: EPS, ease: "none" };
+          if (!first) v0.immediateRender = false;
+          tl.fromTo(node, { scale: st.s, x: st.x, y: st.y, rotation: st.r }, v0, t1);
+        } else {
+          var vs = { scale: nx.s, duration: m.dur, ease: stepper(m, t0, scaleMap) };
+          var vt = { x: nx.x, y: nx.y, rotation: nx.r, duration: m.dur, ease: stepper(m, t0, lin) };
+          if (!first) { vs.immediateRender = false; vt.immediateRender = false; }
+          tl.fromTo(node, { scale: st.s }, vs, t1);
+          tl.fromTo(node, { x: st.x, y: st.y, rotation: st.r }, vt, t1);
+        }
+        st = nx; first = false; end = Math.max(end, t1 + m.dur);
+      }
+      return end;
+    }
+    /* Exact per-frame homographies (row-major 3x3 in frame px), written as CSS
+       variables under a matrix3d so GSAP never decomposes them. */
+    function matVars(m) {
+      return { "--c0": m[0], "--c1": m[3], "--c3": m[6] * 1e6, "--c4": m[1], "--c5": m[4], "--c7": m[7] * 1e6, "--c12": m[2], "--c13": m[5], "--c15": m[8] };
+    }
+    function matStyle(node, m) {
+      node.style.transformOrigin = "0 0";
+      node.style.transform = "matrix3d(var(--c0), var(--c1), 0, calc(var(--c3) / 1000000), var(--c4), var(--c5), 0, calc(var(--c7) / 1000000), 0, 0, 1, 0, var(--c12), var(--c13), 0, var(--c15))";
+      var v = matVars(m); for (var k in v) node.style.setProperty(k, v[k]);
+    }
+    function applyMats(tl, node, t0, mats) {
+      matStyle(node, mats[0][1]);
+      for (var j = 1; j < mats.length; j++) {
+        var f = mats[j][0], v = matVars(mats[j][1]); v.duration = EPS; v.ease = "none";
+        if (j > 1) v.immediateRender = false;
+        tl.fromTo(node, matVars(mats[j - 1][1]), v, t0 + (f - 0.25) / FPS);
+      }
+    }
+    return { PRESETS: PRESETS, CURVE: CURVE, curve: curve, sample: sample, apply: apply, shown: shown, resolve: resolve, matStyle: matStyle, FPS: FPS };
+  })();
+  /* END es-camera */
+  window.__elements = window.__elements || {};
+  window.__elements["billboard"] = (function () {
+    /* BEGIN presets */ var PRESETS = {"replica-s7-B":{"shot":"B","film":[847,865],"W":1417,"H":596,"n":19,"mats":[[1.02986,-0.086888,426.412,0.210957,0.942558,-20.9683,2.71948e-05,-7.92516e-05],[1.0154,-0.0877862,434.166,0.207861,0.928713,-18.1627,2.72393e-05,-7.99676e-05],[1.00146,-0.0880921,441.761,0.205196,0.915261,-15.5282,2.73968e-05,-8.01176e-05],[0.988804,-0.0882559,448.814,0.20291,0.90232,-13.0052,2.83764e-05,-8.04148e-05],[0.974348,-0.0879553,455.821,0.199838,0.889499,-10.4551,2.76375e-05,-7.97769e-05],[0.961418,-0.0888634,462.744,0.197094,0.876731,-8.19654,2.77614e-05,-8.06827e-05],[0.949186,-0.0877055,469.396,0.194601,0.865117,-6.00226,2.79963e-05,-7.98257e-05],[0.938038,-0.0880536,475.968,0.192759,0.853215,-3.99523,2.92465e-05,-8.01122e-05],[0.91769,-0.0801958,486.85,0.189041,0.835682,-0.577889,2.91382e-05,-7.37642e-05],[0.899513,-0.0878619,496.13,0.184336,0.817609,2.7937,2.8534e-05,-8.03837e-05],[0.888201,-0.0869797,502.568,0.182195,0.807146,4.82,2.88384e-05,-7.9548e-05],[0.878321,-0.0878681,508.315,0.180458,0.79636,6.75017,3.03148e-05,-8.0414e-05],[0.864949,-0.0862799,513.906,0.177419,0.785264,9.0995,2.89145e-05,-7.92558e-05],[0.854025,-0.0866003,519.658,0.174993,0.774728,11.1189,2.89886e-05,-7.97637e-05],[0.843177,-0.085754,525.374,0.172788,0.764817,13.0766,2.90657e-05,-7.90381e-05],[0.832038,-0.0861472,531.377,0.170585,0.754207,15.3209,2.93283e-05,-7.93958e-05],[0.821543,-0.0854789,536.713,0.168393,0.744419,17.3328,2.93868e-05,-7.86154e-05],[0.809772,-0.0857936,542.492,0.165641,0.733502,19.7005,2.87023e-05,-7.92962e-05],[0.811371,-0.0904901,544.15,0.165952,0.731933,19.7718,3.2816e-05,-8.2383e-05]],"ink":[[229,215,192],[229,215,192],[229,215,192],[230,215,193],[230,215,193],[230,215,193],[230,216,193],[230,216,193],[230,216,193],[230,216,193],[230,216,193],[230,216,193],[230,216,193],[230,216,194],[230,216,193],[230,216,194],[230,216,193],[230,216,194],[230,216,194]],"glow":[6,0.45],"pathBlur":0.6,"textBlur":0.6,"textBlurScale":1},"replica-s7-C":{"shot":"C","film":[866,881],"W":1417,"H":596,"n":16,"mats":[[0.525154,-0.0552804,661.451,0.105316,0.452829,133.378,4.0204e-05,-5.09463e-05],[0.519626,-0.0544033,666.503,0.104259,0.448566,133.259,3.9782e-05,-4.99103e-05],[0.514026,-0.0539015,671.694,0.102887,0.444298,132.786,3.92394e-05,-4.9456e-05],[0.509009,-0.052882,676.625,0.102048,0.440304,131.868,3.89542e-05,-4.84858e-05],[0.50437,-0.0535705,681.529,0.101078,0.43573,131.137,3.89613e-05,-4.86965e-05],[0.499687,-0.0532233,686.359,0.100061,0.431551,130.266,3.87705e-05,-4.82293e-05],[0.495193,-0.0534661,691.092,0.0990232,0.427526,129.238,3.87306e-05,-4.87622e-05],[0.489947,-0.0539986,695.842,0.0977597,0.423018,128.036,3.80825e-05,-4.93153e-05],[0.486428,-0.0555181,700.631,0.0970602,0.418469,126.711,3.88119e-05,-5.09266e-05],[0.484595,-0.0556582,704.059,0.0966355,0.416769,125.37,3.87268e-05,-5.09584e-05],[0.480881,-0.0544973,708.854,0.0960072,0.413723,123.902,3.87889e-05,-4.95132e-05],[0.477304,-0.0550026,713.6,0.0953436,0.409917,122.318,3.92824e-05,-5.00104e-05],[0.472847,-0.0557612,718.49,0.0942623,0.405808,121.1,3.91499e-05,-5.05534e-05],[0.468225,-0.0554084,723.161,0.0933465,0.401924,119.598,3.88094e-05,-5.01366e-05],[0.463645,-0.0545406,727.843,0.0923254,0.398337,118.086,3.83444e-05,-4.93252e-05],[0.460158,-0.0547279,732.615,0.091513,0.394667,116.531,3.88434e-05,-4.92822e-05]],"ink":[[231,217,194],[231,216,194],[231,217,194],[232,217,194],[231,216,194],[232,217,194],[231,217,194],[232,217,194],[231,217,194],[232,217,194],[231,217,194],[232,216,194],[232,217,194],[232,217,195],[231,217,194],[232,217,194]],"glow":[6,0.45],"pathBlur":0.6,"textBlur":0.6,"textBlurScale":1},"replica-s7-D":{"shot":"D","film":[882,897],"W":1099,"H":720,"n":16,"mats":[[1.1611,-0.0772142,414.127,0.22528,0.924141,32.1159,0.000120627,-6.95053e-05],[1.13586,-0.0757163,423.609,0.22192,0.904264,40.2824,0.000119726,-6.84004e-05],[1.10958,-0.076051,433.536,0.218568,0.883254,48.4027,0.000118695,-6.88736e-05],[1.08617,-0.0750373,442.244,0.215566,0.864583,56.2696,0.00011814,-6.80942e-05],[1.06233,-0.0749066,451.335,0.212902,0.845828,63.508,0.00011762,-6.81492e-05],[1.04083,-0.0736766,459.481,0.210141,0.828942,71.0349,0.000117454,-6.68211e-05],[1.01737,-0.0742636,468.504,0.207189,0.81061,78.5052,0.000116184,-6.74227e-05],[0.997499,-0.0723318,475.814,0.20469,0.794502,85.6781,0.000115944,-6.62343e-05],[0.984895,-0.0664983,481.906,0.204146,0.786398,90.608,0.000117347,-5.90336e-05],[0.967369,-0.0718754,487.409,0.201166,0.77078,95.2549,0.000114583,-6.60606e-05],[0.949427,-0.0731306,494.92,0.199201,0.755841,100.669,0.000114345,-6.76091e-05],[0.935201,-0.0655345,501.89,0.198634,0.746923,106.064,0.000116171,-5.86564e-05],[0.921081,-0.065752,507.441,0.197513,0.73572,109.825,0.000116029,-5.90238e-05],[0.905566,-0.0657167,513.276,0.195601,0.724216,113.844,0.000114719,-5.9824e-05],[0.891425,-0.0657094,518.839,0.194225,0.713382,117.458,0.00011396,-6.02589e-05],[0.878343,-0.0652524,524.241,0.192937,0.703296,120.978,0.000113827,-6.04593e-05]],"ink":[[190,184,163],[191,184,163],[190,184,163],[191,184,164],[190,184,163],[191,184,164],[190,184,163],[191,184,164],[191,184,163],[191,184,164],[191,184,163],[191,184,165],[191,184,163],[191,184,165],[190,184,163],[191,184,164]],"glow":[6,0.45],"pathBlur":0.6,"textBlur":0.6,"textBlurScale":1},"replica-s7-E":{"shot":"E","film":[898,910],"W":664,"H":438,"n":13,"mats":[[1.03747,0.00301726,622.469,0.00877243,0.993933,280.521,2.60516e-05,1.84062e-06],[0.92845,0.0981959,633.772,-0.0132212,0.992231,288.85,-4.28664e-05,9.24531e-05],[0.940887,0.0573898,640.064,-0.00190332,0.975855,292.262,-1.2988e-05,5.466e-05],[0.947184,0.0175881,644.948,0.00610918,0.944428,295.541,5.94085e-06,1.67389e-05],[0.766789,0.180684,659.067,-0.0373912,0.954698,304.442,-0.000118435,0.000167701],[0.865194,0.0422134,662.451,-0.0043893,0.900841,309.298,-1.85165e-05,3.92131e-05],[0.848294,0.00433307,669.863,-0.00539449,0.862767,315.142,-1.34108e-05,1.7082e-06],[0.848532,-0.0176808,676.438,0.00233204,0.832094,321.409,7.70227e-06,-1.84064e-05],[0.826833,-0.0161698,683.161,0.00178796,0.812666,326.771,6.32543e-06,-1.70247e-05],[0.809466,-0.0177802,688.958,0.00145089,0.794029,331.853,7.52494e-06,-1.88538e-05],[0.78024,-0.018272,694.53,-0.00294475,0.773629,336.651,-1.51297e-06,-1.9797e-05],[0.766615,-0.0194996,700.437,-0.00112835,0.757273,340.258,7.90587e-07,-2.02586e-05],[0.748777,-0.0160777,705.048,-0.00276519,0.74375,344.839,-1.19311e-06,-1.73695e-05]],"ink":[[237,223,201],[237,224,201],[237,224,202],[237,224,201],[237,223,201],[237,223,201],[237,223,201],[237,223,201],[237,223,201],[237,223,201],[237,224,201],[237,224,201],[237,223,201]],"glow":[8,0.6],"pathBlur":0.6,"textBlur":0.6,"textBlurScale":1},"replica-s7-F":{"shot":"F","film":[911,926],"W":488,"H":728,"n":16,"mats":[[0.965419,0.00441417,711.179,-0.0176969,0.99428,196.044,-2.85124e-05,4.0936e-06],[0.956394,0.00467869,714.075,-0.0158018,0.98287,201.373,-2.56554e-05,4.38393e-06],[0.94639,0.00492395,718.801,-0.0141246,0.97016,205.36,-2.24822e-05,4.52898e-06],[0.934776,0.00561559,720.974,-0.0124177,0.956915,209.932,-1.99964e-05,5.31419e-06],[0.88599,0.0150933,727.346,-0.0215919,0.94063,222.101,-4.39939e-05,1.42275e-05],[0.901375,0.00365844,729.724,-0.0116561,0.922409,226.76,-1.99066e-05,3.6104e-06],[0.888587,0.00272924,734.567,-0.00995206,0.905233,231.879,-1.64873e-05,2.4003e-06],[0.877651,0.0052924,737.865,-0.00660579,0.890988,238.372,-1.14148e-05,5.11228e-06],[0.859006,0.00393113,742.574,-0.00594926,0.870835,250.002,-1.0258e-05,3.93675e-06],[0.843789,0.00295047,746.322,-0.00506909,0.853362,254.566,-8.86789e-06,2.83532e-06],[0.829499,0.00318895,751.364,-0.00391674,0.835576,260.108,-5.88156e-06,2.77813e-06],[0.824228,-0.010217,754.827,0.00587721,0.809913,267.982,2.82511e-06,-7.33526e-06],[0.758419,0.0071359,762.475,-0.0147564,0.796208,280.737,-3.01576e-05,6.84037e-06],[0.772734,0.000998699,764.883,-0.00261019,0.778458,284.677,-5.03528e-06,7.51831e-07],[0.757745,-0.00123041,769.479,-0.00180712,0.75923,290.211,-2.63325e-06,-1.80886e-06],[0.744824,0.000179747,773.711,0.0013317,0.742531,299.649,2.24484e-06,-1.97986e-08]],"ink":[[236,221,196],[236,221,197],[236,221,197],[237,221,197],[236,221,196],[236,221,197],[237,221,197],[236,221,197],[237,221,197],[236,221,197],[237,221,197],[236,221,197],[236,221,197],[237,221,197],[236,221,197],[236,221,197]],"glow":[6,0.45],"pathBlur":0.6,"textBlur":0.6,"textBlurScale":1},"replica-s7-G":{"shot":"G","film":[927,937],"W":410,"H":272,"n":11,"mats":[[1.03714,0.0510816,786.137,0.0311625,1.05262,422.831,2.68519e-05,6.6272e-05],[1.02859,0.0501111,788.962,0.0336659,1.03682,424.302,3.21789e-05,6.57786e-05],[1.02193,0.04724,790.581,0.0345884,1.02651,425.289,3.43315e-05,6.27855e-05],[1.01629,0.0513673,792.989,0.0378622,1.01596,426.703,4.11233e-05,6.71579e-05],[1.00492,0.0478277,794.608,0.0364197,1.00394,427.756,3.92984e-05,6.26524e-05],[1.0046,0.0520678,797.133,0.0430658,0.994719,428.933,5.06613e-05,6.7256e-05],[0.997194,0.0505311,798.459,0.0439307,0.98604,429.484,5.11125e-05,6.53752e-05],[0.990461,0.0527367,800.955,0.0455173,0.974421,431.019,5.63383e-05,6.80921e-05],[0.983118,0.0492808,802.447,0.0466014,0.964153,431.639,5.70609e-05,6.44262e-05],[0.974339,0.0556782,804.675,0.0482786,0.9554,432.825,6.00571e-05,7.08574e-05],[0.956701,0.0596117,805.774,0.0439365,0.949857,433.672,5.09996e-05,7.55823e-05]],"ink":[[236,223,198],[236,223,198],[236,223,198],[236,223,198],[236,223,198],[236,223,198],[236,223,198],[236,223,198],[236,223,198],[236,223,198],[236,223,198]],"glow":[6,0.45],"pathBlur":0.6,"textBlur":0.6,"textBlurScale":1},"replica-s7-H":{"shot":"H","film":[938,957],"W":2146,"H":571,"n":20,"mats":[[1.01016,-0.106526,-195.651,-0.000523865,0.949437,246.797,3.08005e-06,-0.000108094],[0.983295,-0.0976918,-166.146,-0.000966143,0.927344,256.688,2.05394e-06,-9.91067e-05],[0.95681,-0.0865735,-138.267,-0.00186952,0.912762,266.249,1.11181e-08,-8.52909e-05],[0.933771,-0.0769044,-111.487,-0.001748,0.89423,276.927,6.52384e-07,-7.63994e-05],[0.911218,-0.0673983,-85.6356,-0.00168517,0.8768,285.423,8.20491e-07,-6.80797e-05],[0.884377,-0.060481,-58.7431,-0.00332801,0.859207,293.445,-2.35507e-06,-5.95783e-05],[0.869229,-0.0561839,-41.7761,-0.00305847,0.844634,300.028,-1.89881e-06,-5.70511e-05],[0.842842,-0.0529465,-11.5835,-0.00411399,0.822358,310.154,-2.84287e-06,-5.3281e-05],[0.819324,-0.0535456,12.9813,-0.00496402,0.800275,318.649,-4.2807e-06,-5.36965e-05],[0.800117,-0.0416444,32.019,-0.00600776,0.791033,324.447,-6.27892e-06,-4.15972e-05],[0.781306,-0.038484,52.4026,-0.00585088,0.773332,331.959,-6.518e-06,-3.93954e-05],[0.76322,-0.035688,72.4184,-0.00559647,0.755958,339.685,-6.50702e-06,-3.75717e-05],[0.746803,-0.0265444,89.4892,-0.0060269,0.746971,346.848,-7.92278e-06,-2.75898e-05],[0.727491,-0.0300231,111.944,-0.00538251,0.723982,354.636,-7.4005e-06,-3.18025e-05],[0.713019,-0.0159815,129.644,-0.00577305,0.718573,359.074,-7.75691e-06,-1.73713e-05],[0.698097,-0.0128053,146.55,-0.00598462,0.704549,362.183,-7.68317e-06,-1.51088e-05],[0.683912,-0.00564969,162.165,-0.00687034,0.696139,365.499,-8.73657e-06,-7.12571e-06],[0.670242,-0.00225207,179.032,-0.00692737,0.68328,369.033,-8.64602e-06,-4.68607e-06],[0.6563,-0.000652415,195.343,-0.00693998,0.669513,372.487,-8.83636e-06,-3.98317e-06],[0.641372,-0.000136946,211.83,-0.00749788,0.657716,375.8,-1.03074e-05,-1.6685e-06]],"ink":[[237,222,197],[237,222,198],[237,222,197],[237,222,198],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197],[237,222,197]],"glow":[6,0.45],"pathBlur":0.6,"textBlur":0.6,"textBlurScale":1},"replica-s7-I":{"shot":"I","film":[958,992],"W":1598,"H":837,"n":35,"mats":[[1.32683,-0.1753,117.806,0.423839,0.971229,-188.966,0.00022952,-0.000136491],[1.29173,-0.162461,136.731,0.408868,0.95474,-169.063,0.000222273,-0.000124503],[1.25401,-0.153747,156.943,0.392971,0.931592,-147.798,0.000214706,-0.000117401],[1.21506,-0.14798,177.65,0.376681,0.904266,-124.278,0.000207152,-0.000114665],[1.17509,-0.143291,198.628,0.360173,0.874257,-99.3638,0.00019956,-0.00011379],[1.12816,-0.131241,223.135,0.340141,0.846314,-70.667,0.000189358,-0.000102983],[1.08141,-0.122231,248.12,0.320315,0.815557,-42.4297,0.000179399,-9.60777e-05],[1.03567,-0.11536,272.41,0.301638,0.782907,-13.9083,0.000170294,-9.22217e-05],[0.992149,-0.103037,300.169,0.286514,0.754598,11.95,0.000164891,-8.28505e-05],[0.949414,-0.0932534,326.042,0.271027,0.726067,36.667,0.000158802,-7.58747e-05],[0.898418,-0.0852375,355.032,0.25149,0.693843,63.7168,0.000148337,-6.89554e-05],[0.844884,-0.0776795,385.587,0.230762,0.660787,90.8893,0.000136434,-6.14963e-05],[0.801559,-0.069717,410.571,0.213898,0.63325,113.794,0.000126901,-5.4599e-05],[0.756184,-0.0609934,436.705,0.195937,0.605692,137.474,0.000115935,-4.60499e-05],[0.71921,-0.0541729,459.586,0.182074,0.58039,158.742,0.000108454,-4.03716e-05],[0.682448,-0.0468945,482.685,0.168469,0.55647,178.841,0.00010044,-3.34443e-05],[0.649302,-0.0402532,503.439,0.156126,0.53506,197.226,9.2424e-05,-2.71887e-05],[0.6162,-0.0332055,522.948,0.14409,0.516433,213.078,8.28926e-05,-1.98273e-05],[0.59078,-0.028051,538.058,0.135143,0.501755,225.555,7.60196e-05,-1.45477e-05],[0.569821,-0.0240633,550.216,0.127846,0.489482,235.805,6.99858e-05,-1.04693e-05],[0.554595,-0.0206253,559.373,0.122674,0.480308,243.79,6.62118e-05,-7.03168e-06],[0.539846,-0.0166102,567.54,0.117339,0.472451,250.844,6.15348e-05,-2.84248e-06],[0.528856,-0.0137577,573.85,0.113504,0.466626,255.857,5.83018e-05,6.58594e-08],[0.518212,-0.0122389,579.877,0.109599,0.460324,261.101,5.49109e-05,1.6689e-06],[0.510951,-0.00934862,584.145,0.107141,0.45686,264.741,5.27144e-05,4.70451e-06],[0.503893,-0.00612113,587.992,0.104588,0.454356,267.609,5.03107e-05,8.07506e-06],[0.497722,-0.00462436,591.675,0.102303,0.450574,270.916,4.83105e-05,9.67317e-06],[0.494273,-0.0039979,594.112,0.101269,0.448174,272.779,4.77312e-05,1.0381e-05],[0.489391,-0.00156268,596.523,0.0993856,0.446582,274.612,4.57757e-05,1.2743e-05],[0.486903,-2.95326e-05,598.327,0.0985852,0.445339,276.152,4.54094e-05,1.44927e-05],[0.482981,0.00110547,600.424,0.0970668,0.443402,277.927,4.39966e-05,1.57289e-05],[0.479063,0.00177609,602.299,0.0954569,0.441563,279.524,4.23429e-05,1.64869e-05],[0.477484,0.00389025,603.296,0.0948164,0.441219,280.643,4.20445e-05,1.86165e-05],[0.475947,0.00412859,604.117,0.0942432,0.44049,281.083,4.15261e-05,1.86976e-05],[0.4765,0.00462482,604.259,0.0945589,0.440736,281.074,4.22225e-05,1.92561e-05]],"ink":[[236,222,197],[236,222,197],[236,222,197],[237,222,198],[236,222,197],[237,222,198],[236,222,197],[237,222,198],[237,222,198],[237,222,198],[236,222,197],[237,222,198],[237,222,197],[237,222,197],[237,222,197],[238,221,197],[237,221,197],[238,221,197],[237,221,197],[238,221,197],[237,221,197],[238,221,197],[237,221,197],[238,221,197],[238,221,197],[238,221,197],[237,221,197],[238,221,198],[238,221,197],[238,221,198],[238,221,197],[238,221,198],[238,221,197],[238,221,198],[238,221,197]],"glow":[6,0.45],"pathBlur":0.6,"textBlur":0.6,"textBlurScale":1}}; /* END presets */
+    var NS = "http://www.w3.org/2000/svg", FR = 1 / 24;
+    var FACE = { serif: "var(--font-serif)", mono: "var(--font-mono)", grotesk: "var(--font-grotesk)", humanist: "var(--font-humanist)", pixel: "var(--font-pixel)" };
+
+    function frameOf(props) { return (props && props.frame) || { w: 1920, h: 1080 }; }
+    function colorOf(c, d) { return window.__esShared ? window.__esShared.color(c, d) : (c || d); }
+
+    /* The homography taking the board's flat rectangle (0,0) (W,0) (W,H) (0,H) onto the
+       quad q = [tl, tr, br, bl], as [a b c; d e f; g h 1] row-major. Pure arithmetic. */
+    function homography(W, H, q) {
+      var x0 = q[0][0], y0 = q[0][1], x1 = q[1][0], y1 = q[1][1], x2 = q[2][0], y2 = q[2][1], x3 = q[3][0], y3 = q[3][1];
+      var dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2, sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3;
+      var g = 0, h = 0, den = dx1 * dy2 - dx2 * dy1;
+      if (Math.abs(sx) > 1e-9 || Math.abs(sy) > 1e-9) { g = (sx * dy2 - dx2 * sy) / den; h = (dx1 * sy - sx * dy1) / den; }
+      var a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, d = y1 - y0 + g * y1, e = y3 - y0 + h * y3;
+      /* unit square to quad, then scale the board down to the unit square */
+      return [a / W, b / H, x0, d / W, e / H, y0, g / W, h / H];
+    }
+    function cssVars(m, ink) {
+      var v = { "--a": m[0], "--b": m[3], "--c": m[6] * 1e6, "--d": m[1], "--e": m[4], "--g": m[7] * 1e6, "--h": m[2], "--i": m[5] };
+      if (ink) { v["--ir"] = ink[0]; v["--ig"] = ink[1]; v["--ib"] = ink[2]; }
+      return v;
+    }
+    /* Where a point given in the picture's own pixels lands in the frame once the picture
+       is cover-cropped (or contained) into a box of bw x bh about its focal point. */
+    function picToBox(spec, bw, bh) {
+      var iw = spec.size[0], ih = spec.size[1], fx = spec.focal ? spec.focal[0] : 0.5, fy = spec.focal ? spec.focal[1] : 0.5;
+      var s = (spec.fit === "contain" ? Math.min(bw / iw, bh / ih) : Math.max(bw / iw, bh / ih)) * (spec.zoom || 1);
+      var ox = (bw - iw * s) * fx, oy = (bh - ih * s) * fy;
+      return function (p) { return [ox + p[0] * s, oy + p[1] * s]; };
+    }
+    function blurFilter(svg, defs, uid, cache, sd) {
+      var key = Number(sd).toFixed(2);
+      if (!cache[key]) {
+        var fl = document.createElementNS(NS, "filter");
+        fl.setAttribute("id", uid + "-" + key.replace(".", "_"));
+        fl.setAttribute("x", "-50%"); fl.setAttribute("y", "-50%"); fl.setAttribute("width", "200%"); fl.setAttribute("height", "200%");
+        var gb = document.createElementNS(NS, "feGaussianBlur"); gb.setAttribute("stdDeviation", key);
+        fl.appendChild(gb); defs.appendChild(fl); cache[key] = "url(#" + fl.getAttribute("id") + ")";
+      }
+      return cache[key];
+    }
+
+    /* General-mode artwork, laid out in board space from glyph metrics. Returns items in
+       the replica's own vocabulary (path, text with per-glyph x, rect), so both modes draw
+       through one painter. */
+    function layoutArt(props, W, H) {
+      var S = window.__esShared, items = [], art = props.art || {};
+      var logo = art.logo || (props.word ? { text: props.word } : null);
+      var pad = (art.pad == null ? 0.07 : art.pad) * W;
+      var logoBottom = H * 0.5;
+      if (logo && logo.d) {
+        /* a traced or drawn path set with its own box [x0, y0, x1, y1]: fit it to the width */
+        var bx = logo.box || [0, 0, 1000, 300], bw = bx[2] - bx[0], bh = bx[3] - bx[1];
+        var sc = Math.min((logo.width || 0.78) * W / bw, (logo.height || 0.42) * H / bh);
+        var lx = (W - bw * sc) / 2, ly = (logo.y == null ? 0.42 : logo.y) * H - bh * sc / 2;
+        items.push({ kind: "path", id: "logo", d: logo.d, transform: "translate(" + lx + " " + ly + ") scale(" + sc + ") translate(" + (-bx[0]) + " " + (-bx[1]) + ")" });
+        logoBottom = ly + bh * sc;
+      } else if (logo && logo.text) {
+        /* a word in ES Serif: cap height as a share of the board, shrunk until its ink fits
+           the width share, ink centred (or set left at the pad), baseline at logo.y */
+        var cap = (logo.cap == null ? 0.3 : logo.cap) * H, size = S.sizeForCap(cap), tr = logo.tracking || 0;
+        var L = S.layout(logo.text, size, tr), maxW = (logo.width || 0.84) * W;
+        if (L.ink > maxW) { size *= maxW / L.ink; L = S.layout(logo.text, size, tr); }
+        var base = (logo.y == null ? 0.56 : logo.y) * H;
+        var x0 = logo.align === "left" ? pad - L.inkL : (W - L.ink) / 2 - L.inkL;
+        items.push({ kind: "text", id: "logo", text: logo.text, family: "var(--font-serif)", size: size, y: base,
+          xs: L.pens.map(function (p) { return +(x0 + p).toFixed(2); }), logo: true });
+        logoBottom = base + 0.04 * H;
+      }
+      /* small type: lines in blocks at a corner or centred under the logo; SVG anchors the
+         alignment at paint, so nothing is measured for placement */
+      var blocks = art.lines || [];
+      for (var b = 0; b < blocks.length; b++) {
+        var bl = blocks[b], at = bl.at || "below", lines = bl.text instanceof Array ? bl.text : [bl.text];
+        var fs = (bl.size || 0.045) * H, lead = fs * (bl.leading || 1.35), face = FACE[bl.face || "mono"] || bl.face;
+        var anchor = /r$/.test(at) ? "end" : (at === "below" || at === "above") ? "middle" : "start";
+        var x = anchor === "end" ? W - pad : anchor === "middle" ? W / 2 : pad;
+        var y = at === "below" ? logoBottom + lead * 1.1 : /^t/.test(at) || at === "above" ? pad + fs : H - pad - lead * (lines.length - 1);
+        for (var l = 0; l < lines.length; l++) {
+          items.push({ kind: "text", id: "line" + b + "-" + l, text: lines[l], family: face, size: fs, y: y + l * lead, x: x, anchor: anchor,
+            spacing: bl.tracking ? bl.tracking + "em" : null, blur: bl.blur, weight: bl.weight });
+        }
+      }
+      var rules = art.rules || [];
+      for (var r = 0; r < rules.length; r++) {
+        var ru = rules[r];
+        items.push({ kind: "rect", id: "rule" + r, x: ru[0] * W, y: ru[1] * H, w: ru[2] * W, h: Math.max(1, ru[3] * H) });
+      }
+      return items;
+    }
+
+    function paint(svg, items, opt) {
+      var defs = document.createElementNS(NS, "defs"); svg.appendChild(defs);
+      var cache = {}, uid = "bb" + Math.round(opt.W * 7 + opt.H * 13 + items.length + (opt.seed || 0));
+      var glowable = function (it) { return it.kind === "path" || it.logo; };
+      if (opt.glow) {
+        var gg = document.createElementNS(NS, "g");
+        gg.setAttribute("filter", blurFilter(svg, defs, uid, cache, opt.glow[0]));
+        gg.style.opacity = opt.glow[1];
+        for (var q = 0; q < items.length; q++) if (glowable(items[q])) gg.appendChild(node(items[q], null));
+        svg.appendChild(gg);
+      }
+      for (var i = 0; i < items.length; i++) svg.appendChild(node(items[i], opt));
+      function node(it, o) {
+        var n;
+        if (it.kind === "path") {
+          n = document.createElementNS(NS, "path"); n.setAttribute("d", it.d); n.setAttribute("fill-rule", "evenodd");
+          if (it.transform) n.setAttribute("transform", it.transform);
+          if (o && o.pathBlur) n.setAttribute("filter", blurFilter(svg, defs, uid, cache, o.pathBlur));
+        } else if (it.kind === "rect") {
+          n = document.createElementNS(NS, "rect");
+          n.setAttribute("x", it.x); n.setAttribute("y", it.y); n.setAttribute("width", it.w); n.setAttribute("height", it.h);
+          if (o && o.textBlur) n.setAttribute("filter", blurFilter(svg, defs, uid, cache, o.textBlur));
+        } else {
+          n = document.createElementNS(NS, "text");
+          n.setAttribute("x", it.xs ? it.xs.join(" ") : it.x); n.setAttribute("y", it.y);
+          if (it.anchor) n.setAttribute("text-anchor", it.anchor);
+          n.textContent = it.text;
+          n.style.fontFamily = it.family; n.style.fontSize = it.size + "px"; n.style.fontKerning = "none"; n.style.whiteSpace = "pre";
+          if (it.var) n.style.fontVariationSettings = it.var;
+          if (it.weight) n.style.fontWeight = it.weight;
+          if (it.spacing) n.style.letterSpacing = it.spacing;
+          var bl = o ? (it.blur != null ? it.blur * (o.textBlurScale || 1) : (it.logo ? o.pathBlur : o.textBlur) || 0) : 0;
+          if (bl > 0.05) n.setAttribute("filter", blurFilter(svg, defs, uid, cache, bl));
+        }
+        if (it.fill && o) n.style.fill = it.fill;
+        n.setAttribute("data-layout-allow-overlap", ""); n.setAttribute("data-layout-allow-overflow", "");
+        return n;
+      }
+    }
+
+    /* A per-frame picture list (a photo sequence or per-frame cut-outs): every frame is an
+       img shown only while the root's --f sits inside its own frame. */
+    function seq(el, list, cls, w, h) {
+      for (var k = 0; k < list.length; k++) {
+        var it = list[k], src = typeof it === "string" ? it : it && it.src;
+        if (!src) continue;
+        var im = document.createElement("img");
+        im.className = cls; im.src = src; im.style.width = w + "px"; im.style.height = h + "px";
+        im.style.opacity = "calc(clamp(0, (var(--f) - " + k + ") * 1000, 1) * clamp(0, (" + (k + 1) + " - var(--f)) * 1000, 1))";
+        el.appendChild(im);
+      }
+    }
+
+    function resolve(props) {
+      var P = props.preset && PRESETS[props.preset];
+      var F = frameOf(props), slot = props.slot || {};
+      if (typeof slot === "string") slot = { src: slot };
+      var o = { P: P, F: F, slot: slot };
+      if (P) {
+        o.W = P.W; o.H = P.H; o.n = P.n; o.mats = P.mats; o.ink = P.ink;
+        o.glow = props.glow || P.glow; o.pathBlur = P.pathBlur; o.textBlur = P.textBlur; o.textBlurScale = P.textBlurScale;
+        o.items = (props.art && props.art.items) || [];
+        return o;
+      }
+      /* general: the plane from four corners, in frame px or in the picture's own px */
+      var q = props.quad || [[0.3 * F.w, 0.3 * F.h], [0.7 * F.w, 0.3 * F.h], [0.7 * F.w, 0.62 * F.h], [0.3 * F.w, 0.62 * F.h]];
+      if (props.quadSpace === "image" && slot.size) { var map = picToBox(slot, F.w, F.h); q = q.map(map); }
+      var ew = (Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]) + Math.hypot(q[2][0] - q[3][0], q[2][1] - q[3][1])) / 2;
+      var eh = (Math.hypot(q[3][0] - q[0][0], q[3][1] - q[0][1]) + Math.hypot(q[2][0] - q[1][0], q[2][1] - q[1][1])) / 2;
+      o.W = props.boardW || 1000; o.H = Math.round(o.W * eh / ew);
+      o.mats = [homography(o.W, o.H, q)]; o.n = 1;
+      o.glow = props.glow === undefined ? [0.006 * o.W, 0.45] : props.glow;
+      var soft = props.soften == null ? 0.6 * o.W / Math.max(ew, 1) : props.soften; /* about 0.6 frame px */
+      o.pathBlur = soft; o.textBlur = soft; o.textBlurScale = 1;
+      o.items = (props.art && props.art.items) || layoutArt(props, o.W, o.H);
+      return o;
+    }
+
+    return {
+      /* props: see billboard.md. preset "replica-s7-B".."replica-s7-I" or none (general).
+         slot { src | frames: [src...], fit, focal, size: [w, h] }, art { items } (replica) or
+         word / art { logo { text | d, box }, lines [...], rules [...] } (general), quad, quadSpace,
+         boardW, ink, glow, soften, panel { color | src }, fgs [src per frame], cutout, cam, exitAt */
+      render: function (props) {
+        var S = window.__esShared, o = resolve(props), F = o.F;
+        var el = document.createElement("div");
+        el.className = "el-billboard";
+        el.style.width = F.w + "px"; el.style.height = F.h + "px";
+        el.style.background = props.background || "#000";
+        el.setAttribute("data-layout-allow-overflow", "");
+        var cam = document.createElement("div"); cam.className = "bb-cam"; el.appendChild(cam);
+        var slot = o.slot;
+        if (slot.frames) seq(cam, slot.frames, "bb-fr", F.w, F.h);
+        else cam.appendChild(S.slot(slot, F.w, F.h, "plate"));
+        var bd = document.createElement("div");
+        bd.className = "bb-bd"; bd.setAttribute("data-layout-allow-overflow", "");
+        bd.style.width = o.W + "px"; bd.style.height = o.H + "px";
+        var v = cssVars(o.mats[0], o.ink && o.ink[0]);
+        for (var key in v) bd.style.setProperty(key, v[key]);
+        if (props.panel) {
+          /* a printed ground on the plane: a colour, or a picture in its own image slot */
+          var pn = props.panel.src ? S.slot(props.panel, o.W, o.H, "panel") : document.createElement("div");
+          pn.classList.add("bb-panel");
+          if (!props.panel.src) pn.style.background = colorOf(props.panel.color, "paper");
+          if (props.panel.light != null) pn.style.filter = "brightness(" + props.panel.light + ")";
+          bd.appendChild(pn);
+          if (props.panel.scrim) {
+            /* a printed shade under the type, darker at the foot, as posters carry for legibility */
+            var sc = document.createElement("div"); sc.className = "bb-panel";
+            sc.style.background = "linear-gradient(to top, rgba(10,10,10," + props.panel.scrim + "), rgba(10,10,10," + (props.panel.scrim * 0.35) + ") 60%, rgba(10,10,10,0))";
+            bd.appendChild(sc);
+          }
+        }
+        var svg = document.createElementNS(NS, "svg");
+        svg.setAttribute("width", o.W); svg.setAttribute("height", o.H); svg.setAttribute("viewBox", "0 0 " + o.W + " " + o.H);
+        svg.style.fill = o.P ? "rgb(var(--ir), var(--ig), var(--ib))" : colorOf(props.ink, "type-light");
+        /* type deliberately behind a cut-out: the occlusion is the design, so layout checks skip it */
+        if (slot.cutout || props.fgs) svg.setAttribute("data-layout-ignore", "");
+        paint(svg, o.items, { W: o.W, H: o.H, glow: o.glow, pathBlur: o.pathBlur, textBlur: o.textBlur, textBlurScale: o.textBlurScale });
+        bd.appendChild(svg);
+        cam.appendChild(bd);
+        /* what stands in front of the board: per-frame cut-outs, or one cut-out of the
+           picture on transparency cropped exactly like the slot */
+        if (props.fgs) seq(cam, props.fgs, "bb-fr", F.w, F.h);
+        var cut = S.cutout(slot, F.w, F.h, "plate");
+        if (cut) cam.appendChild(cut);
+        return el;
+      },
+
+      animate: function (tl, el, t0, props) {
+        var o = resolve(props), F = o.F, end = t0;
+        var nf = o.slot.frames ? o.slot.frames.length : 0, n = Math.max(o.n, nf, props.fgs ? props.fgs.length : 0);
+        var bd = el.querySelector(".bb-bd"), cam = el.querySelector(".bb-cam");
+        if (n > 1) {
+          /* the picture sequence and the plane advance one source frame per film frame */
+          tl.fromTo(el, { "--f": 0.5 }, { "--f": n + 0.5, duration: n * FR, ease: "none" }, t0);
+          end = t0 + n * FR;
+        }
+        for (var k = 0; k < o.n - 1; k++) {
+          var to = cssVars(o.mats[k + 1], o.ink && o.ink[k + 1]);
+          to.duration = FR; to.ease = "none"; to.immediateRender = k === 0;
+          tl.fromTo(bd, cssVars(o.mats[k], o.ink && o.ink[k]), to, t0 + k * FR);
+        }
+        if (props.cam) {
+          var C = window.__esCamera;
+          /* the duration scale stretches every camera move; a move whose at is { beat: i }
+             starts on beat i (seconds after t0, props.beats), so a cam list cuts to the music */
+          var moves = [].concat(props.cam).map(function (c, i) {
+            var m = {}; for (var kk in c) m[kk] = c[kk];
+            if (props.scale && m.scale == null) m.scale = props.scale;
+            /* a still has no picture past its edge, so a preset's measured travel (the
+               pull-back drifts -33, +26 px) is dropped unless the move asks for it */
+            if (!o.slot.frames && !m.keys && !m.mats) { if (m.dx == null) m.dx = 0; if (m.dy == null) m.dy = 0; }
+            if (m.at && m.at.beat != null) m.at = (props.beats && props.beats[m.at.beat]) || 0;
+            return m;
+          });
+          if (C) end = Math.max(end, C.apply(tl, cam, t0, moves.length === 1 ? moves[0] : moves, props));
+          else {
+            /* fallback until es-camera is injected: a scale about the origin on the style's curve */
+            var c = moves[0], d = (c.dur || 1.458) * (c.scale || 1), og = c.origin || [0.5, 0.5];
+            var e = window.__motionExpert ? window.__motionExpert.ease(c.ease || "pull") : "none";
+            tl.fromTo(cam, { scale: c.from || 1.3, transformOrigin: og[0] * 100 + "% " + og[1] * 100 + "%" },
+              { scale: c.to || 1, duration: d, ease: e, immediateRender: true }, t0 + (c.at || 0));
+            end = Math.max(end, t0 + (c.at || 0) + d);
+          }
+        }
+        if (props.exitAt != null) {
+          tl.fromTo(el, { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.0001, ease: "none", immediateRender: false }, t0 + props.exitAt);
+        }
+        return end;
+      }
+    };
+  })();
+</script>

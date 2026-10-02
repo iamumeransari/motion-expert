@@ -1,91 +1,331 @@
 <style>
   /* giant-word-rise. A giant solid black serif word rises into the frame from
-     below its bottom edge and drifts left as it climbs, cropped by the frame,
-     sitting over the plate and over any object in it; it can shrink with the
-     frame in single steps when the picture is printed into a card.
-     Source strip: assets/frames/giant-rise-print-dense.jpg (frames 550 to
-     561). Measured at 1920 x 1080: cap height 710 px (font-size 1029 px), ink
-     #0A0A0A with no grain; the baseline climbs from 1744 px to 1000 px on a
-     cubic-bezier of 0, 0.5, 0.4, 1 over twelve frames starting half a frame
-     before frame 552 (baseline 1508 on frame 552, 1355 on 553, 1205 on 555,
-     1120 on 556, 1063 on 558, 1023 on 559, 992 on 561, fit rms 8.6 px), while
-     the first letter's left edge travels linearly from 292 px to minus 6 px
-     over the same twelve frames (24.8 px a frame); those
-     defaults already carry the 20 px and 30 px offsets the stand-in serif
-     needs to put its i dot where the source's sits (within 15 px on every
-     frame from 553 to 561). The word is first visible
-     on frame 552 with its top 270 px above the bottom edge and is still
-     moving when the plate behind it shrinks to a card on frame 561; the word
-     itself does not shrink (its i dot keeps its 160 px width) and cuts away
-     on frame 562, so shrink is optional and empty for the source. */
-  .el-giant-word-rise { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; transform-origin: 50% 50%; }
-  .el-giant-word-rise .gw-word { position: absolute; left: 0; top: 0; white-space: nowrap; line-height: 1; }
-  .el-giant-word-rise .gw-cut { position: absolute; background-size: 100% 100%; }
+     below its bottom edge over a photograph, cropped by the frame, drifting left
+     the whole time while the photograph pulls back a touch, and then the
+     photograph is printed into a card on pale paper in single steps (the word
+     stays full size over it and is cut on the next shot). Source: s5 shot 25,
+     film frames 550 to 562 (moves.md).
+     Measured per frame (ES Serif line fitted to the film's ink at IoU 0.91 to
+     0.93; camera from the s5 replica's keys/s550r.json): baseline 1492, 1339,
+     1191, 1106, 1050, 1010, 979 px on frames 552, 553, 555, 556, 558, 559, 561
+     (cubic-bezier 0, 0.5, 0.4, 1 over nine frames; first visible with 0.39 of
+     its cap height above the bottom edge), font size 982 px (cap 678, 0.628 of
+     the frame height) and never scaling, left ink edge 257 px stepping 38 px
+     left on every picture update (608 px a second); the photograph pushes 0.18
+     percent while the word rises and pulls back to 0.977 on 558 to 559; the
+     print steps to a card at 59, 33 to 1861, 1047 on 561 and 195, 110 to 1725,
+     970 on 562 with the picture inside at 0.849 and 0.721 about the frame
+     centre (the card shows more picture than the frame did), and the word is
+     cut on 562. In general mode the word's middle settles at 0.59 of the frame
+     height and drifts 0.9 of its cap height a second. Every change lands on the film's sixteen-a-second picture
+     updates. layer "plate" or "word" splits the block so another block
+     (card-wipe's window) can sit between the photograph and the word. */
+  .el-giant-word-rise { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; }
+  .el-giant-word-rise .gw-paper { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; }
+  .el-giant-word-rise .gw-card { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; }
+  .el-giant-word-rise .gw-cam { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; }
+  .el-giant-word-rise .gw-svg { position: absolute; left: 0; top: 0; overflow: visible; display: block; }
+  .el-giant-word-rise .gw-word { opacity: 0; }
 </style>
 <script>
   window.__elements = window.__elements || {};
-  window.__elements["giant-word-rise"] = (function () {
-    var FR = 1 / 24;
-    var BASE = 0.8505; /* baseline below the line box top, in em, at line-height 1 */
-    function S(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
+  /* es-kit:begin */
+  /* es-kit v1: shared by every editorial-select block, copied verbatim; the
+     first copy in a document wins. Source: work/blocks/_shared/kit.js. */
+  if (!window.__esKit) window.__esKit = (function () {
+    var EPS = 0.0001, LEAD = 0.002, FPS = 24;
+    /* ES Serif metrics (units per 1000 em): advance, ink x range, kern pairs. */
+    var FM = {adv:{" ":238,"!":312,"\"":402,"#":557,"$":540,"%":952,"&":759,"'":200,"(":374,")":374,"*":468,"+":560,",":315,"-":336,".":236,"/":360,"0":545,"1":545,"2":545,"3":545,"4":535,"5":515,"6":545,"7":545,"8":545,"9":545,":":315,";":315,"<":560,"=":560,">":560,"?":440,"@":884,"A":732,"B":635,"C":675,"D":774,"E":661,"F":678,"G":734,"H":834,"I":334,"J":399,"K":725,"L":617,"M":911,"N":783,"O":756,"P":592,"Q":755,"R":707,"S":557,"T":676,"U":776,"V":721,"W":1120,"X":692,"Y":678,"Z":596,"[":349,"\\":360,"]":349,"^":561,"_":542,"`":418,"a":502,"b":596,"c":495,"d":597,"e":504,"f":339,"g":558,"h":570,"i":261,"j":273,"k":549,"l":263,"m":886,"n":587,"o":564,"p":602,"q":561,"r":401,"s":434,"t":345,"u":582,"v":522,"w":791,"x":531,"y":582,"z":451,"{":368,"|":307,"}":368,"~":560," ":238,"–":542,"—":856,"‘":231,"’":231,"“":453,"”":453,"…":869},ink:{"!":[81,231],"\"":[40,361],"#":[25,533],"$":[53,501],"%":[40,912],"&":[26,717],"'":[40,160],"(":[83,340],")":[34,291],"*":[19,450],"+":[32,530],",":[45,234],"-":[42,294],".":[44,191],"/":[4,356],"0":[40,506],"1":[82,477],"2":[47,502],"3":[46,504],"4":[24,542],"5":[24,473],"6":[39,504],"7":[52,504],"8":[44,501],"9":[32,501],":":[79,237],";":[45,237],"<":[58,503],"=":[32,530],">":[59,504],"?":[68,376],"@":[39,847],"A":[9,728],"B":[41,593],"C":[47,636],"D":[41,716],"E":[42,618],"F":[42,590],"G":[47,715],"H":[41,794],"I":[41,315],"J":[-28,368],"K":[41,717],"L":[42,591],"M":[36,899],"N":[38,747],"O":[47,708],"P":[41,567],"Q":[47,709],"R":[41,694],"S":[41,515],"T":[21,664],"U":[36,746],"V":[14,714],"W":[14,1110],"X":[10,683],"Y":[21,670],"Z":[23,574],"[":[108,317],"\\":[4,356],"]":[32,242],"^":[81,481],"_":[42,500],"`":[78,275],"a":[28,504],"b":[26,565],"c":[29,475],"d":[30,597],"e":[27,474],"f":[17,432],"g":[17,544],"h":[5,571],"i":[10,268],"j":[-98,217],"k":[0,544],"l":[-14,239],"m":[13,882],"n":[17,585],"o":[26,534],"p":[10,568],"q":[26,562],"r":[10,405],"s":[38,402],"t":[11,339],"u":[-2,573],"v":[-7,550],"w":[-16,796],"x":[-1,529],"y":[11,576],"z":[13,437],"{":[47,335],"|":[117,190],"}":[34,322],"~":[50,512],"–":[42,500],"—":[42,814],"‘":[38,206],"’":[26,193],"“":[38,428],"”":[26,415],"…":[79,790]},kern:{"Fi":21,"Tr":-16,"al":26,"ap":-9,"at":-8,"el":13,"gh":-12,"ho":9,"hy":-29,"id":15,"il":-28,"ll":-11,"lm":21,"rt":11,"ry":21}};
     function bez(x1, y1, x2, y2) {
-      var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
-      var cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+      var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
       return function (p) {
         if (p <= 0) return 0; if (p >= 1) return 1;
         var lo = 0, hi = 1, t = p, x, i;
-        for (i = 0; i < 30; i++) { x = ((ax * t + bx) * t + cx) * t; if (Math.abs(x - p) < 1e-7) break; if (x < p) lo = t; else hi = t; t = (lo + hi) / 2; }
+        for (i = 0; i < 40; i++) { x = ((ax * t + bx) * t + cx) * t; if (Math.abs(x - p) < 1e-7) break; if (x < p) lo = t; else hi = t; t = (lo + hi) / 2; }
         return ((ay * t + by) * t + cy) * t;
       };
     }
+    /* The style's fitted curves (tokens.css), as control points. */
+    var CURVE = { snap: [0.33, 1, 0.68, 1], drift: [0.15, 0.11, 0.614, 0.796], push: [0.336, -0.065, 0, 0.821], "push-hard": [0.772, 0.446, 0.15, 0.453],
+      pull: [0.924, 0.668, 0.604, 0.958], glide: [0.034, 0.665, 0.702, 1.023], reveal: [0.081, -0.525, 0, 0.951], rise: [0.15, 0.85, 0.3, 1],
+      pass: [0.45, 0.05, 0.55, 0.95], settle: [0.42, 0.543, 1, 1.076], zoom: [0.213, 0.313, 0.759, 0.883], linear: [0, 0, 1, 1] };
+    function curve(c) { var e = typeof c === "string" ? (CURVE[c] || CURVE.snap) : (c || CURVE.snap); return bez(e[0], e[1], e[2], e[3]); }
+    /* The film updates its picture 16 times a second inside 24 fps: frame f with
+       f mod 3 == 2 repeats f - 1. "twos" holds every second frame, "none" runs
+       on ones. phase shifts which frame repeats. Returns the time whose state
+       the frame at time t shows. */
+    function shown(t, cad, phase) {
+      if (!cad || cad === "none") return t;
+      var f = Math.floor(t * FPS + 1e-3), p = phase || 0, g = f;
+      if (cad === "16" || cad === 16) { if (((f - p) % 3 + 3) % 3 === 2) g = f - 1; }
+      else if (cad === "twos" || cad === 12) { if (((f - p) % 2 + 2) % 2 === 1) g = f - 1; }
+      return g / FPS;
+    }
+    /* A seek-safe ease that follows a fitted curve but only changes on the
+       cadence's picture updates, aligned to absolute timeline frames. */
+    function stepped(c, t0, dur, cad, phase) {
+      var f = curve(c);
+      if (!cad || cad === "none" || !(dur > 0)) return f;
+      return function (p) {
+        if (p >= 1) return 1;
+        var t = shown(t0 + p * dur + 1e-6, cad, phase), q = (t - t0) / dur;
+        return f(q < 0 ? 0 : q > 1 ? 1 : q);
+      };
+    }
+    /* Snap a time to the nearest frame on which the cadence shows a new picture. */
+    function snap(t, cad, phase) {
+      var f = Math.round(t * FPS);
+      if (cad === "16" || cad === 16) { while (((f - (phase || 0)) % 3 + 3) % 3 === 2) f++; }
+      else if (cad === "twos" || cad === 12) { if (((f - (phase || 0)) % 2 + 2) % 2 === 1) f++; }
+      return f / FPS;
+    }
+    /* Pure text measure from the font's own metrics: no layout read, so any word
+       at any size is known before paint. Returns advance, ink left and right
+       (px from the pen start) and cap height. */
+    function measure(text, size, track) {
+      var s = size / 1000, x = 0, inkL = null, inkR = 0, tr = (track || 0) * 1000, ch, i, a, k;
+      for (i = 0; i < text.length; i++) {
+        ch = text.charAt(i); a = FM.adv[ch]; if (a == null) a = FM.adv["n"];
+        k = i > 0 ? (FM.kern[text.charAt(i - 1) + ch] || 0) : 0; x += k;
+        var ink = FM.ink[ch];
+        if (ink) { if (inkL == null) inkL = x + ink[0]; inkR = x + ink[1]; }
+        x += a + (i < text.length - 1 ? tr : 0);
+      }
+      return { adv: x * s, inkL: (inkL || 0) * s, inkR: inkR * s, inkW: (inkR - (inkL || 0)) * s, cap: 0.69 * size };
+    }
+    /* Font size whose ink spans w px, or whose cap height is c px. */
+    function sizeForInk(text, w, track) { var m = measure(text, 1000, track); return 1000 * w / Math.max(1, m.inkW); }
+    function sizeForCap(c) { return c / 0.69; }
+    function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+    /* A token colour, falling back to a literal. */
+    function col(v, fb) { if (!v) return fb; return v.charAt(0) === "-" ? "var(" + v + ", " + (fb || "#000") + ")" : v; }
+    var uid = 0;
+    function id(p) { uid += 1; return (p || "es") + uid; }
+    /* An image slot: { src | frames: [src], fit: cover|contain|fill, focal: [x, y] in 0..1,
+       box: [x, y, w, h] in frame px (default the frame) }. Returns a div holding one
+       img per picture, positioned by object-fit and object-position. */
+    function slot(sp, W, H, cls) {
+      sp = sp || {};
+      var b = sp.box || [0, 0, W, H], el = document.createElement("div");
+      el.className = (cls || "") + " es-slot";
+      el.style.cssText = "position:absolute;left:" + b[0] + "px;top:" + b[1] + "px;width:" + b[2] + "px;height:" + b[3] + "px;overflow:hidden;";
+      var list = sp.frames || (sp.src ? [sp.src] : []), fo = sp.focal || [0.5, 0.5];
+      if (!list.length) { el.style.background = sp.color || "repeating-linear-gradient(45deg,#cfcfcf 0 22px,#d9d9d9 22px 44px)"; el.setAttribute("data-slot-empty", sp.name || "image"); }
+      for (var i = 0; i < list.length; i++) {
+        var im = document.createElement("img");
+        im.src = typeof list[i] === "string" ? list[i] : list[i].src; im.alt = "";
+        im.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;display:block;max-width:none;object-fit:" + (sp.fit || "cover") +
+          ";object-position:" + (fo[0] * 100) + "% " + (fo[1] * 100) + "%;" + (list.length > 1 ? "opacity:0;" : "");
+        el.appendChild(im);
+      }
+      return el;
+    }
+    /* Play a frame-sequence slot from t0, one picture per frame at fps; hold the last. */
+    function playSlot(tl, el, t0, fps, hold) {
+      var ims = el.querySelectorAll("img"), n = ims.length, fr = 1 / (fps || FPS), i;
+      if (n < 2) return t0;
+      for (i = 0; i < n; i++) {
+        step(tl, ims[i], { opacity: 0 }, { opacity: 1 }, t0 + i * fr);
+        if (i < n - 1 || hold === false) step(tl, ims[i], { opacity: 1 }, { opacity: 0 }, t0 + (i + 1) * fr);
+      }
+      return t0 + n * fr;
+    }
+    /* Hold-per-key state changes (measured per-frame keys): each key's values
+       hold until the next. map(key) returns the tween vars for that key. */
+    function keyed(tl, node, keys, t0, map, first) {
+      var prev = null;
+      for (var i = 0; i < keys.length; i++) {
+        var to = map(keys[i]), from = prev || to, v = {};
+        for (var k in to) v[k] = to[k];
+        v.duration = EPS; v.ease = "none"; v.immediateRender = !!(first && i === 0);
+        var at = t0 + keys[i].t - LEAD;
+        if (at < 0) { from = to; at = 0; v.immediateRender = true; }
+        tl.fromTo(node, from, v, at);
+        prev = to;
+      }
+      return prev;
+    }
+    /* A one-frame change (show, hide, swap) on the cadence. */
+    function step(tl, node, from, to, at) {
+      var v = {}; for (var k in to) v[k] = to[k];
+      v.duration = EPS; v.ease = "none"; v.immediateRender = false;
+      if (at - LEAD < 0) { tl.fromTo(node, to, v, 0); return; }
+      tl.fromTo(node, from, v, at - LEAD);
+    }
+    /* Beats: props.beats (seconds from t0) or n even beats over span. */
+    function beats(props, n, span) {
+      if (props.beats && props.beats.length) return props.beats.slice();
+      var out = []; for (var i = 0; i < n; i++) out.push(span * (i + 1) / (n + 1)); return out;
+    }
+    /* A marquee selection state as SVG markup: { x0, y0, x1, y1, op } is the
+       translucent fill, chips [[ax, ay, bx, by, o]] are square handles chip px
+       wide, each streaked as the hull of its square at a (where the last
+       picture left it) and at b (where it is now). */
+    function hull2(ax, ay, bx, by, h) {
+      var P = [[ax - h, ay - h], [ax + h, ay - h], [ax + h, ay + h], [ax - h, ay + h], [bx - h, by - h], [bx + h, by - h], [bx + h, by + h], [bx - h, by + h]];
+      P.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+      function cr(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+      var lo = [], up = [], i;
+      for (i = 0; i < P.length; i++) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], P[i]) <= 0) lo.pop(); lo.push(P[i]); }
+      for (i = P.length - 1; i >= 0; i--) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], P[i]) <= 0) up.pop(); up.push(P[i]); }
+      return lo.slice(0, -1).concat(up.slice(0, -1)).map(function (q) { return q[0].toFixed(1) + "," + q[1].toFixed(1); }).join(" ");
+    }
+    function sel(st, chip, color) {
+      var c = color || "#fff", h = (chip || 24) / 2, s = "";
+      if (st.op) s += '<rect x="' + Math.min(st.x0, st.x1) + '" y="' + Math.min(st.y0, st.y1) + '" width="' + Math.abs(st.x1 - st.x0) + '" height="' + Math.abs(st.y1 - st.y0) + '" style="fill:' + c + '" fill-opacity="' + st.op + '"/>';
+      var C = st.chips || [];
+      for (var i = 0; i < C.length; i++) s += '<polygon points="' + hull2(C[i][0], C[i][1], C[i][2], C[i][3], h) + '" style="fill:' + c + '" fill-opacity="' + (C[i][4] == null ? 1 : C[i][4]) + '"/>';
+      return s;
+    }
+    /* Start a measured key list part way in: times shift by -skip, and every key
+       at or before the new zero collapses into one starting key (the last wins). */
+    function shift(keys, skip) {
+      if (!skip) return keys;
+      var out = [], pre = null;
+      for (var i = 0; i < keys.length; i++) {
+        var k = {}, q; for (q in keys[i]) k[q] = keys[i][q]; k.t = keys[i].t - skip;
+        if (k.t <= 1e-6) { pre = k; pre.t = 0; } else { if (pre) { out.push(pre); pre = null; } out.push(k); }
+      }
+      if (pre) out.push(pre);
+      return out;
+    }
+    return { EPS: EPS, LEAD: LEAD, FPS: FPS, FM: FM, bez: bez, curve: curve, CURVE: CURVE, shown: shown, stepped: stepped, snap: snap,
+      measure: measure, sizeForInk: sizeForInk, sizeForCap: sizeForCap, esc: esc, col: col, id: id, slot: slot, playSlot: playSlot,
+      keyed: keyed, step: step, beats: beats, sel: sel, shift: shift };
+  })();
+  /* es-kit:end */
+  window.__elements["giant-word-rise"] = (function () {
+    /* replica-s5-shot25: film frame 550 is t 0. cam: [frame, a, b, c, d, e, f] CSS
+       matrix of the photograph per frame; card: [frame, x0, y0, x1, y1]; word:
+       [frame, x, y, s], a translate and scale about the frame's top left applied
+       to the line as set in path space (ES Serif 982 px, baseline 984, glyph pens
+       fitted to the traced source letters at ink IoU 0.917). */
+    var R = {
+      cam: [[0,1,0,0,1,0,0],[1,1.00054,-4e-05,-1e-05,1.00041,-0.56,-0.28],[2,1.00127,-7e-05,0.00011,1.00096,-1.34,-0.6],[3,1.00144,-5e-05,0.0002,1.00116,-1.55,-0.71],[4,1.00159,-3e-05,0.00026,1.00129,-1.74,-0.8],[5,1.00178,-3e-05,0.00018,1.00155,-1.89,-0.93],[6,1.00128,-8e-05,8e-05,1.00102,-1.36,-0.6],[8,0.99511,-6e-05,4e-05,0.99494,4.57,2.59],[9,0.9773,-8e-05,8e-05,0.97703,21.66,12.4],[11,0.84912,0,0,0.84912,144.71,81.5],[12,0.72072,0,0,0.72072,267.57,150.65]],
+      card: [[11,59,33,1861,1047],[12,195,110,1725,970]],
+      word: [[2,215,508,1.0051],[3,177,355,1.0043],[5,139,207,1.0031],[6,101,122,1.0026],[8,60,66,1.0046],[9,21,26,1.0039],[11,-9,-5,1.0078]],
+      wordPath: [[2,220,514],[3,181,361],[5,142,212],[6,103,126],[8,64,69],[9,25,29],[11,-1,-1]],
+      text: "Write", size: 982, base: 984, xs: [42, 1083, 1500, 1763, 2001], weight: 6, wordOut: 12, plateOut: 16, paper: "#EFEFEF", ink: "#020202"
+    };
+    var PRESETS = { "replica-s5-shot25": R };
+    function F(n) { return n / 24; }
+    function glyphXs(kit, text, size, track, pen) {
+      var xs = [], s = size / 1000, x = pen, i, ch;
+      for (i = 0; i < text.length; i++) {
+        ch = text.charAt(i);
+        if (i > 0) x += (kit.FM.kern[text.charAt(i - 1) + ch] || 0) * s;
+        xs.push(+x.toFixed(2));
+        x += (kit.FM.adv[ch] == null ? kit.FM.adv.n : kit.FM.adv[ch]) * s + track * size;
+      }
+      return xs;
+    }
+    function geom(props) {
+      var W = (props.frame && props.frame.w) || 1920, H = (props.frame && props.frame.h) || 1080, kit = window.__esKit;
+      var P = props.preset && PRESETS[props.preset];
+      if (P) return { W: W, H: H, P: P, text: props.text || P.text, size: P.size, base: P.base, xs: props.text ? glyphXs(kit, props.text, P.size, 0, P.xs[0]) : P.xs, weight: P.weight };
+      /* general: cap height as a share of the frame's shorter side (film 0.628) */
+      var text = props.text || "Write", cap = (props.cap || 0.628) * Math.min(W, H), size = kit.sizeForCap(cap);
+      var m = kit.measure(text, size, props.track || 0), left = (props.left == null ? 0.134 : props.left) * W;
+      return { W: W, H: H, text: text, size: size, base: 0, xs: glyphXs(kit, text, size, props.track || 0, left - m.inkL), weight: (props.weight == null ? 0.0061 : props.weight) * size };
+    }
     return {
-      /* props:
-           text, cap (710), color (#0A0A0A)
-           from: { x, y } and to: { x, y }: left edge of the first letter and
-             the baseline, px at 1920 x 1080 (defaults are the source's)
-           frames (12), ease_y ([0, 0.5, 0.4, 1]), x travels linearly
-           cutout: { src, rect: [x0, y0, x1, y1] } drawn over the word when
-             over_cutout is false (the source puts the word over the object)
-           shrink: [{ t, scale }] single-step scales about the frame centre
-           exitAt: seconds after t0 when the word goes. t0 is the motion start. */
+      /* props: preset "replica-s5-shot25" (measured keys) or general mode;
+         image: slot { src | frames, fit, focal, box } for the photograph;
+         text (word, set in ES Serif; any length, cropped by the frame);
+         cap (share of the frame's shorter side, 0.628), left (share of width
+         of the first ink edge, 0.134), weight (ink stroke in em, 0.0061),
+         color (token, --color-ink), paper (token, --color-paper);
+         speed (duration scale, 1), cadence "16" | "twos" | "none";
+         beats [shrink] seconds from t0 (default 9 frames times speed; the rise runs 9 frames times speed);
+         shrink true | false (print the photograph into a card at the second beat);
+         middle (share of frame height where the word's middle settles, 0.59);
+         glyph { d, x0, y0 } a traced outline drawn instead of the text (the replica
+         preset uses assets/glyphs/wri-s5-561.json with its own fitted keys);
+         layer "all" | "plate" | "word"; skip (seconds into a preset); exitAt. */
       render: function (props) {
-        var s = S(props), el = document.createElement("div");
+        var kit = window.__esKit, g = geom(props), layer = props.layer || "all";
+        var el = document.createElement("div");
         el.className = "el-giant-word-rise";
-        var cap = props.cap || 710, size = cap / 0.69, from = props.from || { x: 292, y: 1744 };
-        var w = document.createElement("div");
-        w.className = "gw-word es-serif";
-        w.style.fontSize = size * s + "px";
-        w.style.color = props.color || "#0A0A0A";
-        w.style.left = (from.x - 0.012 * size) * s + "px";
-        w.style.top = (from.y - BASE * size) * s + "px";
-        w.textContent = props.text || "";
-        var cut = null;
-        if (props.cutout && props.cutout.src) {
-          cut = document.createElement("div");
-          cut.className = "gw-cut";
-          var r = props.cutout.rect || [0, 0, 1920, 1080];
-          cut.style.left = r[0] * s + "px"; cut.style.top = r[1] * s + "px";
-          cut.style.width = (r[2] - r[0]) * s + "px"; cut.style.height = (r[3] - r[1]) * s + "px";
-          cut.style.backgroundImage = "url(" + props.cutout.src + ")";
+        if (layer !== "word") {
+          var paper = document.createElement("div");
+          paper.className = "gw-paper";
+          paper.style.background = g.P ? g.P.paper : kit.col(props.paper || "--color-paper", "#EEEEEE");
+          el.appendChild(paper);
+          var card = document.createElement("div"); card.className = "gw-card";
+          var cam = document.createElement("div"); cam.className = "gw-cam";
+          cam.appendChild(kit.slot(props.image || {}, g.W, g.H, "gw-slot"));
+          card.appendChild(cam); el.appendChild(card);
         }
-        if (cut && props.over_cutout === false) { el.appendChild(w); el.appendChild(cut); }
-        else { if (cut) el.appendChild(cut); el.appendChild(w); }
+        if (layer !== "plate") {
+          var fill = g.P ? g.P.ink : kit.col(props.color || "--color-ink", "#0A0A0A"), t = "", gl = props.glyph;
+          for (var i = 0; i < g.text.length; i++) t += '<tspan x="' + g.xs[i] + '">' + kit.esc(g.text.charAt(i)) + "</tspan>";
+          /* data-layout-ignore: the giant word is cropped by the frame on purpose and
+             reads as shape over the photograph (black on grass in the film, under
+             AA contrast), so the layout and contrast audits skip it; the
+             composited still is the check. */
+          el.insertAdjacentHTML("beforeend", '<svg class="gw-svg" data-layout-ignore="true" width="' + g.W + '" height="' + g.H + '" viewBox="0 0 ' + g.W + " " + g.H + '"><g class="gw-word">' + (gl ? '<path fill-rule="evenodd" transform="translate(' + (gl.x0 || 0) + " " + (gl.y0 || 0) + ')" d="' + gl.d + '" style="fill:' + fill + '"/>' :
+            '<text y="' + g.base.toFixed(2) + '" style="font-family:var(--font-serif);font-size:' + g.size.toFixed(2) + "px;font-kerning:none;fill:" + fill + ";stroke:" + fill + ";stroke-width:" + g.weight.toFixed(2) +
+            'px;stroke-linejoin:round;paint-order:stroke">' + t + "</text>") + "</g></svg>");
+        }
         return el;
       },
       animate: function (tl, el, t0, props) {
-        var s = S(props), w = el.querySelector(".gw-word");
-        var from = props.from || { x: 292, y: 1744 }, to = props.to || { x: -6, y: 1000 };
-        var dur = (props.frames || 12) * FR, e = props.ease_y || [0, 0.5, 0.4, 1];
-        tl.fromTo(w, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none" }, t0);
-        tl.fromTo(w, { y: 0 }, { y: (to.y - from.y) * s, duration: dur, ease: bez(e[0], e[1], e[2], e[3]), immediateRender: false }, t0);
-        tl.fromTo(w, { x: 0 }, { x: (to.x - from.x) * s, duration: dur, ease: "none", immediateRender: false }, t0);
-        var sh = props.shrink || [], prev = 1;
-        for (var i = 0; i < sh.length; i++) {
-          tl.fromTo(el, { scale: prev }, { scale: sh[i].scale, duration: 0.0001, ease: "none", immediateRender: false }, t0 + sh[i].t);
-          prev = sh[i].scale;
+        var kit = window.__esKit, g = geom(props);
+        var paper = el.querySelector(".gw-paper"), card = el.querySelector(".gw-card"), cam = el.querySelector(".gw-cam"), word = el.querySelector(".gw-word");
+        var slotEl = el.querySelector(".gw-slot");
+        var ins = function (r) { return "inset(" + r[1] + "px " + (g.W - r[2]) + "px " + (g.H - r[3]) + "px " + r[0] + "px)"; };
+        kit.step(tl, el, { opacity: 0 }, { opacity: 1 }, t0);
+        if (slotEl) kit.playSlot(tl, slotEl, t0, (props.image && props.image.fps) || 24, true);
+        if (g.P) {
+          var P = g.P, skip = props.skip || 0, end = t0;
+          if (cam) {
+            kit.keyed(tl, cam, kit.shift(P.cam.map(function (r) { return { t: F(r[0]), m: "matrix(" + r.slice(1).join(",") + ")" }; }), skip), t0, function (k) { return { transform: k.m }; }, true);
+            var ck = [{ t: 0, r: [0, 0, g.W, g.H] }].concat(P.card.map(function (r) { return { t: F(r[0]), r: r.slice(1) }; }));
+            kit.keyed(tl, card, kit.shift(ck, skip), t0, function (k) { return { clipPath: ins(k.r) }; }, true);
+            var pk = kit.shift([{ t: 0, o: 0 }, { t: F(P.card[0][0]), o: 1 }], skip);
+            kit.keyed(tl, paper, pk, t0, function (k) { return { opacity: k.o }; }, true);
+            var po = props.exitAt != null ? props.exitAt : F(P.plateOut) - skip;
+            kit.step(tl, el, { opacity: 1 }, { opacity: 0 }, t0 + po);
+          }
+          if (word) {
+            var wk = [{ t: 0, x: 0, y: 0, s: 1, o: 0 }].concat(props.glyph ? P.wordPath.map(function (r) { return { t: F(r[0]), x: r[1], y: r[2], s: 1, o: 1 }; }) : P.word.map(function (r) { return { t: F(r[0]), x: r[1], y: r[2], s: r[3], o: 1 }; }));
+            wk.push({ t: F(P.wordOut), x: 0, y: 0, s: 1, o: 0 });
+            kit.keyed(tl, word, kit.shift(wk, skip), t0, function (k) { return { attr: { transform: "translate(" + k.x + " " + k.y + ") scale(" + k.s + ")" }, opacity: k.o }; }, true);
+          }
+          return t0 + F(P.word[P.word.length - 1][0]) - skip;
         }
-        if (props.exitAt != null) tl.fromTo(w, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, t0 + props.exitAt);
-        return t0 + dur;
+        /* general mode, from the fitted envelopes */
+        var sp = props.speed || 1, cad = props.cadence || "16", W = g.W, H = g.H;
+        var b = props.beats && props.beats.length ? props.beats : [F(9) * sp];
+        var rise = F(9) * sp, tShrink = b[0] != null && props.shrink !== false ? kit.snap(t0 + b[0], cad) : null;
+        var cap = g.size * 0.69, B0 = H + 0.61 * cap, B1 = Math.min(H + 0.61 * cap, (props.middle == null ? 0.59 : props.middle) * H + cap / 2);
+        var endW = props.exitAt != null ? t0 + props.exitAt : (tShrink != null ? tShrink + F(1) : t0 + rise + F(3));
+        var drift = 0.9 * cap * (endW - t0); /* 38 px a picture at cap 678: 0.9 cap a second */
+        if (word) {
+          /* the line is set with its baseline at 0 and its left ink at "left"; the group carries it */
+          var tr = function (x, y) { return "translate(" + x.toFixed(2) + " " + y.toFixed(2) + ")"; };
+          kit.keyed(tl, word, [{ t: 0 }], t0, function () { return { attr: { transform: tr(0, B0) }, opacity: 1 }; }, true);
+          var xr = -drift * Math.min(1, rise / (endW - t0));
+          tl.fromTo(word, { attr: { transform: tr(0, B0) } }, { attr: { transform: tr(xr, B1) }, duration: rise, ease: kit.stepped([0, 0.5, 0.4, 1], t0, rise, cad), immediateRender: false }, t0);
+          if (endW > t0 + rise) tl.fromTo(word, { attr: { transform: tr(xr, B1) } }, { attr: { transform: tr(-drift, B1) }, duration: endW - t0 - rise, ease: kit.stepped("linear", t0 + rise, endW - t0 - rise, cad), immediateRender: false }, t0 + rise);
+          kit.step(tl, word, { opacity: 1 }, { opacity: 0 }, endW);
+        }
+        var tGrow = t0 + F(4) * sp; /* the pull starts one frame later, on the fifth */
+        if (cam) {
+          var M = function (s) { return "matrix(" + s + ",0,0," + s + "," + (W / 2 * (1 - s)).toFixed(2) + "," + (H / 2 * (1 - s)).toFixed(2) + ")"; };
+          kit.keyed(tl, cam, [{ t: 0 }], t0, function () { return { transform: M(1) }; }, true);
+          tl.fromTo(cam, { transform: M(1) }, { transform: M(1.0018), duration: F(5) * sp, ease: kit.stepped("drift", t0, F(5) * sp, cad), immediateRender: false }, t0);
+          tl.fromTo(cam, { transform: M(1.0018) }, { transform: M(0.977), duration: F(2) * sp, ease: kit.stepped("snap", tGrow + F(1), F(2) * sp, cad), immediateRender: false }, tGrow + F(1));
+          if (tShrink != null) {
+            var c1 = 0.939, c2 = 0.796, r1 = [W * (1 - c1) / 2, H * (1 - c1) / 2, W * (1 + c1) / 2, H * (1 + c1) / 2], r2 = [W * (1 - c2) / 2, H * (1 - c2) / 2, W * (1 + c2) / 2, H * (1 + c2) / 2];
+            kit.keyed(tl, card, [{ t: 0, r: [0, 0, W, H] }, { t: tShrink - t0, r: r1 }, { t: tShrink - t0 + F(1), r: r2 }], t0, function (k) { return { clipPath: ins(k.r) }; }, true);
+            kit.step(tl, paper, { opacity: 0 }, { opacity: 1 }, tShrink);
+            kit.step(tl, cam, { transform: M(0.977) }, { transform: M(0.849) }, tShrink);
+            kit.step(tl, cam, { transform: M(0.849) }, { transform: M(0.721) }, tShrink + F(1));
+          }
+          if (props.exitAt != null) kit.step(tl, el, { opacity: 1 }, { opacity: 0 }, t0 + props.exitAt);
+        }
+        return t0 + rise;
       }
     };
   })();

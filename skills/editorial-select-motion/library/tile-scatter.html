@@ -1,195 +1,521 @@
 <style>
-  /* tile-scatter. Photo tiles and loose words on grid paper. Tiles land on
-     whole frames with no entrance tween and then glide a short way on the
-     snap curve, their pictures swapping in place; words sit under the tiles on
-     small paper cards that hide the grid and glide in the same steps; then
-     the words collapse into one centred line, the line and the tiles grow,
-     and the tiles clear a few per frame until only the line is left. The
-     ground is optional, so the first tiles can land over the previous scene
-     before the paper cuts in under them.
-     Source strips: assets/frames/tile-scatter-dense.jpg (frames 79 to 139)
-     and assets/frames/select-title-step-dense.jpg (frames 72 to 79).
-     Measured at 1920 x 1080: paper #ECECEC with 1.5 px rules (#D2D2D2 on a
-     #E1E1E1 half pixel) every 120 px across through x 960 and every 121.5 px
-     down through y 540; tiles 240 x 245, 242 x 365, 483 x 318 and 363 x 242
-     px, first two tiles landing on frames 75 and 76 over the previous scene
-     and the paper cutting in on frame 79; tiles glide 15 to 50 px per step,
-     each step two or three frames, settling by frame 100; words set at
-     84.5 px (cap 58 px) on #F1F1F1 cards 120 px tall and 122 px wider than
-     the ink; collapse on frame 112 into one line at 95 px, baseline y 566,
-     centred, which then grows 1.156 by frame 126; tiles grow about 1.12
-     about the frame centre over frames 113 to 127 on an accelerating curve
-     while the grid only grows 1.018; tiles clear on frames 123, 124, 127
-     and 129 and the grid goes with the last one. */
+  /* tile-scatter. Grid paper, picture tiles and word cards: tiles pop onto
+     the grid and drift into their cells, lowercase serif words land one at a
+     time on paper cards and walk across the grid a cell at a time, then the
+     words snap into one line at the centre that swells while the grid grows
+     with it and the tiles drop away a few per picture. Everything steps on
+     the film's sixteen pictures a second. Source: s1 shot 8, film frames 79
+     to 127 (3.292 to 5.333 s), measured in work/replica/s1 (paper-grid,
+     scatter-words, tile-seq). Measured: grid 120 x 121.49 px through the
+     frame centre, rule a two pixel profile (4.6 and 10.7 percent darker);
+     cards 240 x 120 (two cells by one) a shade lighter than the paper, the
+     word's ink centred in its card; words ES Serif at 83 to 84.5 px with 1.5
+     to 2.5 px tracking; a card step is one cell over two or three pictures;
+     the line is ES Serif 86.75 px at scale 1.102 rising to 1.294 over 15
+     frames about the frame centre while the grid scales 1 to 1.017; tiles sit
+     on whole cells (2x2, 2x3, 3x2, 4x2) above the cards. */
   .el-tile-scatter { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
-  .el-tile-scatter .ts-ground { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; transform-origin: 50% 50%; }
-  .el-tile-scatter .ts-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 50% 50%; }
-  .el-tile-scatter .ts-tile { position: absolute; left: 0; top: 0; opacity: 0; overflow: hidden; transform-origin: 0 0; }
-  .el-tile-scatter .ts-pic { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0; }
-  .el-tile-scatter .ts-word { position: absolute; left: 0; top: 0; opacity: 0; white-space: nowrap; line-height: 1; color: #0A0A0A; }
-  .el-tile-scatter .ts-card { position: absolute; background: #F1F1F1; }
-  .el-tile-scatter .ts-text { position: absolute; left: 0; top: 0; }
-  .el-tile-scatter .ts-line { position: absolute; left: 0; width: 100%; text-align: center; white-space: nowrap; line-height: 1; color: #0A0A0A; opacity: 0; transform-origin: 50% 50%; }
+  .el-tile-scatter .ts-paper { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .el-tile-scatter .ts-rules { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .el-tile-scatter .ts-rule { position: absolute; }
+  .el-tile-scatter .ts-card { position: absolute; left: 0; top: 0; opacity: 0; }
+  .el-tile-scatter .ts-word { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; }
+  .el-tile-scatter .ts-line { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; }
+  .el-tile-scatter .ts-tile { opacity: 0; }
+  .el-tile-scatter svg.ts-run { position: absolute; left: 0; top: 0; overflow: visible; }
 </style>
 <script>
-  window.__esMetrics = window.__esMetrics || { serif: { upm: 1000, cap: 670, x: 475, stroke: 20, adv: {" ":225,"!":280,"\"":420,"#":530,"$":530,"%":826,"&":722,"'":231,"(":331,")":331,"*":443,"+":530,",":242,"-":330,".":242,"/":385,"0":530,"1":530,"2":530,"3":530,"4":530,"5":530,"6":530,"7":530,"8":530,"9":530,":":242,";":242,"<":530,"=":530,">":530,"?":409,"@":914,"A":662,"B":632,"C":641,"D":706,"E":580,"F":553,"G":698,"H":786,"I":379,"J":365,"K":667,"L":556,"M":898,"N":729,"O":735,"P":592,"Q":735,"R":653,"S":532,"T":602,"U":727,"V":650,"W":991,"X":647,"Y":604,"Z":589,"[":331,"\\":385,"]":331,"^":530,"_":500,"`":500,"a":498,"b":556,"c":454,"d":561,"e":487,"f":326,"g":508,"h":574,"i":289,"j":281,"k":527,"l":283,"m":857,"n":577,"o":540,"p":558,"q":549,"r":407,"s":426,"t":328,"u":567,"v":499,"w":774,"x":499,"y":500,"z":456,"{":331,"|":256,"}":331,"~":530,"’":231,"…":726,"é":487,"è":487} }, width: function (text, size, track) { var a = this.serif.adv, w = 0, n = 0; for (var i = 0; i < text.length; i++) { var c = text[i]; w += (a[c] != null ? a[c] : 500); n++; } return (w + this.serif.stroke) / 1000 * size + Math.max(0, n - 1) * (track || 0) * size; } };
+/* BEGIN es-shared */
+  /* es-shared. The helpers every editorial-select block uses: frame scale,
+     the film's picture cadence, zero-duration steps, a seeded PRNG, ES Serif
+     glyph metrics for arithmetic text layout, and the image slot. Copied
+     verbatim into every block file between the BEGIN and END markers by
+     work/blocks/shared/inject.py; the first copy in a document wins, so
+     change es-shared.src.js and re-inject rather than editing a copy. */
+  window.__esShared = window.__esShared || (function () {
+    var METRICS = { serif: {"cap":0.69,"x":0.499,"asc":0.802,"desc":-0.284,"adv":{" ":0.238,"!":0.312,"\"":0.402,"#":0.557,"$":0.54,"%":0.952,"&":0.759,"'":0.2,"(":0.374,")":0.374,"*":0.468,"+":0.56,",":0.315,"-":0.336,".":0.236,"/":0.36,"0":0.545,"1":0.545,"2":0.545,"3":0.545,"4":0.535,"5":0.515,"6":0.545,"7":0.545,"8":0.545,"9":0.545,":":0.315,";":0.315,"<":0.56,"=":0.56,">":0.56,"?":0.44,"@":0.884,"A":0.732,"B":0.635,"C":0.675,"D":0.774,"E":0.661,"F":0.678,"G":0.734,"H":0.834,"I":0.334,"J":0.399,"K":0.725,"L":0.617,"M":0.911,"N":0.783,"O":0.756,"P":0.592,"Q":0.755,"R":0.707,"S":0.557,"T":0.676,"U":0.776,"V":0.721,"W":1.12,"X":0.692,"Y":0.678,"Z":0.596,"[":0.349,"\\":0.36,"]":0.349,"^":0.561,"_":0.542,"`":0.418,"a":0.502,"b":0.596,"c":0.495,"d":0.597,"e":0.504,"f":0.339,"g":0.558,"h":0.57,"i":0.261,"j":0.273,"k":0.549,"l":0.263,"m":0.886,"n":0.587,"o":0.564,"p":0.602,"q":0.561,"r":0.401,"s":0.434,"t":0.345,"u":0.582,"v":0.522,"w":0.791,"x":0.531,"y":0.582,"z":0.451,"{":0.368,"|":0.307,"}":0.368,"~":0.56},"kern":{"Fi":0.021,"Tr":-0.016,"al":0.026,"ap":-0.009,"at":-0.008,"el":0.013,"gh":-0.012,"ho":0.009,"hy":-0.029,"id":0.015,"il":-0.028,"ll":-0.011,"lm":0.021,"rt":0.011,"ry":0.021},"ink":{"!":[0.081,-0.014,0.231,0.705],"\"":[0.04,0.437,0.361,0.762],"#":[0.025,0.0,0.533,0.671],"$":[0.053,-0.118,0.501,0.776],"%":[0.04,-0.028,0.912,0.701],"&":[0.026,-0.014,0.717,0.706],"'":[0.04,0.437,0.16,0.762],"(":[0.083,-0.195,0.34,0.77],")":[0.034,-0.195,0.291,0.77],"*":[0.019,0.363,0.45,0.771],"+":[0.032,0.077,0.53,0.595],",":[0.045,-0.186,0.234,0.137],"-":[0.042,0.224,0.294,0.301],".":[0.044,-0.015,0.191,0.135],"/":[0.004,-0.166,0.356,0.734],"0":[0.04,-0.014,0.506,0.68],"1":[0.082,-0.001,0.477,0.673],"2":[0.047,-0.001,0.502,0.68],"3":[0.046,-0.014,0.504,0.68],"4":[0.024,-0.009,0.542,0.696],"5":[0.024,-0.011,0.473,0.738],"6":[0.039,-0.014,0.504,0.68],"7":[0.052,0.0,0.504,0.666],"8":[0.044,-0.014,0.501,0.68],"9":[0.032,-0.016,0.501,0.68],":":[0.079,-0.013,0.237,0.496],";":[0.045,-0.185,0.237,0.496],"<":[0.058,0.081,0.503,0.596],"=":[0.032,0.201,0.53,0.477],">":[0.059,0.083,0.504,0.598],"?":[0.068,-0.014,0.376,0.707],"@":[0.039,-0.162,0.847,0.682],"A":[0.009,0.0,0.728,0.701],"B":[0.041,-0.009,0.593,0.698],"C":[0.047,-0.017,0.636,0.707],"D":[0.041,0.0,0.716,0.683],"E":[0.042,-0.003,0.618,0.689],"F":[0.042,0.001,0.59,0.691],"G":[0.047,-0.017,0.715,0.707],"H":[0.041,0.0,0.794,0.69],"I":[0.041,0.0,0.315,0.686],"J":[-0.028,-0.14,0.368,0.69],"K":[0.041,0.0,0.717,0.69],"L":[0.042,-0.002,0.591,0.684],"M":[0.036,-0.009,0.899,0.686],"N":[0.038,-0.007,0.747,0.69],"O":[0.047,-0.004,0.708,0.704],"P":[0.041,0.002,0.567,0.691],"Q":[0.047,-0.223,0.709,0.707],"R":[0.041,-0.011,0.694,0.69],"S":[0.041,-0.017,0.515,0.707],"T":[0.021,-0.003,0.664,0.682],"U":[0.036,-0.016,0.746,0.69],"V":[0.014,-0.006,0.714,0.69],"W":[0.014,-0.007,1.11,0.707],"X":[0.01,0.0,0.683,0.69],"Y":[0.021,0.0,0.67,0.69],"Z":[0.023,0.0,0.574,0.69],"[":[0.108,-0.165,0.317,0.739],"\\":[0.004,-0.166,0.356,0.734],"]":[0.032,-0.165,0.242,0.739],"^":[0.081,0.204,0.481,0.506],"_":[0.042,-0.072,0.5,0.005],"`":[0.078,0.579,0.275,0.791],"a":[0.028,-0.014,0.504,0.511],"b":[0.026,-0.012,0.565,0.751],"c":[0.029,-0.012,0.475,0.512],"d":[0.03,-0.012,0.597,0.762],"e":[0.027,-0.012,0.474,0.508],"f":[0.017,0.0,0.432,0.764],"g":[0.017,-0.254,0.544,0.511],"h":[0.005,0.001,0.571,0.758],"i":[0.01,0.001,0.268,0.715],"j":[-0.098,-0.25,0.217,0.748],"k":[0.0,0.001,0.544,0.762],"l":[-0.014,0.002,0.239,0.76],"m":[0.013,0.0,0.882,0.507],"n":[0.017,0.001,0.585,0.511],"o":[0.026,-0.013,0.534,0.506],"p":[0.01,-0.241,0.568,0.515],"q":[0.026,-0.24,0.562,0.514],"r":[0.01,0.0,0.405,0.507],"s":[0.038,-0.013,0.402,0.511],"t":[0.011,-0.012,0.339,0.596],"u":[-0.002,-0.011,0.573,0.511],"v":[-0.007,-0.012,0.55,0.496],"w":[-0.016,-0.008,0.796,0.498],"x":[-0.001,-0.001,0.529,0.5],"y":[0.011,-0.253,0.576,0.501],"z":[0.013,-0.001,0.437,0.5],"{":[0.047,-0.165,0.335,0.739],"|":[0.117,-0.25,0.19,0.773],"}":[0.034,-0.165,0.322,0.739],"~":[0.05,0.27,0.512,0.442]}} };
+
+    /* Scale from the 1920x1080 source to this frame. The short side carries
+       it, so a portrait or square frame keeps the source's type size. */
+    function k(props) { var f = (props && props.frame) || { w: 1920, h: 1080 }; return Math.min(f.w, f.h) / 1080; }
+    function fw(props) { return ((props && props.frame) || { w: 1920 }).w; }
+    function fh(props) { return ((props && props.frame) || { h: 1080 }).h; }
+
+    /* The film updates its picture 16 times a second inside 24 fps (frame f
+       with f mod 3 = 2 repeats f - 1), and parts of it run on twos. quant(t)
+       moves a time to the start of the picture it falls in, so any tween or
+       step placed through it lands on a picture the film could show.
+       cadence: "16" (default), "twos", "ones". */
+    function quant(t, cadence, fps) {
+      fps = fps || 24; var f = Math.round(t * fps * 1000) / 1000, fl = Math.floor(f + 1e-6);
+      if (cadence === "ones") return fl / fps;
+      if (cadence === "twos") return (fl - (fl % 2)) / fps;
+      return (fl % 3 === 2 ? fl - 1 : fl) / fps;
+    }
+    /* Sample a tween as held pictures: returns the list of times at which the
+       picture changes between t0 and t1 on the cadence. */
+    function pictures(t0, t1, cadence, fps) {
+      fps = fps || 24; var out = [], f0 = Math.ceil(t0 * fps - 1e-6), f1 = Math.floor(t1 * fps + 1e-6), last = null;
+      for (var f = f0; f <= f1; f++) { var q = quant(f / fps, cadence, fps); if (q !== last && q >= t0 - 1e-6) { out.push(q); last = q; } }
+      if (!out.length || out[out.length - 1] < t1 - 1e-6) out.push(t1);
+      return out;
+    }
+
+    /* A zero-duration step, the film's way of changing a picture. Steps after
+       the first on a node carry immediateRender false (CONTRACT.md). */
+    function step(tl, node, from, to, t, first) {
+      var v = {}; for (var p in to) v[p] = to[p];
+      v.duration = 0.0001; v.ease = "none"; if (!first) v.immediateRender = false;
+      tl.fromTo(node, from, v, Math.max(0, t));
+    }
+
+    function rng(seed) {
+      var s = (seed >>> 0) || 1;
+      return function () { s = (s + 0x6D2B79F5) >>> 0; var t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }
+
+    /* Lay out a string in ES Serif from its glyph metrics: returns pen x per
+       character (from the run's left edge, px), the advance width and the ink
+       box, at a font size in px and tracking in em. Pure arithmetic, so it is
+       right before the webfont arrives and render() never reads layout. */
+    function layout(text, size, tracking, face) {
+      var m = METRICS[face || "serif"], pens = [], x = 0, tr = (tracking || 0) * size;
+      var inkL = Infinity, inkR = -Infinity;
+      for (var i = 0; i < text.length; i++) {
+        var ch = text[i], a = m.adv[ch] != null ? m.adv[ch] : 0.5;
+        pens.push(x);
+        var b = m.ink[ch];
+        if (b) { inkL = Math.min(inkL, x + b[0] * size); inkR = Math.max(inkR, x + b[2] * size); }
+        x += a * size;
+        if (i + 1 < text.length) { x += tr; var kp = m.kern[ch + text[i + 1]]; if (kp) x += kp * size; }
+      }
+      if (inkL === Infinity) { inkL = 0; inkR = x; }
+      return { pens: pens, width: x, inkL: inkL, inkR: inkR, ink: inkR - inkL, cap: m.cap * size, xh: m.x * size, size: size };
+    }
+    /* The font size whose cap height is cap px. */
+    function sizeForCap(cap, face) { return cap / METRICS[face || "serif"].cap; }
+    /* Where the baseline sits below the top of a line-height:1 box, as a
+       share of the font size, so a glyph node can be placed by its baseline. */
+    function baseFrac(face) { var m = METRICS[face || "serif"]; return (1 - (m.asc - m.desc)) / 2 + m.asc; }
+
+    /* An image slot: a box that crops its picture by code. spec is
+         { src, fit: "cover" | "contain", focal: [x, y] (0..1), zoom (1),
+           cutout: src of the subject on transparency, label }
+       or a string src. Without a src it draws a labelled placeholder, which is
+       the code-and-slots view of the block. Returns the slot node; the picture
+       is its first child (class es-pic) so a block can move it inside the box. */
+    function slot(spec, w, h, name) {
+      if (typeof spec === "string") spec = { src: spec };
+      spec = spec || {};
+      var box = document.createElement("div");
+      box.className = "es-slot"; box.setAttribute("data-slot", name || "image");
+      box.style.cssText = "position:absolute;overflow:hidden;width:" + w + "px;height:" + h + "px;";
+      var fx = spec.focal ? spec.focal[0] : 0.5, fy = spec.focal ? spec.focal[1] : 0.5;
+      if (spec.src) {
+        var pic = document.createElement("div");
+        pic.className = "es-pic";
+        var z = spec.zoom || 1;
+        pic.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;background-image:url(\"" + spec.src + "\");background-repeat:no-repeat;background-size:" +
+          (spec.fit === "contain" ? "contain" : (z === 1 ? "cover" : (z * 100) + "% auto")) + ";background-position:" + (fx * 100) + "% " + (fy * 100) + "%;transform-origin:" + (fx * 100) + "% " + (fy * 100) + "%;";
+        box.appendChild(pic);
+      } else {
+        box.style.background = "repeating-linear-gradient(45deg, var(--color-mist) 0 2px, var(--color-ghost) 2px 14px)";
+        box.style.outline = "2px solid var(--color-ink-grey)"; box.style.outlineOffset = "-2px";
+        var lab = document.createElement("div");
+        lab.className = "es-slot-label"; lab.textContent = spec.label || name || "image";
+        lab.style.cssText = "position:absolute;left:8px;top:6px;font:500 " + Math.max(10, Math.min(18, h / 8)) + "px/1 var(--font-mono);color:var(--color-ink-grey);white-space:nowrap;";
+        box.appendChild(lab);
+      }
+      return box;
+    }
+    /* The cut-out layer for type-behind-subject: the same crop as slot(spec)
+       but showing spec.cutout, to sit above the type. Null when there is none. */
+    function cutout(spec, w, h, name) {
+      if (!spec || typeof spec === "string" || !spec.cutout) return null;
+      var c = {}; for (var p in spec) c[p] = spec[p]; c.src = spec.cutout;
+      var n = slot(c, w, h, (name || "image") + "-cutout"); n.classList.add("es-cutout"); return n;
+    }
+
+    /* A token colour by name ("violet" -> var(--color-violet)); any other
+       CSS colour passes through. */
+    function color(c, dflt) { c = c || dflt; return /^[a-z-]+$/.test(c) && c !== "white" && c !== "black" && c !== "transparent" ? "var(--color-" + c + ")" : c; }
+
+    return { METRICS: METRICS, k: k, fw: fw, fh: fh, quant: quant, pictures: pictures, step: step, rng: rng,
+             layout: layout, sizeForCap: sizeForCap, baseFrac: baseFrac, slot: slot, cutout: cutout, color: color, FR: 1 / 24 };
+  })();
+  /* END es-shared */
 
   window.__elements = window.__elements || {};
   window.__elements["tile-scatter"] = (function () {
-    var FR = 1 / 24;
-    var BASE = 0.8505; /* baseline below the line box top at line-height 1, in em */
-    var LSB = 0.03;    /* average left side bearing of the serif, in em */
-    function S(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
-    function grid(g) {
-      var rule = g.rule || "#D2D2D2", half = g.half || "#E1E1E1", gx = g.gx || 120, gy = g.gy || 121.5;
-      var ox = (g.cx == null ? 960 : g.cx) % gx, oy = (g.cy == null ? 540 : g.cy) % gy;
-      return { css: "background-color:" + (g.color || "#ECECEC") + ";background-image:" +
-        "linear-gradient(to right," + half + " 0," + half + " 1px," + rule + " 1px," + rule + " 2px,transparent 2px)," +
-        "linear-gradient(to bottom," + half + " 0," + half + " 1px," + rule + " 1px," + rule + " 2px,transparent 2px);" +
-        "background-size:" + gx + "px " + gy + "px;", ox: ox - 1, oy: oy - 1 };
+    var SH = window.__esShared, FR = 1 / 24;
+
+    /* replica-s1-shot8: the s1 replica's per-frame keys, frames counted from
+       film frame 79. words: keys [f, pen x, baseline, card x, card y] (pen
+       is the traced ink's pen; dx moves it onto ES Serif's); sentence keys
+       [f, scale, pen x, baseline], hide {f: [glyph index]}; tiles
+       [f0, f1, x, y, w, h], one per held pose, filled by props.images[i];
+       grid grow [f, scale]. Px at 1920 x 1080. */
+    var PRESETS = {
+      "replica-s1-shot8": {"frames":49,"ink":"#0D0D0D","card":{"w":240,"h":120,"color":"#F1F1F1"},"words":[{"text":"will","size":84.5,"tr":2.5,"dx":-1.0,"keys":[[9,288.76,266.81,238,178],[10,288.76,266.81,239,178],[11,290.82,267.17,239,179],[12,290.83,279.96,239,192],[13,290.82,279.96,240,191],[14,292.74,381.1,242,296],[15,292.71,386.91,242,298],[16,292.71,386.9,242,298],[17,292.74,392.63,242,304],[18,292.7,494.97,239,406],[19,292.7,494.98,240,407],[20,292.77,508.03,240,420],[21,294.79,508.46,242,420],[22,294.8,508.45,242,420],[23,352.57,508.47,301,420],[24,410.3,508.44,358,420],[25,410.3,508.44,358,420],[26,412.34,508.44,359,420],[27,412.34,508.43,359,420],[28,412.35,508.44,359,420],[29,412.39,508.39,359,420],[30,419.95,508.4,368,420],[31,419.94,508.42,369,420],[32,532.49,508.31,598,484]]},{"text":"never","size":83.0,"tr":1.5,"dx":-0.24,"keys":[[0,368.39,865.29,359,784],[1,368.39,865.29,359,784],[2,370.7,865.28,359,784],[3,372.68,865.31,365,784],[4,372.68,865.31,369,784],[5,379.02,865.32,369,784],[6,430.0,865.21,420,784],[7,430.0,865.21,420,784],[8,481.35,865.24,478,784],[9,488.0,865.18,478,784],[10,487.98,865.22,478,785],[11,489.97,865.18,480,785],[12,490.12,863.04,480,784],[13,490.13,863.04,480,784],[14,490.06,803.99,480,725],[15,490.16,744.83,480,664],[16,490.16,744.83,480,663],[17,490.6,742.68,479,663],[18,503.39,742.7,494,663],[19,503.39,742.7,495,663],[20,603.97,742.7,593,663],[21,609.64,742.74,601,663],[22,609.64,742.74,601,662],[23,609.65,737.03,601,656],[24,609.58,634.76,598,556],[25,609.58,634.76,598,554],[26,609.62,621.57,598,541],[27,609.63,621.25,598,541],[28,609.63,621.25,598,541],[29,609.64,620.47,598,540],[30,609.67,567.25,597,487],[31,609.67,567.25,598,487],[32,609.69,563.98,598,484]]},{"text":"be","size":84.25,"tr":2.5,"dx":-3.0,"keys":[[3,679.69,145.88,719,56],[4,679.69,145.88,718,56],[5,737.52,145.93,718,56],[6,795.44,145.91,723,56],[7,795.44,145.91,723,56],[8,797.49,145.92,723,55],[9,797.53,145.93,723,56],[10,797.52,145.93,723,56],[11,797.52,145.93,723,56],[12,797.5,145.94,723,56],[13,797.5,145.94,723,56],[14,798.44,145.93,723,56],[15,824.05,145.9,723,56],[16,824.05,145.9,723,55],[17,1023.64,145.86,842,55],[18,1035.06,145.89,842,55],[19,1035.06,145.89,842,56],[20,1034.99,151.56,842,56],[21,1035.0,253.31,842,56],[22,1035.0,253.31,961,176],[23,1034.94,266.33,961,176],[24,1034.95,268.85,961,178],[25,1034.93,268.84,961,178],[26,1034.93,327.42,961,178],[27,1034.92,385.97,959,298],[28,1034.92,385.97,960,298],[29,1034.9,388.13,960,298],[30,1034.93,388.12,959,298],[31,1034.93,388.13,959,298],[32,974.86,388.07,958,298]]},{"text":"the","size":83.0,"tr":2.0,"dx":-0.54,"keys":[[6,1261.31,876.05,1202,784],[7,1261.31,876.05,1202,784],[8,1261.29,875.47,1202,784],[9,1261.33,862.23,1202,771],[10,1261.33,862.22,1202,771],[11,1261.23,759.1,1202,670],[12,1261.19,753.24,1202,662],[13,1261.19,753.24,1202,662],[14,1261.2,753.26,1201,662],[15,1259.11,753.25,1201,662],[16,1259.11,753.25,1200,662],[17,1200.59,753.29,1142,662],[18,1142.05,753.2,1085,662],[19,1142.06,753.21,1086,662],[20,1139.98,752.79,1080,662],[21,1139.94,739.87,1079,648],[22,1139.94,739.87,1079,648],[23,1139.88,638.07,1082,542],[24,1139.94,632.28,1082,542],[25,1139.93,632.29,1081,542],[26,1134.24,632.26,1079,542],[27,1033.86,632.22,962,542],[28,1033.86,632.23,962,542],[29,1021.09,632.24,962,542],[30,1020.59,632.28,962,542],[31,1020.59,632.29,960,542],[32,1020.61,631.64,960,541]]},{"text":"same","size":83.25,"tr":1.6,"dx":-0.22,"keys":[[11,1578.41,500.11,1559,420],[12,1578.42,500.13,1559,420],[13,1578.42,500.12,1559,420],[14,1572.73,500.15,1557,420],[15,1472.35,500.14,1456,420],[16,1472.34,500.13,1454,420],[17,1459.56,500.15,1440,420],[18,1459.17,500.13,1441,420],[19,1459.12,500.15,1441,420],[20,1459.12,500.14,1441,420],[21,1459.12,500.12,1441,420],[22,1459.12,500.12,1441,420],[23,1459.12,500.12,1441,420],[24,1459.13,500.15,1441,420],[25,1459.14,500.16,1441,420],[26,1458.71,500.13,1441,420],[27,1445.74,500.11,1426,420],[28,1445.74,500.11,1424,420],[29,1345.0,500.17,1326,420],[30,1339.3,500.04,1323,420],[31,1339.29,500.04,1323,420],[32,1339.3,500.04,1317,420]]}],"sentence":{"text":"will never be the same","size":86.75,"tr":0.2,"dx":4.97,"f1":48,"keys":[[33,1.102,484.61,563.94],[34,1.102,484.61,563.94],[35,1.146,465.88,564.93],[36,1.174,453.04,565.83],[37,1.174,453.04,565.83],[38,1.19,446.14,565.92],[39,1.202,441.21,566.74],[40,1.202,441.21,566.74],[41,1.214,436.28,566.55],[42,1.226,431.36,567.37],[43,1.226,431.36,567.37],[44,1.238,426.43,567.18],[45,1.254,418.52,567.27],[46,1.254,418.52,567.27],[47,1.27,412.62,568.36],[48,1.294,401.76,568.99]],"hide":{"48":[0,9,15]}},"tiles":[[0,1,153,184,239,240],[0,1,248,626,238,358],[0,1,842,182,238,360],[2,2,138,180,240,244],[2,2,240,638,245,361],[2,2,672,178,240,366],[3,4,128,178,243,244],[3,4,236,646,247,362],[3,4,642,176,244,364],[5,5,124,176,244,246],[5,5,234,651,244,365],[5,5,628,176,242,364],[5,5,840,718,240,246],[6,7,122,178,242,244],[6,7,234,654,244,364],[6,7,620,176,242,364],[6,7,840,691,240,245],[8,8,120,177,242,245],[8,8,228,657,244,365],[8,8,614,176,242,364],[8,8,840,680,240,244],[9,10,120,177,242,245],[9,9,190,659,242,365],[9,9,610,176,240,364],[9,10,838,674,242,244],[9,10,1418,0,484,294],[10,10,190,658,242,366],[10,10,610,176,240,364],[11,11,119,134,241,246],[11,11,162,660,242,364],[11,11,606,176,242,364],[11,11,840,670,242,244],[11,11,1370,0,482,296],[12,13,118,97,242,245],[12,13,146,660,244,366],[12,12,604,176,241,366],[12,12,840,666,240,246],[12,13,1348,0,482,296],[12,13,1560,783,360,245],[13,13,604,176,241,366],[13,13,838,666,242,246],[14,14,118,79,242,245],[14,14,136,661,244,365],[14,14,602,176,242,366],[14,14,838,664,242,246],[14,14,1336,0,482,296],[14,14,1474,783,366,245],[15,15,118,69,244,245],[15,15,130,660,242,366],[15,15,601,176,241,366],[15,15,840,663,242,245],[15,16,1328,0,482,296],[15,15,1460,783,364,245],[16,16,119,69,243,245],[16,16,130,660,242,366],[16,16,601,176,241,366],[16,16,840,663,240,245],[16,16,1460,784,364,244],[17,17,118,62,244,246],[17,17,126,660,242,366],[17,17,600,176,242,368],[17,17,840,662,240,246],[17,17,1324,16,482,314],[17,17,1454,784,362,244],[18,18,118,57,244,245],[18,18,122,660,244,366],[18,18,600,176,242,368],[18,18,840,661,240,245],[18,19,1320,32,484,316],[18,18,1448,784,364,244],[19,19,118,57,244,247],[19,19,122,660,244,366],[19,19,600,176,242,368],[19,19,840,661,241,245],[19,19,1448,786,364,242],[20,20,118,55,244,245],[20,20,120,660,244,366],[20,20,600,174,242,368],[20,20,840,661,240,245],[20,20,1320,40,482,316],[20,20,1446,786,362,240],[21,22,118,54,244,246],[21,23,120,660,242,366],[21,22,600,170,242,368],[21,21,840,661,240,245],[21,21,1320,44,482,316],[21,21,1444,781,362,245],[22,22,840,661,240,245],[22,22,1320,44,482,316],[22,22,1444,781,362,245],[23,25,118,53,244,247],[23,23,600,154,242,366],[23,23,840,660,240,246],[23,23,1320,48,482,314],[23,23,1442,781,362,245],[24,26,118,660,244,366],[24,25,600,68,242,364],[24,24,840,660,240,246],[24,25,1318,48,484,318],[24,24,1442,782,362,245],[25,29,840,660,240,246],[25,25,1442,782,362,245],[26,26,118,53,244,247],[26,26,600,58,242,364],[26,26,1319,50,483,318],[26,26,1440,782,362,245],[27,28,118,53,244,245],[27,27,118,660,244,367],[27,27,600,55,241,365],[27,27,1320,50,482,318],[27,27,1440,783,362,245],[28,29,118,660,244,368],[28,28,600,54,242,366],[28,28,1320,50,482,318],[28,28,1440,783,362,245],[29,29,118,53,244,245],[29,30,600,54,242,366],[29,29,1320,50,484,318],[29,29,1440,783,362,245],[30,31,118,53,242,245],[30,31,118,660,244,368],[30,31,840,660,241,246],[30,31,1320,50,484,318],[30,30,1438,782,364,246],[31,32,599,54,241,366],[31,31,1438,782,364,246],[32,32,116,52,244,246],[32,32,116,660,246,368],[32,33,839,661,242,245],[32,32,1320,50,484,318],[32,32,1438,782,364,246],[33,33,116,52,244,246],[33,33,116,660,246,368],[33,33,599,54,241,366],[33,33,1320,50,486,318],[33,34,1438,780,366,248],[34,34,116,52,242,246],[34,34,116,662,246,368],[34,34,598,52,242,367],[34,34,839,661,242,247],[34,34,1320,50,486,318],[35,35,114,51,244,247],[35,35,114,662,246,368],[35,35,598,52,242,368],[35,35,838,661,243,247],[35,35,1320,48,486,320],[35,35,1440,784,364,246],[36,37,112,50,244,248],[36,37,112,662,246,368],[36,37,597,52,243,366],[36,36,838,661,243,247],[36,36,1320,48,488,320],[36,36,1442,784,364,246],[37,37,838,661,243,247],[37,37,1320,48,488,320],[37,37,1442,783,365,247],[38,38,110,48,244,250],[38,38,110,662,246,370],[38,38,596,50,244,368],[38,38,838,661,244,249],[38,38,1320,46,492,322],[38,38,1442,783,368,249],[39,39,106,46,246,248],[39,40,106,664,246,372],[39,40,594,46,246,372],[39,40,838,662,244,250],[39,40,1324,44,492,322],[39,39,1446,785,368,249],[40,40,106,46,246,248],[40,40,1446,785,368,249],[41,41,100,43,250,251],[41,41,100,664,250,374],[41,41,592,44,248,374],[41,41,836,663,247,251],[41,41,1328,42,492,326],[41,41,1448,787,370,250],[42,43,92,39,250,251],[42,43,92,664,254,378],[42,43,589,40,249,376],[42,43,836,664,248,252],[42,42,1330,37,498,325],[42,43,1452,789,374,253],[43,43,1330,36,498,326],[44,44,80,666,256,382],[44,44,82,33,253,255],[44,44,584,34,252,380],[44,44,834,666,252,256],[44,44,1334,32,506,328],[45,46,68,24,256,260],[45,46,832,668,255,260],[45,46,1340,22,514,338],[47,47,46,12,263,266],[47,47,828,671,262,265],[47,47,1350,10,524,342],[48,48,824,676,271,276]],"grid":{"x0":959.88,"y0":539.75,"gx":120,"gy":121.49,"v":[0.046,0.107],"h":[0.03,0.102,0.022],"vOff":-1,"hOff":-1,"grow":[[39,1.0005],[40,1.0005],[41,1.001],[42,1.002],[43,1.002],[44,1.0046],[45,1.0065],[46,1.0065],[47,1.011],[48,1.0173]]}}
+    };
+
+    function easeFn(name) {
+      var M = window.__motionExpert, e = M && M.ease ? M.ease(name) : null;
+      if (typeof e === "function") return e;
+      return function (p) { return 1 - Math.pow(1 - p, 3); };
     }
-    /* Each track key is [t, x, y] or [t, x, y, w, h] with t in seconds after t0.
-       Between keys a tile or word moves on props.ease (snap by default), or in
-       a step when the key says so with a fifth or sixth entry "step". */
+    /* An SVG run of glyphs at the run's pen and baseline (0, 0), one <text>
+       per glyph at the pen ES Serif's metrics give it, so layout is pure
+       arithmetic and any glyph can be stepped on its own. */
+    function run(text, size, tr, fill) {
+      var L = SH.layout(text, size, tr / size), s = '<svg class="ts-run" width="1" height="1">';
+      for (var i = 0; i < text.length; i++) {
+        if (text[i] === " ") { s += '<text data-g="' + i + '"></text>'; continue; }
+        s += '<text data-g="' + i + '" x="' + L.pens[i].toFixed(2) + '" y="0" style="font-family:var(--font-serif);font-size:' + size.toFixed(2) + 'px;fill:' + fill + ';font-kerning:none">' +
+          text[i].replace("&", "&amp;").replace("<", "&lt;") + "</text>";
+      }
+      return { html: s + "</svg>", L: L };
+    }
+    function vink(text, size) {
+      var m = SH.METRICS.serif, top = 0, bot = 0;
+      for (var i = 0; i < text.length; i++) { var b = m.ink[text[i]]; if (b) { top = Math.max(top, b[3]); bot = Math.min(bot, b[1]); } }
+      return { top: top * size, bot: bot * size };
+    }
+    function rules(el, x0, y0, gx, gy, W, H, prof, s) {
+      var box = document.createElement("div"); box.className = "ts-rules";
+      box.style.transformOrigin = (W / 2) + "px " + (H / 2) + "px";
+      function grad(dir, a) {
+        if (!a) return null;
+        var st = [], n = a.length;
+        for (var i = 0; i < n; i++) st.push("rgba(0,0,0," + a[i] + ") " + (100 * i / n) + "%", "rgba(0,0,0," + a[i] + ") " + (100 * (i + 1) / n) + "%");
+        return "linear-gradient(" + dir + "," + st.join(",") + ")";
+      }
+      var pad = 60 * s, lw = prof ? prof.v.length * s : Math.max(1, s), lh = prof ? prof.h.length * s : Math.max(1, s);
+      for (var c = -Math.ceil(x0 / gx) - 1; x0 + c * gx < W + pad; c++) {
+        var x = prof ? Math.round(x0 / s + c * gx / s) * s : x0 + c * gx, d = document.createElement("div"); d.className = "ts-rule";
+        d.style.cssText = "left:" + (x + (prof ? prof.vOff * s : 0)) + "px;top:" + (-pad) + "px;width:" + lw + "px;height:" + (H + 2 * pad) + "px;" +
+          (prof ? "background-image:" + grad("to right", prof.v) : "background:var(--color-grid-rule)");
+        box.appendChild(d);
+      }
+      for (var r = -Math.ceil(y0 / gy) - 1; y0 + r * gy < H + pad; r++) {
+        var y = prof ? Math.round(y0 / s + r * gy / s) * s : y0 + r * gy, e = document.createElement("div"); e.className = "ts-rule";
+        e.style.cssText = "top:" + (y + (prof ? prof.hOff * s : 0)) + "px;left:" + (-pad) + "px;height:" + lh + "px;width:" + (W + 2 * pad) + "px;" +
+          (prof ? "background-image:" + grad("to bottom", prof.h) : "background:var(--color-grid-rule)");
+        box.appendChild(e);
+      }
+      el.appendChild(box);
+      return box;
+    }
+
+    /* ---------------- preset mode ---------------- */
+    function renderPreset(props, P) {
+      var s = SH.fw(props) / 1920, W = SH.fw(props), H = SH.fh(props);
+      var el = document.createElement("div"); el.className = "el-tile-scatter";
+      var paper = props.paper ? SH.slot(props.paper, W, H, "paper") : document.createElement("div");
+      paper.classList.add("ts-paper"); if (!props.paper) paper.style.background = "var(--color-paper-grid)";
+      paper.style.position = "absolute"; el.appendChild(paper);
+      rules(el, P.grid.x0 * s, P.grid.y0 * s, P.grid.gx * s, P.grid.gy * s, W, H, P.grid, s);
+      var ink = props.ink || P.ink, i;
+      for (i = 0; i < P.words.length; i++) {
+        var c = document.createElement("div"); c.className = "ts-card"; c.setAttribute("data-w", i);
+        c.style.width = P.card.w * s + "px"; c.style.height = P.card.h * s + "px"; c.style.background = props.cardColor || P.card.color;
+        el.appendChild(c);
+      }
+      for (i = 0; i < P.words.length; i++) {
+        var w = P.words[i], n = document.createElement("div"); n.className = "ts-word"; n.setAttribute("data-w", i);
+        n.innerHTML = run(w.text, w.size * s, w.tr * s, ink).html; el.appendChild(n);
+      }
+      var se = P.sentence, ln = document.createElement("div"); ln.className = "ts-line";
+      ln.innerHTML = run(se.text, se.size * s, se.tr * s, ink).html;
+      ln.firstChild.style.left = se.dx * s + "px";
+      el.appendChild(ln);
+      var imgs = props.images || [];
+      for (i = 0; i < P.tiles.length; i++) {
+        var t = P.tiles[i], sl = SH.slot(imgs[i] || { label: "tile " + i }, t[4] * s, t[5] * s, "tile");
+        sl.classList.add("ts-tile"); sl.setAttribute("data-i", i);
+        sl.style.left = t[2] * s + "px"; sl.style.top = t[3] * s + "px";
+        el.appendChild(sl);
+      }
+      return el;
+    }
+    function animatePreset(tl, el, t0, props, P) {
+      var s = SH.fw(props) / 1920;
+      function at(f) { return t0 + Math.max(0, (f - 0.5) * FR); }
+      function st(node, from, to, f) { SH.step(tl, node, from, to, at(f), false); }
+      var i, k;
+      for (i = 0; i < P.words.length; i++) {
+        var w = P.words[i], card = el.querySelector('.ts-card[data-w="' + i + '"]'), wn = el.querySelector('.ts-word[data-w="' + i + '"]');
+        var pw = null, pc = null;
+        for (k = 0; k < w.keys.length; k++) {
+          var q = w.keys[k], f = q[0];
+          var nw = { x: (q[1] + w.dx) * s, y: q[2] * s }, nc = { x: q[3] * s, y: q[4] * s };
+          if (!pw) {
+            st(wn, { opacity: 0, x: nw.x, y: nw.y }, { opacity: 1, x: nw.x, y: nw.y }, f);
+            st(card, { opacity: 0, x: nc.x, y: nc.y }, { opacity: 1, x: nc.x, y: nc.y }, f);
+          } else {
+            if (pw.x !== nw.x || pw.y !== nw.y) st(wn, pw, nw, f);
+            if (pc.x !== nc.x || pc.y !== nc.y) st(card, pc, nc, f);
+          }
+          pw = nw; pc = nc;
+        }
+        var end = w.keys[w.keys.length - 1][0] + 1;
+        st(wn, { opacity: 1 }, { opacity: 0 }, end); st(card, { opacity: 1 }, { opacity: 0 }, end);
+      }
+      var se = P.sentence, ln = el.querySelector(".ts-line"), ps = null;
+      for (k = 0; k < se.keys.length; k++) {
+        var sk = se.keys[k], ns = { scale: sk[1], x: sk[2] * s, y: sk[3] * s };
+        if (!ps) { ln.style.transformOrigin = "0 0"; st(ln, { opacity: 0, scale: ns.scale, x: ns.x, y: ns.y }, { opacity: 1, scale: ns.scale, x: ns.x, y: ns.y }, sk[0]); }
+        else if (ps.scale !== ns.scale || ps.x !== ns.x || ps.y !== ns.y) st(ln, ps, ns, sk[0]);
+        ps = ns;
+      }
+      if (se.f1 != null && se.f1 + 1 < P.frames) st(ln, { opacity: 1 }, { opacity: 0 }, se.f1 + 1);
+      for (var hf in se.hide) for (k = 0; k < se.hide[hf].length; k++) {
+        var g = ln.querySelector('[data-g="' + se.hide[hf][k] + '"]');
+        if (g) st(g, { opacity: 1 }, { opacity: 0 }, Number(hf));
+      }
+      var tiles = el.querySelectorAll(".ts-tile");
+      for (i = 0; i < P.tiles.length; i++) {
+        var t = P.tiles[i];
+        if (t[0] > 0) st(tiles[i], { opacity: 0 }, { opacity: 1 }, t[0]);
+        else SH.step(tl, tiles[i], { opacity: 1 }, { opacity: 1 }, t0, true);
+        if (t[1] + 1 < P.frames) st(tiles[i], { opacity: 1 }, { opacity: 0 }, t[1] + 1);
+      }
+      var rl = el.querySelector(".ts-rules"), prev = 1, gr = P.grid.grow || [];
+      for (k = 0; k < gr.length; k++) { if (gr[k][1] === prev) continue; st(rl, { scale: prev }, { scale: gr[k][1] }, gr[k][0]); prev = gr[k][1]; }
+      if (props.exitAt != null) SH.step(tl, el, { opacity: 1 }, { opacity: 0 }, t0 + props.exitAt - FR, false);
+      return t0 + P.frames * FR;
+    }
+
+    /* ---------------- general mode ---------------- */
+    var CELLS = [[2, 2], [2, 3], [3, 2], [2, 2], [4, 2], [2, 3]];
+    function plan(props) {
+      var W = SH.fw(props), H = SH.fh(props), k = SH.k(props), rnd = SH.rng(props.seed == null ? 7 : props.seed);
+      var gx = (props.grid && props.grid[0] || 120) * k, gy = (props.grid && props.grid[1] || 121.5) * k;
+      var x0 = W / 2, y0 = H / 2;
+      var words = typeof props.words === "string" ? props.words.split(/\s+/) : (props.words || ["one", "line", "at", "a", "time"]);
+      var cap = (props.cap || 58) * k, size = SH.sizeForCap(cap), tr = (props.tracking == null ? 2 : props.tracking) * k;
+      var cMin = Math.ceil(-x0 / gx), cMax = Math.floor((W - x0) / gx) - 1, rMin = Math.ceil(-y0 / gy), rMax = Math.floor((H - y0) / gy) - 1;
+      var occ = {};
+      function free(c, r, cw, ch, gap) { for (var a = c - gap; a < c + cw + gap; a++) for (var b = r - gap; b < r + ch + gap; b++) if (occ[a + "," + b]) return false; return true; }
+      function take(c, r, cw, ch) { for (var a = c; a < c + cw; a++) for (var b = r; b < r + ch; b++) occ[a + "," + b] = 1; }
+      function place(cw, ch, avoidBand) {
+        for (var tries = 0; tries < 400; tries++) {
+          var gap = tries < 200 ? 1 : 0;
+          var c = cMin + Math.floor(rnd() * (cMax - cMin - cw + 2)), r = rMin + Math.floor(rnd() * (rMax - rMin - ch + 2));
+          if (avoidBand && r <= bandHi && r + ch - 1 >= bandLo) continue;
+          if (free(c, r, cw, ch, gap)) { take(c, r, cw, ch); return [c, r]; }
+        }
+        return null;
+      }
+      var out = [];
+      for (var j = 0; j < words.length; j++) {
+        var L = SH.layout(words[j], size, tr / size), cw = Math.max(2, Math.ceil((L.ink + 0.6 * cap) / gx));
+        out.push({ text: words[j], L: L, cw: cw, v: vink(words[j], size) });
+      }
+      /* the gathered line: ES Serif at lineScale[0] of the word size, wrapped
+         into balanced rows (at most three) when its swollen width would not fit
+         inside the margins, and shrunk only if three rows still do not fit */
+      var line = null;
+      if (props.gather !== false) {
+        var ls = props.lineScale || [1.14, 1.34], grow = ls[1] / ls[0], lsize = size * ls[0], maxW = W - 2 * 64 * k;
+        var spaceW = SH.layout(" ", lsize, 0).width, ww = out.map(function (o) { return SH.layout(o.text, lsize, 0).width; });
+        var rows = null;
+        for (var nr = 1; nr <= Math.min(3, out.length) && !rows; nr++) {
+          var total = ww.reduce(function (a, b) { return a + b; }, 0) + spaceW * (out.length - 1), target = total / nr, cand = [[]], cw2 = 0;
+          for (var q2 = 0; q2 < out.length; q2++) {
+            var add = (cand[cand.length - 1].length ? spaceW : 0) + ww[q2];
+            if (cand[cand.length - 1].length && cw2 + add / 2 > target && cand.length < nr) { cand.push([]); cw2 = 0; add = ww[q2]; }
+            cand[cand.length - 1].push(q2); cw2 += add;
+          }
+          var widest = 0;
+          for (var q3 = 0; q3 < cand.length; q3++) widest = Math.max(widest, SH.layout(cand[q3].map(function (x) { return out[x].text; }).join(" "), lsize, 0).width);
+          if (widest * grow <= maxW || nr === Math.min(3, out.length)) { rows = cand; if (widest * grow > maxW) lsize *= maxW / (widest * grow); }
+        }
+        var lead = 1.2 * lsize, rowsOut = [];
+        for (var q4 = 0; q4 < rows.length; q4++) {
+          var txt = rows[q4].map(function (x) { return out[x].text; }).join(" "), LL = SH.layout(txt, lsize, 0), off = 0;
+          for (var q5 = 0; q5 < rows[q4].length; q5++) {
+            var wi = rows[q4][q5], wl = SH.layout(out[wi].text, lsize, 0).width;
+            out[wi].lx = -LL.width / 2 + off + wl / 2; out[wi].ly = (q4 - (rows.length - 1) / 2) * lead;
+            off += wl + spaceW;
+          }
+          rowsOut.push({ text: txt, width: LL.width, y: (q4 - (rows.length - 1) / 2) * lead });
+        }
+        line = { size: lsize, rows: rowsOut, grow: grow };
+      }
+      /* rows the swollen line will cover stay free of tiles */
+      var bandLo = -1, bandHi = 0;
+      if (line) { var ext = line.size * line.grow; bandLo = Math.floor((line.rows[0].y - ext) / gy); bandHi = Math.floor((line.rows[line.rows.length - 1].y + 0.6 * ext) / gy); }
+      var tiles = [], specs = props.tiles || [{}, {}, {}, {}, {}, {}];
+      for (var i = 0; i < specs.length; i++) {
+        var sp = typeof specs[i] === "string" ? { src: specs[i] } : (specs[i] || {}), cells = sp.cells;
+        if (!cells && sp.aspect) { var best = null; for (var q = 0; q < CELLS.length; q++) { var d = Math.abs(Math.log(CELLS[q][0] * gx / (CELLS[q][1] * gy)) - Math.log(sp.aspect)); if (!best || d < best[0]) best = [d, CELLS[q]]; } cells = best[1]; }
+        cells = cells || CELLS[i % CELLS.length];
+        var pos = place(cells[0], cells[1], true);
+        if (pos) tiles.push({ spec: sp, c: pos[0], r: pos[1], cw: cells[0], ch: cells[1], i: i });
+      }
+      for (var j2 = 0; j2 < out.length; j2++) {
+        var p2 = place(out[j2].cw, 1, false) || [cMin + (j2 % Math.max(1, cMax - cMin - out[j2].cw)), rMin + (j2 % Math.max(1, rMax - rMin))];
+        out[j2].c = p2[0]; out[j2].r = p2[1];
+      }
+      return { W: W, H: H, k: k, gx: gx, gy: gy, x0: x0, y0: y0, size: size, tr: tr, cap: cap, tiles: tiles, words: out, rnd: rnd, cMin: cMin, cMax: cMax, rMin: rMin, rMax: rMax, line: line };
+    }
+    function renderGeneral(props) {
+      var G = plan(props), el = document.createElement("div"); el.className = "el-tile-scatter";
+      var paper = props.paper ? SH.slot(props.paper, G.W, G.H, "paper") : document.createElement("div");
+      paper.classList.add("ts-paper"); paper.style.position = "absolute"; if (!props.paper) paper.style.background = SH.color(props.ground, "paper-grid");
+      el.appendChild(paper);
+      rules(el, G.x0, G.y0, G.gx, G.gy, G.W, G.H, null, G.k);
+      var ink = SH.color(props.ink, "ink"), cardCol = SH.color(props.card, "paper"), i;
+      for (i = 0; i < G.words.length; i++) {
+        var w = G.words[i], c = document.createElement("div"); c.className = "ts-card"; c.setAttribute("data-w", i);
+        c.style.width = w.cw * G.gx + "px"; c.style.height = (G.gy - 1.5 * G.k) + "px"; c.style.background = cardCol;
+        el.appendChild(c);
+      }
+      for (i = 0; i < G.words.length; i++) {
+        var n = document.createElement("div"); n.className = "ts-word"; n.setAttribute("data-w", i);
+        n.innerHTML = run(G.words[i].text, G.size, G.tr, ink).html; el.appendChild(n);
+      }
+      if (G.line) {
+        var ln = document.createElement("div"); ln.className = "ts-line";
+        for (var r = 0; r < G.line.rows.length; r++) {
+          var row = G.line.rows[r], vi = vink(row.text, G.line.size), R = run(row.text, G.line.size, 0, ink);
+          ln.insertAdjacentHTML("beforeend", R.html);
+          ln.lastChild.style.left = (-row.width / 2) + "px"; ln.lastChild.style.top = (row.y + (vi.top + vi.bot) / 2) + "px";
+        }
+        el.appendChild(ln);
+      }
+      for (i = 0; i < G.tiles.length; i++) {
+        var t = G.tiles[i], sl = SH.slot(t.spec.src ? t.spec : { label: t.spec.label || "tile " + (t.i + 1) }, t.cw * G.gx, t.ch * G.gy, "tile-" + (t.i + 1));
+        sl.classList.add("ts-tile"); sl.setAttribute("data-i", i); sl.style.left = "0px"; sl.style.top = "0px";
+        el.appendChild(sl);
+      }
+      return el;
+    }
+    function animateGeneral(tl, el, t0, props) {
+      var G = plan(props), cad = props.cadence || "16", sc = props.durScale || 1;
+      var D = (props.duration || 2.04) * sc, rnd = SH.rng((props.seed == null ? 7 : props.seed) + 101);
+      var Q = function (t) { return SH.quant(t, cad); };
+      var gatherAt = props.gather === false ? D : (props.gatherAt != null ? props.gatherAt * sc : 0.67 * D);
+      var snap = easeFn("snap"), i, j, p;
+      /* tiles: pop in over the first 45 percent, a cell or a third of a cell
+         off their rest, and drift home on the snap curve held on the cadence */
+      var tnodes = el.querySelectorAll(".ts-tile"), tg = (props.tileGlide || 0.75) * sc;
+      for (i = 0; i < G.tiles.length; i++) {
+        var t = G.tiles[i], rx = G.x0 + t.c * G.gx, ry = G.y0 + t.r * G.gy;
+        var far = rnd() < 0.5, ax = rnd() < 0.5, sg = rnd() < 0.5 ? -1 : 1, off = (far ? 0.6 : 0.3) * sg;
+        var sx = rx + (ax ? off * G.gx : 0), sy = ry + (ax ? 0 : off * G.gy);
+        var tin = Q(t0 + (props.tileTimes ? props.tileTimes[i] * sc : (G.tiles.length > 1 ? i / (G.tiles.length - 1) : 0) * 0.45 * D));
+        SH.step(tl, tnodes[i], { opacity: 0, x: sx, y: sy }, { opacity: 1, x: sx, y: sy }, tin, i === 0 && tin <= t0);
+        var pics = SH.pictures(tin + FR, tin + tg, cad), px = sx, py = sy;
+        for (p = 0; p < pics.length; p++) {
+          var e = snap(Math.min(1, (pics[p] - tin) / tg)), nx = sx + (rx - sx) * e, ny = sy + (ry - sy) * e;
+          nx = Math.round(nx); ny = Math.round(ny);
+          if (nx !== px || ny !== py) { SH.step(tl, tnodes[i], { x: px, y: py }, { x: nx, y: ny }, pics[p], false); px = nx; py = ny; }
+        }
+        t.node = tnodes[i];
+      }
+      /* words: one lands per beat, then walks a cell at a time towards a cell
+         beside its place in the line */
+      var n = G.words.length, beats = props.beats;
+      var land = [];
+      for (i = 0; i < n; i++) land.push(Q(t0 + (beats && beats[i] != null ? beats[i] * sc : (0.04 + 0.4 * (n > 1 ? i / (n - 1) : 0)) * D)));
+      var ln = el.querySelector(".ts-line");
+      var cards = el.querySelectorAll(".ts-card"), wn = el.querySelectorAll(".ts-word"), stepDur = 2.5 * FR * sc;
+      var chh = G.gy - 1.5 * G.k, cur = [], tgt = [], evs = [], segs = [];
+      /* every word gets its own step times; the steps are then played in time
+         order against the other words' current cells, so a card waits or turns
+         rather than sliding over another card */
+      for (i = 0; i < n; i++) {
+        var w = G.words[i], cwp = w.cw * G.gx;
+        var tc = ln ? Math.round((w.lx - cwp / 2) / G.gx) : w.c, trw = ln ? Math.round(w.ly / G.gy) + [-2, -1, 0, 1][i % 4] : w.r;
+        tgt.push([Math.max(G.cMin, Math.min(G.cMax - w.cw + 1, tc)), Math.max(G.rMin, Math.min(G.rMax, trw))]);
+        cur.push([w.c, w.r]); segs.push([]);
+        var dist = Math.abs(tgt[i][0] - w.c) + Math.abs(tgt[i][1] - w.r);
+        var span = Math.max(0, gatherAt - 0.1 * D - (land[i] - t0) - 0.1);
+        var nSteps = Math.min(dist + 1, Math.max(0, Math.floor(span / (stepDur + 2 * FR))));
+        for (j = 0; j < nSteps; j++) evs.push([Q(land[i] + 0.1 + (j + 0.5) * span / nSteps), i, nSteps - j, rnd() < 0.5]);
+      }
+      evs.sort(function (A, B2) { return A[0] - B2[0] || A[1] - B2[1]; });
+      function clash(i2, c, r, t) {
+        for (var o = 0; o < n; o++) {
+          if (o === i2 || land[o] > t) continue;
+          if (cur[o][1] === r && c < cur[o][0] + G.words[o].cw && cur[o][0] < c + G.words[i2].cw) return true;
+        }
+        return false;
+      }
+      for (var ev = 0; ev < evs.length; ev++) {
+        var E = evs[ev], wi = E[1], c0 = cur[wi][0], r0 = cur[wi][1], dc = tgt[wi][0] - c0, dr = tgt[wi][1] - r0;
+        if (!dc && !dr) continue;
+        var left = E[2], need = Math.abs(dc) + Math.abs(dr), len = Math.max(1, Math.ceil(need / left));
+        var opts = [], mx = [c0 + Math.sign(dc) * Math.min(len, Math.abs(dc)), r0], my = [c0, r0 + Math.sign(dr) * Math.min(len, Math.abs(dr))];
+        if (dc) opts.push(mx); if (dr) opts.push(my); if (E[3]) opts.reverse();
+        for (var o2 = 0; o2 < opts.length; o2++) if (!clash(wi, opts[o2][0], opts[o2][1], E[0])) { segs[wi].push([E[0], [c0, r0], opts[o2]]); cur[wi] = opts[o2]; break; }
+      }
+      for (i = 0; i < n; i++) {
+        var wd = G.words[i], cw = wd.cw * G.gx;
+        var place = function (cr) { var X = G.x0 + cr[0] * G.gx, Y = G.y0 + cr[1] * G.gy; return { card: { x: Math.round(X), y: Math.round(Y) }, dx: (cw - wd.L.ink) / 2 - wd.L.inkL, dy: chh / 2 + (wd.v.top + wd.v.bot) / 2 }; };
+        var p0 = place([wd.c, wd.r]), pc = p0.card;
+        SH.step(tl, cards[i], { opacity: 0, x: pc.x, y: pc.y }, { opacity: 1, x: pc.x, y: pc.y }, land[i], false);
+        SH.step(tl, wn[i], { opacity: 0, x: pc.x + p0.dx, y: pc.y + p0.dy }, { opacity: 1, x: pc.x + p0.dx, y: pc.y + p0.dy }, land[i], false);
+        for (j = 0; j < segs[i].length; j++) {
+          var sg2 = segs[i][j], ts = sg2[0], A0 = place(sg2[1]).card, A1 = place(sg2[2]).card;
+          var pics2 = SH.pictures(ts, ts + stepDur, cad);
+          for (p = 0; p < pics2.length; p++) {
+            var e2 = snap(Math.min(1, (pics2[p] - ts + FR) / (stepDur + FR)));
+            var mc = { x: Math.round(A0.x + (A1.x - A0.x) * e2), y: Math.round(A0.y + (A1.y - A0.y) * e2) };
+            if (mc.x === pc.x && mc.y === pc.y) continue;
+            SH.step(tl, cards[i], { x: pc.x, y: pc.y }, mc, pics2[p], false);
+            SH.step(tl, wn[i], { x: pc.x + p0.dx, y: pc.y + p0.dy }, { x: mc.x + p0.dx, y: mc.y + p0.dy }, pics2[p], false);
+            pc = mc;
+          }
+        }
+        if (ln) { var ga = Q(t0 + gatherAt); SH.step(tl, cards[i], { opacity: 1 }, { opacity: 0 }, ga, false); SH.step(tl, wn[i], { opacity: 1 }, { opacity: 0 }, ga, false); }
+      }
+      /* gather: the line appears at the centre and swells on an ease-in, the
+         grid grows with it, the tiles drop out a few per picture */
+      if (ln) {
+        var g0 = Q(t0 + gatherAt), g1 = t0 + D, ls = props.lineScale || [1.14, 1.34], s0 = 1, s1 = ls[1] / ls[0];
+        var gg = props.gridGrow || 1.017, rl = el.querySelector(".ts-rules");
+        var ly = G.y0 + (props.lineY != null ? (props.lineY - 0.5) * G.H : 0);
+        SH.step(tl, ln, { opacity: 0, x: G.x0, y: ly, scale: s0 }, { opacity: 1, x: G.x0, y: ly, scale: s0 }, g0, false);
+        var pics3 = SH.pictures(g0 + FR, g1, cad), psc = s0, pg = 1;
+        for (p = 0; p < pics3.length; p++) {
+          var u = Math.pow(Math.min(1, (pics3[p] - g0) / (g1 - g0)), 1.5);
+          var nsc = Math.round((s0 + (s1 - s0) * u) * 1000) / 1000, ngg = Math.round((1 + (gg - 1) * u) * 10000) / 10000;
+          if (nsc !== psc) { SH.step(tl, ln, { scale: psc }, { scale: nsc }, pics3[p], false); psc = nsc; }
+          if (ngg !== pg) { SH.step(tl, rl, { scale: pg }, { scale: ngg }, pics3[p], false); pg = ngg; }
+        }
+        var keepN = props.tilesKeep || 0, order = [];
+        for (i = 0; i < G.tiles.length; i++) order.push(i);
+        for (i = order.length - 1; i > 0; i--) { j = Math.floor(rnd() * (i + 1)); var tmp = order[i]; order[i] = order[j]; order[j] = tmp; }
+        var leaving = order.slice(0, Math.max(0, order.length - keepN)), lw0 = g0 + 0.35 * (g1 - g0);
+        for (i = 0; i < leaving.length; i++) {
+          var tt = Q(lw0 + (leaving.length > 1 ? i / (leaving.length - 1) : 0) * 0.6 * (g1 - lw0));
+          SH.step(tl, G.tiles[leaving[i]].node, { opacity: 1 }, { opacity: 0 }, Math.max(tt, g0 + FR), false);
+        }
+      }
+      if (props.exitAt != null) SH.step(tl, el, { opacity: 1 }, { opacity: 0 }, t0 + props.exitAt - FR, false);
+      return land.length ? land[land.length - 1] : t0;
+    }
+
     return {
-      /* props:
-           ground: { t, out_t, color, rule, half, gx, gy, grow: { t, dur, to, ease } }
-           tiles:  [{ t, out_t, w, h, src (url or CSS background), swaps: [{ t, src }],
-                      keys: [[t, x, y, w?, h?], ...] }]   x, y: top left in px at 1920
-           words:  [{ text, t, out_t, size (84.5), card (true), keys: [[t, x, baseline], ...] }]
-                   x is the ink's left edge
-           line:   { text, t, out_t, size (95), baseline (566), grow: { t, dur, to, ease } | keys: [[t, scale]] }
-           ease:   the tracks' curve name (snap); exitAt: everything off. */
+      /* props: see library/tile-scatter.md.
+           preset: "replica-s1-shot8" with paper (slot) and images (one slot per
+             held tile pose), or general mode:
+           words (array or string), tiles [slot spec + cells [cw, ch] or aspect],
+           paper (slot, optional texture), seed, cap (px at 1080), tracking (px),
+           duration (2.04 s), durScale, beats [s], tileTimes [s], tileGlide (s),
+           gather (true), gatherAt (s), lineScale [1.14, 1.34], lineY (0..1),
+           gridGrow (1.017), tilesKeep (0), cadence ("16"), ink, card, ground
+           (tokens), exitAt (s). */
       render: function (props) {
-        var s = S(props), el = document.createElement("div");
-        el.className = "el-tile-scatter";
-        if (props.ground) {
-          var g = grid(props.ground), gr = document.createElement("div");
-          gr.className = "ts-ground";
-          gr.style.cssText += g.css + "background-position:" + g.ox * s + "px " + g.oy * s + "px;";
-          if (s !== 1) gr.style.backgroundSize = (props.ground.gx || 120) * s + "px " + (props.ground.gy || 121.5) * s + "px";
-          el.appendChild(gr);
-        }
-        var layer = document.createElement("div");
-        layer.className = "ts-layer";
-        el.appendChild(layer);
-        var words = props.words || [];
-        for (var w = 0; w < words.length; w++) {
-          var wd = words[w], size = (wd.size || 84.5) * s;
-          var node = document.createElement("div");
-          node.className = "ts-word"; node.setAttribute("data-i", w);
-          var ink = window.__esMetrics.width(wd.text, size) - 0.06 * size;
-          if (wd.card !== false) {
-            var card = document.createElement("div");
-            card.className = "ts-card";
-            var ch = (wd.card_h || 120) * size / (84.5 * s), padx = (wd.card_pad || 61) * size / (84.5 * s);
-            card.style.left = (-padx) + "px"; card.style.width = (ink + 2 * padx) + "px";
-            card.style.top = (-0.4 * size - ch / 2) + "px"; card.style.height = ch + "px";
-            node.appendChild(card);
-          }
-          var tx = document.createElement("div");
-          tx.className = "ts-text es-serif"; tx.textContent = wd.text;
-          tx.style.fontSize = size + "px";
-          tx.style.left = (-LSB * size) + "px"; tx.style.top = (-BASE * size) + "px";
-          node.appendChild(tx);
-          layer.appendChild(node);
-        }
-        var tiles = props.tiles || [];
-        for (var i = 0; i < tiles.length; i++) {
-          var tl0 = tiles[i], tile = document.createElement("div");
-          tile.className = "ts-tile"; tile.setAttribute("data-i", i);
-          tile.style.width = (tl0.w || 240) * s + "px"; tile.style.height = (tl0.h || 240) * s + "px";
-          var pics = [{ src: tl0.src }].concat(tl0.swaps || []);
-          for (var p = 0; p < pics.length; p++) {
-            var pic = document.createElement("div");
-            pic.className = "ts-pic"; pic.setAttribute("data-p", p);
-            var src = pics[p].src || "#999";
-            pic.style.background = /^(url|linear|radial|#|rgb|hsl)/.test(src) ? src : "url(" + src + ")";
-            pic.style.backgroundSize = "cover"; pic.style.backgroundPosition = "center";
-            tile.appendChild(pic);
-          }
-          layer.appendChild(tile);
-        }
-        if (props.line) {
-          var ln = document.createElement("div"), lsize = (props.line.size || 95) * s;
-          ln.className = "ts-line es-serif"; ln.textContent = props.line.text || "";
-          ln.style.fontSize = lsize + "px";
-          ln.style.top = ((props.line.baseline == null ? 566 : props.line.baseline) * s - BASE * lsize) + "px";
-          ln.style.transformOrigin = "50% " + (BASE * lsize - 0.3 * lsize) + "px";
-          el.appendChild(ln);
-        }
-        return el;
+        var P = props.preset && PRESETS[props.preset];
+        return P ? renderPreset(props, P) : renderGeneral(props);
       },
       animate: function (tl, el, t0, props) {
-        var M = window.__motionExpert, s = S(props), ease = M.ease(props.ease || "snap");
-        var exitAt = props.exitAt != null ? t0 + props.exitAt : null;
-        var end = t0;
-        function onOff(node, tOn, tOff) {
-          tl.fromTo(node, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, t0 + tOn);
-          var off = tOff != null ? t0 + tOff : exitAt;
-          if (off != null) tl.fromTo(node, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, off);
-        }
-        function track(node, keys, sizeKeys) {
-          for (var k = 0; k < keys.length; k++) {
-            var a = keys[k], b = keys[k + 1];
-            var va = { x: a[1] * s, y: a[2] * s };
-            if (sizeKeys && a[3] != null) { va.width = a[3] * s; va.height = a[4] * s; }
-            if (!b) {
-              tl.fromTo(node, va, { x: va.x, y: va.y, duration: 0.0001, ease: "none", immediateRender: k === 0 ? undefined : false }, t0 + a[0]);
-              continue;
-            }
-            var vb = { x: b[1] * s, y: b[2] * s };
-            if (sizeKeys && b[3] != null) { vb.width = b[3] * s; vb.height = b[4] * s; }
-            var step = b[b.length - 1] === "step" || a[a.length - 1] === "hold";
-            vb.duration = step ? 0.0001 : Math.max(0.0001, b[0] - a[0]);
-            vb.ease = step ? "none" : (b[b.length - 1] === "linear" ? "none" : ease);
-            if (k > 0) vb.immediateRender = false;
-            tl.fromTo(node, va, vb, t0 + (step ? b[0] - 0.0001 : a[0]));
-            end = Math.max(end, t0 + b[0]);
-          }
-        }
-        var ground = el.querySelector(".ts-ground");
-        if (ground) {
-          onOff(ground, props.ground.t || 0, props.ground.out_t);
-          var gg = props.ground.grow;
-          if (gg) tl.fromTo(ground, { scale: 1 }, { scale: gg.to, duration: gg.dur, ease: M.ease(gg.ease || "none"), immediateRender: false }, t0 + gg.t);
-        }
-        var tiles = props.tiles || [];
-        for (var i = 0; i < tiles.length; i++) {
-          var tile = el.querySelector('.ts-tile[data-i="' + i + '"]');
-          onOff(tile, tiles[i].t, tiles[i].out_t);
-          track(tile, tiles[i].keys || [[tiles[i].t, tiles[i].x || 0, tiles[i].y || 0]], true);
-          var pics = tile.querySelectorAll(".ts-pic");
-          var swaps = tiles[i].swaps || [];
-          for (var p = 0; p < pics.length; p++) {
-            var on = p === 0 ? tiles[i].t : swaps[p - 1].t;
-            var off = p + 1 < pics.length ? swaps[p].t : null;
-            tl.fromTo(pics[p], { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, t0 + on);
-            if (off != null) tl.fromTo(pics[p], { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, t0 + off);
-          }
-        }
-        var words = props.words || [];
-        for (var w = 0; w < words.length; w++) {
-          var node = el.querySelector('.ts-word[data-i="' + w + '"]');
-          onOff(node, words[w].t, words[w].out_t);
-          track(node, words[w].keys || [[words[w].t, words[w].x, words[w].baseline]], false);
-        }
-        var line = el.querySelector(".ts-line");
-        if (line) {
-          onOff(line, props.line.t, props.line.out_t);
-          if (props.line.keys) {
-            var lk = props.line.keys;
-            for (var q = 0; q + 1 < lk.length; q++) {
-              var v = { scale: lk[q + 1][1], duration: Math.max(0.0001, lk[q + 1][0] - lk[q][0]), ease: "none" };
-              if (q > 0) v.immediateRender = false;
-              tl.fromTo(line, { scale: lk[q][1] }, v, t0 + lk[q][0]);
-            }
-          } else if (props.line.grow) {
-            var lg = props.line.grow;
-            tl.fromTo(line, { scale: 1 }, { scale: lg.to, duration: lg.dur, ease: M.ease(lg.ease || "none"), immediateRender: false }, t0 + lg.t);
-          }
-        }
-        return end;
+        var P = props.preset && PRESETS[props.preset];
+        return P ? animatePreset(tl, el, t0, props, P) : animateGeneral(tl, el, t0, props);
       }
     };
   })();

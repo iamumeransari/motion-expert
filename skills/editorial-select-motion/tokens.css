@@ -6,6 +6,7 @@
 @font-face { font-family: "ES Bitmap"; src: url("assets/fonts/VT323-Regular.woff2") format("woff2"); font-display: block; }
 @font-face { font-family: "ES Grotesk"; src: url("assets/fonts/CabinetGrotesk-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: block; }
 
+@font-face { font-family: "ES Line"; src: url("assets/fonts/S3Replica.ttf") format("truetype"); font-weight: 400; font-display: block; }
 /* editorial-select motion tokens, mirrored from tokens.json. Faces load from
    assets/fonts through the @font-face rules below (the toolkit embeds them as
    base64 when it inlines this file). */
@@ -48,6 +49,10 @@
   --font-humanist: "ES Humanist", Helvetica, Arial, sans-serif;
   --font-bitmap: "ES Bitmap", monospace;
   --font-grotesk: "ES Grotesk", Helvetica, Arial, sans-serif;
+  /* ES Line: the s3 face, 14 letters traced from "The most precise edit model"
+     (work/replica/s3/tools/build_font.py). Used by the replica presets of
+     chromatic-title and giant-type-pass; new work uses --font-serif. */
+  --font-line: "ES Line", var(--font-serif);
 
   /* font-size per role = measured cap height / 0.69 */
   --type-ghost: 928px;

@@ -1,0 +1,348 @@
+<style>
+  /* endcard-typeon. The end card: a sentence types on word by word inside
+     violet pixel-bar handles that open out past the line with each word and
+     then pull in to four corner chips; the line cuts out, the handles
+     reappear as diagonal pixel-step brackets around a chip where the mark
+     will be, the mark grows inside them while the brackets shrink back to
+     corner chips, blink faint and go; the lockup (mark plus wordmark) cuts in
+     already sliding left on an exponential ease, and the tagline drops in
+     under it on one frame.
+     Source: replica s8 (film frames 993 to 1135, 41.375 to 47.381 s),
+     assets/frames/end-card-dense.jpg. Measured at 1920 x 1080, everything on
+     the film's 16 fps cadence (film frames 3k+2 repeat 3k+1):
+     body line EditorialSelect Serif 105.8 px (cap 73 px) tracked -0.8 px,
+     baseline 580, words on frames 0, 1, 4, 6, 7; handle rows 25 px tall at
+     y 417 and 636 (baseline - 1.536 and + 0.534 of the size), centred on the
+     frame, bars cycling four dashed patterns then a solid bar of 4 chips
+     that shrinks to one chip on 1 - e^(-0.605 f) from frame 8 while its
+     outer edge moves out on 1 - e^(-0.715 f); cut to brackets on frame 28
+     (coarse steps, outer corners 238.5 x 244.5 px from centre, a 50 px chip
+     at the centre), opened on 30, shrinking on 31 to 37, faint on 39 and 42;
+     mark 174 x 160.6 px, width 1 - e^(-0.45 (f - 28.25)) of full from frame
+     30; lockup cut on 42 sliding 1 - e^(-0.25 (f - 39.5)) to mark x 377;
+     tagline 66.7 px tracked 1.5 px on frame 70, baseline 731.5.
+     The preset "replica-s8-endcard" keys every one of those per frame from
+     the measurement (work/blocks/endcard-typeon/tools); the general mode
+     rebuilds the same states from the fitted curves above, in units of the
+     body size, for any sentence, mark, wordmark, frame and duration. */
+  .el-endcard-typeon { position: absolute; left: 0; top: 0; overflow: hidden; pointer-events: none; }
+  .el-endcard-typeon .ec-paper { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: var(--color-paper, #EEEEEE); }
+  .el-endcard-typeon .ec-paper img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+  .el-endcard-typeon svg.ec-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+  .el-endcard-typeon .ec-vio { fill: var(--color-violet, #A27AE7); }
+  .el-endcard-typeon .ec-ink { fill: var(--color-ink-soft, #1B1917); font-family: var(--font-serif, "ES Serif"), Georgia, serif; font-kerning: none; white-space: pre; }
+  .el-endcard-typeon .ec-slot { position: absolute; left: 0; top: 0; display: none; color: var(--color-ink-soft, #1B1917); }
+  .el-endcard-typeon .ec-slot img, .el-endcard-typeon .ec-slot svg { display: block; width: 100%; height: 100%; }
+</style>
+<script>
+  window.__elements = window.__elements || {};
+  window.__elements["endcard-typeon"] = (function () {
+    var NS = "http://www.w3.org/2000/svg", FPS = 24;
+    /* Measured per-frame keys of replica s8, built by
+       work/blocks/endcard-typeon/tools/make_preset.py (px at 1920 x 1080). */
+    var PRESETS = { "replica-s8-endcard": /*PRESET*/{"frames":143,"size":105.8,"tracking":-0.8,"baseline":579.5,"sentence":"Model weights are coming soon","body":[[1,762],[2,619],[2,619],[2,558],[3,453],[3,453],[4,331],[5,224],[5,224],[5,224],[5,226],[5,226],[5,224],[5,224],[5,224],[5,224],[5,224],[5,224],[5,224],[5,224],[5,224],[5,224],[5,224],[5,224],[5,224],[5,224],[5,224],[5,224]],"bars":{"top":417,"h":25,"bottom":636,"hb":24,"s":[[[624,48],[689,25],[736,34],[1152,32],[1208,24],[1250,48]],[[564,96],[668,24],[721,49],[1152,48],[1229,23],[1261,97]],[[564,96],[668,24],[721,49],[1152,48],[1229,23],[1261,97]],[[470,129],[1323,129]],[[307,76],[389,25],[440,24],[466,45],[1410,45],[1457,25],[1508,25],[1540,75]],[[307,76],[389,25],[440,24],[466,45],[1410,45],[1457,25],[1508,25],[1540,75]],[[276,123],[418,24],[1480,24],[1524,122]],[[214,100],[1608,100]],[[214,100],[1608,100]],[[192,72],[1658,73]],[[180,44],[1696,46]],[[180,44],[1696,46]],[[174,34],[1712,36]],[[171,29],[1721,30]],[[171,29],[1721,30]],[[170,26],[1725,26]],[[170,25],[1726,25]],[[170,25],[1726,25]],[[170,25],[1726,25]],[[170,25],[1726,25]],[[170,25],[1726,25]],[[170,25],[1726,25]],[[170,25],[1726,25]],[[170,25],[1726,25]],[[170,25],[1726,25]],[[170,25],[1726,25]],[[170,25],[1726,25]],[[170,25],[1726,25]]]},"diag":{"28":{"r":[[725,294,6,1],[737,294,8,1],[1177,294,8,1],[1177,295,24,8],[723,295,25,10],[723,305,33,8],[1167,303,34,10],[1157,313,44,6],[723,313,42,7],[731,320,35,6],[768,325,9,1],[1157,319,36,7],[732,326,45,2],[1145,326,47,2],[741,328,37,10],[745,338,6,1],[1145,328,38,11],[753,338,24,3],[1146,339,25,2],[753,341,40,10],[1131,341,38,10],[769,351,24,10],[1111,361,18,1],[1130,351,25,11],[1111,362,45,4],[769,361,44,6],[1137,366,17,1],[787,367,26,19],[1111,366,25,20],[1117,386,8,1],[1131,386,6,1],[1081,393,24,24],[819,393,25,25],[1089,417,14,1],[937,515,50,50],[818,662,26,25],[1081,662,24,25],[787,694,26,20],[1111,694,25,20],[769,714,44,5],[1111,714,44,5],[769,719,24,10],[1131,719,24,11],[1163,729,6,1],[753,729,40,10],[1131,730,38,9],[753,739,25,3],[1145,739,24,3],[741,742,36,11],[1145,742,38,11],[769,753,8,2],[731,753,36,8],[1157,753,36,8],[723,761,44,6],[1157,761,44,6],[723,767,33,10],[1167,767,34,10],[723,777,25,8],[1177,777,24,8]]},"29":{"r":[[725,294,6,1],[737,294,8,1],[1177,294,8,1],[1177,295,24,8],[723,295,25,10],[723,305,33,8],[1167,303,34,10],[1157,313,44,6],[723,313,42,7],[731,320,35,6],[768,325,9,1],[1157,319,36,7],[732,326,45,2],[1145,326,47,2],[741,328,37,10],[745,338,6,1],[1145,328,38,11],[753,338,24,3],[1146,339,25,2],[753,341,40,10],[1131,341,38,10],[769,351,24,10],[1111,361,18,1],[1130,351,25,11],[1111,362,45,4],[769,361,44,6],[1137,366,17,1],[787,367,26,19],[1111,366,25,20],[1117,386,8,1],[1131,386,6,1],[1081,393,24,24],[819,393,25,25],[1089,417,14,1],[937,515,50,50],[818,662,26,25],[1081,662,24,25],[787,694,26,20],[1111,694,25,20],[769,714,44,5],[1111,714,44,5],[769,719,24,10],[1131,719,24,11],[1163,729,6,1],[753,729,40,10],[1131,730,38,9],[753,739,25,3],[1145,739,24,3],[741,742,36,11],[1145,742,38,11],[769,753,8,2],[731,753,36,8],[1157,753,36,8],[723,761,44,6],[1157,761,44,6],[723,767,33,10],[1167,767,34,10],[723,777,25,8],[1177,777,24,8]]},"30":{"r":[[673,241,23,4],[1227,242,25,3],[1223,245,29,7],[673,245,30,12],[1217,252,35,9],[671,257,44,10],[1208,261,43,9],[677,267,42,6],[1201,270,42,7],[685,273,42,8],[1193,277,40,9],[691,281,46,8],[700,289,40,4],[1186,286,41,7],[706,293,39,8],[1179,293,39,8],[1171,301,40,6],[712,301,41,8],[1171,307,36,2],[719,309,42,7],[1162,309,42,7],[727,316,35,5],[1162,316,34,5],[729,321,44,3],[729,324,7,1],[1151,321,45,4],[737,324,36,10],[1151,325,36,9],[748,334,39,11],[1137,334,38,11],[761,345,26,7],[1137,345,26,8],[761,352,43,7],[1121,353,42,6],[779,359,25,18],[1120,359,25,18],[1095,377,25,25],[803,377,26,26],[1101,402,8,1],[1115,402,6,1],[803,677,26,26],[1095,677,25,26],[785,703,18,2],[1121,703,16,2],[778,705,26,16],[1120,705,25,16],[761,721,42,7],[1121,721,41,8],[761,728,26,7],[1137,729,25,6],[748,735,39,11],[1137,735,38,11],[1141,746,44,1],[737,746,36,11],[1151,747,36,10],[1151,757,45,2],[727,757,46,3],[1162,759,34,6],[727,760,35,9],[720,769,41,2],[1162,765,42,6],[1171,771,40,7],[713,771,40,8],[705,779,48,2],[1171,778,46,3],[1181,781,36,6],[702,781,43,8],[1179,787,45,2],[695,789,42,8],[1187,789,44,8],[686,797,43,5],[1193,797,42,6],[681,802,44,7],[1200,803,45,8],[1206,811,45,6],[673,809,45,10],[671,819,36,9],[1213,817,39,11],[671,828,29,9],[673,837,22,2],[1225,828,26,11]]},"31":{"s":[[649,217,70,72,0,24,2.0,25],[1206,217,70,72,1,24,1.0,49],[649,791,70,72,1,24,1.5,33],[1205,791,71,72,0,24,2.0,25]]},"32":{"s":[[649,217,70,72,0,24,2.0,25],[1206,217,70,72,1,24,1.0,49],[649,791,70,72,1,24,1.5,33],[1205,791,71,72,0,24,2.0,25]]},"33":{"s":[[1241,203,48,50,1,26,2.0,13],[635,204,48,50,0,25,2.0,13],[635,826,50,51,1,25,1.0,27],[1241,826,48,51,0,25,2.0,14]]},"34":{"s":[[1259,195,37,40,1,26,1.0,15],[627,197,39,38,0,26,2.0,7],[1257,845,40,40,0,26,2.0,8]],"c":[[627,845,39,39]]},"35":{"s":[[1259,195,37,40,1,26,1.0,15],[627,197,39,38,0,26,2.0,7],[1257,845,40,40,0,26,2.0,8]],"c":[[627,845,39,39]]},"36":{"c":[[625,193,31,32],[1269,193,31,32],[623,855,33,33],[1267,855,34,33]]},"37":{"c":[[623,191,28,28],[1273,191,28,28],[623,861,28,28],[1273,860,28,29]]},"38":{"c":[[623,191,28,28],[1273,191,28,28],[623,861,28,28],[1273,860,28,29]]},"39":{"c":[[1277,191,24,26],[623,193,26,24],[623,864,24,25],[1275,863,26,26]],"a":0.5},"42":{"c":[[1277,191,24,26],[625,193,22,24],[625,864,22,25],[1277,865,24,24]],"a":0.5}},"mark":{"30":[915,485,90,82],"31":[895,466,130,120],"32":[895,466,130,120],"33":[886,458,148,136],"34":[881,453,158,146],"35":[881,453,158,146],"36":[878,450,164,152],"37":[875,448,170,156],"38":[875,448,170,156],"39":[874,447,172,159],"40":[873,446,174,160],"41":[873,446,174,160]},"lockup":{"top":446,"w":174.125,"h":160.625,"wmDx":207.6,"wmTop":445.5,"wmW":938.625,"wmH":189.375,"x":[676,563,563,508,473,473,447,428,428,413,402,402,393,387,387,382,379,379,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377]},"tagline":{"text":"Try it now at ideogram.ai","size":66.7,"tracking":1.5,"inkLeft":566,"baseline":731.5,"at":70}} };
+    /* General-mode envelopes, all fitted on s8. Lengths in chips (c = 0.236
+       of the body size) or in mark widths (M), offsets in frames at scale 1. */
+    var DASH = [[[0, 1.92], [2.6, 1.0], [4.48, 1.36]], [[0, 3.84], [4.16, 0.96], [6.28, 1.96]],
+                [[0, 3.04], [3.28, 1.0], [5.32, 0.96], [6.36, 1.8]], [[0, 4.92], [5.68, 0.96]]];
+    var PAD = [1.81, 0.567, 2.19, 0.695], PAD_SOLID = 1.484, PAD_LAST = 0.104, PAD_SETTLE = 0.51;
+    /* bracket keys after the collapse: [frame, Bx, By (M), stair length, square (c), coarse,
+       inner chip offset (c) or 0, centre chip, corner chip size (c), alpha] */
+    var KEYS = [[0, 1.371, 1.405, 3.64, 1.0, 1, [3.84, 3.96], 1, 0, 1], [2, 1.664, 1.710, 5.32, 0.88, 0, [5.28, 5.44], 0, 0, 1],
+                [3, 1.790, 1.848, 2.84, 0.96, 0, 0, 0, 0, 1], [5, 1.871, 1.922, 1.96, 1.0, 0, 0, 0, 0, 1],
+                [6, 1.917, 1.963, 1.56, 1.04, 0, 0, 0, 0, 1], [8, 1.928, 1.986, 0, 0, 0, 0, 0, 1.28, 1],
+                [9, 1.940, 1.997, 0, 0, 0, 0, 0, 1.12, 1], [11, 1.940, 1.997, 0, 0, 0, 0, 0, 1.0, 0.5],
+                [12, 0, 0, 0, 0, 0, 0, 0, 0, 0], [14, 1.940, 1.997, 0, 0, 0, 0, 0, 1.0, 0.5], [15, 0, 0, 0, 0, 0, 0, 0, 0, 0]];
+    var K_BAR = 0.605, K_EDGE = 0.715, K_MARK = 0.45, K_LOCK = 0.25;   /* per frame */
+
+    function svg(tag, attrs) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
+    function slotNode(slot, cls) {
+      var d = document.createElement("div"); d.className = "ec-slot " + cls;
+      if (!slot) return d;
+      var src = typeof slot === "string" ? slot : (slot.svg || slot.src);
+      if (!src) return d;
+      if (/^\s*</.test(src)) d.innerHTML = src;
+      else {
+        var im = document.createElement("img"); im.src = src; im.alt = "";
+        im.style.objectFit = slot.fit || "contain";
+        im.style.objectPosition = ((slot.focal ? slot.focal[0] : 0.5) * 100) + "% " + ((slot.focal ? slot.focal[1] : 0.5) * 100) + "%";
+        d.appendChild(im);
+      }
+      return d;
+    }
+    function rectPath(rs) {
+      var s = "";
+      for (var i = 0; i < rs.length; i++) { var r = rs[i]; if (r[2] > 0 && r[3] > 0) s += "M" + r[0] + " " + r[1] + "h" + r[2] + "v" + r[3] + "h" + (-r[2]) + "z"; }
+      return s;
+    }
+    /* A diagonal pixel-step bracket: n squares of side a stepping d px down
+       the diagonal from the bbox's outer corner. flip draws "/" instead of "\". */
+    function stairRects(x, y, w, h, flip, a, d, n, out) {
+      for (var k = 0; k < n; k++) {
+        var o = Math.round(k * d), sx = flip ? x + w - a - o : x + o;
+        out.push([sx, y + o, a, a]);
+      }
+    }
+    return {
+      /* props (see endcard-typeon.md): preset, sentence, mark, wordmark,
+         tagline, paper, size, tracking, font, cx, cy, wordTimes, wordGap,
+         collapseAt, lockupAt, taglineAt, scale, cadence, abs0, exitAt, seed. */
+      render: function (props) {
+        var W = props.frame ? props.frame.w : 1920, H = props.frame ? props.frame.h : 1080;
+        var el = document.createElement("div"); el.className = "el-endcard-typeon";
+        el.style.width = W + "px"; el.style.height = H + "px";
+        var paper = document.createElement("div"); paper.className = "ec-paper";
+        var ps = props.paper && (props.paper.src || (typeof props.paper === "string" ? props.paper : null));
+        if (ps) {
+          var pi = document.createElement("img"); pi.src = ps; pi.alt = "";
+          pi.style.objectFit = props.paper.fit || "cover";
+          var pf = props.paper.focal || [0.5, 0.5]; pi.style.objectPosition = pf[0] * 100 + "% " + pf[1] * 100 + "%";
+          paper.appendChild(pi);
+        }
+        if (props.paper !== false) el.appendChild(paper);
+        var s = svg("svg", { "class": "ec-svg", width: W, height: H, viewBox: "0 0 " + W + " " + H });
+        s.appendChild(svg("path", { "class": "ec-vio ec-bars", d: "" }));
+        s.appendChild(svg("path", { "class": "ec-vio ec-faint", d: "", "fill-opacity": 0.5 }));
+        var body = svg("text", { "class": "ec-ink ec-body", x: 0, y: 0, style: "display:none" });
+        s.appendChild(body);
+        var tag = svg("text", { "class": "ec-ink ec-tag", x: 0, y: 0, style: "display:none" });
+        s.appendChild(tag);
+        var wmText = svg("text", { "class": "ec-ink ec-wmtext", x: 0, y: 0, style: "display:none" });
+        s.appendChild(wmText);
+        el.appendChild(s);
+        el.appendChild(slotNode(props.mark, "ec-mark"));
+        var wm = props.wordmark;
+        el.appendChild(slotNode(wm && (wm.src || wm.svg || typeof wm === "string") ? wm : null, "ec-wordmark"));
+        return el;
+      },
+      animate: function (tl, el, t0, props) {
+        var W = props.frame ? props.frame.w : 1920, H = props.frame ? props.frame.h : 1080;
+        var P = props.preset ? PRESETS[props.preset] : null;
+        var Q = P || {};
+        var scl = P ? Math.min(W / 1920, H / 1080) : 1, offX = P ? (W - 1920 * scl) / 2 : 0, offY = P ? (H - 1080 * scl) / 2 : 0;
+        var sentence = props.sentence || Q.sentence || "Model weights are coming soon";
+        var words = sentence.split(/\s+/).filter(Boolean);
+        var tagText = props.tagline === false ? "" : (props.tagline || (Q.tagline && Q.tagline.text) || "");
+        var wmProp = props.wordmark || null;
+        var wmIsText = wmProp && typeof wmProp === "object" && wmProp.text && !wmProp.src && !wmProp.svg;
+        var family = props.font || '"ES Serif"';
+        var bodyEl = el.querySelector(".ec-body"), tagEl = el.querySelector(".ec-tag"), wmTextEl = el.querySelector(".ec-wmtext");
+        var barsEl = el.querySelector(".ec-bars"), faintEl = el.querySelector(".ec-faint");
+        var markEl = el.querySelector(".ec-mark"), wmEl = el.querySelector(".ec-wordmark");
+
+        /* ---- measurement: canvas glyph metrics, idempotent, re-run once the font is in ---- */
+        var cv = document.createElement("canvas").getContext("2d"), latched = false, G = null;
+        function meas(text, size, track) {
+          cv.font = size + "px " + family; try { cv.letterSpacing = track + "px"; } catch (e) {}
+          var m = cv.measureText(text);
+          return { w: m.width, l: m.actualBoundingBoxLeft, r: m.actualBoundingBoxRight, ink: m.actualBoundingBoxLeft + m.actualBoundingBoxRight };
+        }
+        function setText(node, text, size, track, spans) {
+          node.setAttribute("font-size", size); node.setAttribute("letter-spacing", track);
+          while (node.firstChild) node.removeChild(node.firstChild);
+          if (!spans) { node.textContent = text; return; }
+          for (var i = 0; i < spans.length; i++) { var t = svg("tspan", {}); t.textContent = (i ? " " : "") + spans[i]; node.appendChild(t); }
+        }
+        function layout() {
+          G = {};
+          if (P) {
+            G.size = Q.size * scl; G.track = Q.tracking * scl;
+            G.tagSize = Q.tagline.size * scl; G.tagTrack = Q.tagline.tracking * scl;
+          } else {
+            var trackEm = props.tracking == null ? -0.0076 : props.tracking;
+            /* the film's line spans 0.766 of the frame width; size to that,
+               within 0.5 to 1.6 of the film's size scaled to the frame, then
+               fit inside the margins and the settled handles */
+            var size0 = 105.8 * Math.min(W / 1920, H / 1080), size = props.size;
+            if (!size) { var r0 = meas(sentence, size0, trackEm * size0).ink; size = Math.max(0.5 * size0, Math.min(1.6 * size0, size0 * 0.766 * W / r0)); }
+            var full = meas(sentence, size, trackEm * size).ink;
+            var room = W - 2 * 64 * (W / 1920) - 2 * (PAD_SETTLE + 0.236) * size;
+            if (full > room) size = size * room / full;
+            G.size = size; G.track = trackEm * size;
+            G.tagSize = 0.63 * size; G.tagTrack = 0.0225 * G.tagSize;
+            G.cx = props.cx == null ? W / 2 : props.cx * W; G.cy = props.cy == null ? H / 2 : props.cy * H;
+            G.c = 0.236 * size; G.base = G.cy + 0.378 * size;
+            G.lines = [];
+            for (var k = 0; k < words.length; k++) G.lines.push(meas(words.slice(0, k + 1).join(" "), size, G.track));
+            /* lockup: mark, gap, wordmark; shrunk as one if it would overflow */
+            var ls = size, M, gap, wmW, wmH, capT, capB, wmSize;
+            var lay = function (u) {
+              M = 1.645 * u; gap = 0.318 * u;
+              if (wmIsText) { wmSize = (wmProp.size || 1.71) * u; var mm = meas(wmProp.text, wmSize, (wmProp.tracking || 0) * wmSize); wmW = mm.ink; wmH = wmSize; G.wmL = mm.l; capT = -0.69 * wmSize; capB = 0; }
+              else if (wmProp) { wmH = (wmProp.h || 1.79) * u; wmW = wmH * (wmProp.aspect || 4.956); capT = (wmProp.cap ? wmProp.cap[0] : 0.071) * wmH; capB = (wmProp.cap ? wmProp.cap[1] : 0.729) * wmH; }
+              else { wmW = 0; gap = 0; }
+            };
+            lay(ls);
+            var lockRoom = W - 2 * 64 * (W / 1920);
+            if (M + gap + wmW > lockRoom) { ls = ls * lockRoom / (M + gap + wmW); lay(ls); }
+            G.M = M; G.gap = gap; G.wmW = wmW; G.wmH = wmH; G.wmSize = wmSize; G.ls = ls;
+            G.markCy = G.cy - 0.137 * size;            /* the mark sits a little above the brackets' centre */
+            G.capMid = G.markCy - 0.026 * M;           /* the wordmark's cap band centres on the mark */
+            G.groupL = G.cx - (M + gap + wmW) / 2;
+            if (wmIsText) { G.wmBase = G.capMid + 0.345 * wmSize; }
+            else if (wmProp) { G.wmTop = G.capMid - (capT + capB) / 2; G.wmBase = G.wmTop + capB; }
+            else G.wmBase = G.markCy + 0.5 * M;
+            G.tagBase = G.wmBase + 1.40 * size * (ls / size);
+            G.tagSize *= ls / size; G.tagTrack *= ls / size;
+            G.tagInk = tagText ? meas(tagText, G.tagSize, G.tagTrack) : null;
+          }
+          setText(bodyEl, sentence, G.size, G.track, words);
+          if (tagText) setText(tagEl, tagText, G.tagSize, G.tagTrack);
+          if (wmIsText) setText(wmTextEl, wmProp.text, G.wmSize, (wmProp.tracking || 0) * G.wmSize);
+          G.firstL = meas(words[0], G.size, G.track).l;
+          G.tagL = tagText ? meas(tagText, G.tagSize, G.tagTrack).l : 0;
+          last = null;
+        }
+        layout();
+        if (document.fonts && document.fonts.status === "loaded") latched = true;
+        else if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!latched) { latched = true; layout(); if (cur != null) paint(stateAt(cur)); } });
+
+        /* ---- cadence and the general schedule (frames from t0) ---- */
+        var cadence = String(props.cadence || "16"), abs0 = props.abs0 || 0, scale = props.scale || 1;
+        function pic(f) {
+          if (cadence === "16") return ((abs0 + f) % 3 + 3) % 3 === 2 ? f - 1 : f;
+          if (cadence === "twos") return ((abs0 + f) % 2 + 2) % 2 === 1 ? f - 1 : f;
+          return f;
+        }
+        function snap(t) { var f = Math.round(t * FPS); return pic(f) !== f ? f + 1 : f; }
+        var wf = [], N;
+        if (!P) {
+          var gap = (props.wordGap == null ? 1.75 / FPS : props.wordGap) * scale;
+          for (var i = 0; i < words.length; i++) wf.push(snap(props.wordTimes && props.wordTimes[i] != null ? props.wordTimes[i] : i * gap));
+          var lastW = wf[wf.length - 1];
+          var colF = snap(props.collapseAt != null ? props.collapseAt : lastW / FPS + 21 / FPS * scale);
+          var lockF = snap(props.lockupAt != null ? props.lockupAt : colF / FPS + 14 / FPS * scale);
+          var tagF = snap(props.taglineAt != null ? props.taglineAt : colF / FPS + 42 / FPS * scale);
+          N = Math.round(((props.exitAt != null ? props.exitAt : (props.sceneEnd != null ? props.sceneEnd - t0 : tagF / FPS + 3))) * FPS);
+        } else N = Q.frames;
+
+        /* ---- one state per frame ---- */
+        function stateAt(f) {
+          var S = { n: 0, bars: [], faint: [] };
+          if (f < 0 || (props.exitAt != null && f >= Math.round(props.exitAt * FPS))) return S;
+          return P ? presetState(Math.min(f, Q.frames - 1), S) : generalState(pic(f), S);
+        }
+        function presetState(f, S) {
+          var X = function (x) { return offX + x * scl; }, Y = function (y) { return offY + y * scl; }, L = function (v) { return v * scl; };
+          if (f < 28) {
+            var b = Q.body[f]; S.n = b[0]; S.x = X(b[1]); S.base = Y(Q.baseline);
+            var B = Q.bars;
+            Q.bars.s[f].forEach(function (sg) { S.bars.push([X(sg[0]), Y(B.top), L(sg[1]), L(B.h)]); S.bars.push([X(sg[0]), Y(B.bottom), L(sg[1]), L(B.hb)]); });
+          }
+          var d = Q.diag[f];
+          if (d) {
+            var tgt = d.a ? S.faint : S.bars, raw = [];
+            (d.r || []).forEach(function (r) { raw.push(r); });
+            (d.c || []).forEach(function (r) { raw.push(r); });
+            (d.s || []).forEach(function (s) { stairRects(s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7], raw); });
+            raw.forEach(function (r) { tgt.push([X(r[0]), Y(r[1]), L(r[2]), L(r[3])]); });
+          }
+          var m = Q.mark[f];
+          if (m) S.mark = [X(m[0]), Y(m[1]), L(m[2]), L(m[3])];
+          if (f >= 42) {
+            var lk = Q.lockup, mx = lk.x[f - 42];
+            S.mark = [X(mx), Y(lk.top), L(lk.w), L(lk.h)];
+            S.wm = [X(mx + lk.wmDx), Y(lk.wmTop), L(lk.wmW), L(lk.wmH)];
+          }
+          if (f >= Q.tagline.at) { S.tag = [X(Q.tagline.inkLeft), Y(Q.tagline.baseline)]; }
+          return S;
+        }
+        function bracketsAt(dk, S, M) {
+          var key = null;
+          for (var i = 0; i < KEYS.length; i++) if (KEYS[i][0] * scale <= dk + 1e-6) key = KEYS[i];
+          if (!key || !key[1]) return;
+          var c = G.c, bx = key[1] * M, by = key[2] * M, cx = G.cx, cy = G.cy, out = key[9] < 1 ? S.faint : S.bars;
+          var corners = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+          corners.forEach(function (q) {
+            var ox = cx + q[0] * bx, oy = cy + q[1] * by;        /* outer corner */
+            if (key[8]) { var cs = key[8] * c; out.push([q[0] < 0 ? ox : ox - cs, q[1] < 0 ? oy : oy - cs, cs, cs]); return; }
+            var len = key[3] * c, a = key[4] * c, d = key[5] ? 0.38 * a : Math.max(1, 0.08 * a), n = Math.max(1, Math.round((len - a) / d) + 1);
+            for (var k = 0; k < n; k++) {
+              var o = Math.round(k * d);
+              out.push([q[0] < 0 ? ox + o : ox - o - a, q[1] < 0 ? oy + o : oy - o - a, a, a]);
+            }
+            if (key[6]) { var ix = key[6][0] * c, iy = key[6][1] * c; out.push([q[0] < 0 ? ox + ix : ox - ix - c, q[1] < 0 ? oy + iy : oy - iy - c, c, c]); }
+          });
+          if (key[7]) out.push([cx - c, cy - c, 2 * c, 2 * c]);
+        }
+        function generalState(f, S) {
+          if (!G.lines) return S;
+          var c = G.c, size = G.size, colF = this_colF, lastW = wf[wf.length - 1];
+          if (f < wf[0]) return S;
+          if (f < colF) {
+            var k = 0; for (var i = 0; i < wf.length; i++) if (wf[i] <= f) k = i;
+            var ln = G.lines[k]; S.n = k + 1; S.x = G.cx - ln.ink / 2; S.base = G.base;
+            var segs, half;
+            if (k < words.length - 1) {
+              if (f - wf[k] < 2) { segs = DASH[k % 4]; half = ln.ink / 2 + PAD[k % 4] * size; }
+              else { segs = [[0, 5.2]]; half = ln.ink / 2 + PAD_SOLID * size; }
+            } else {
+              var t = Math.max(0, f - (lastW + 1) / 1) / scale;
+              var p = 1 - Math.exp(-K_BAR * t), pe = 1 - Math.exp(-K_EDGE * t);
+              segs = [[0, 4 - 3 * p]]; half = ln.ink / 2 + (PAD_LAST + (PAD_SETTLE - PAD_LAST) * pe) * size;
+            }
+            var top = G.base - 1.536 * size, bot = G.base + 0.534 * size;
+            segs.forEach(function (sg) {
+              var o = sg[0] * c, l = sg[1] * c, xl = G.cx - half + o, xr = G.cx + half - o - l;
+              S.bars.push([xl, top, l, c], [xl, bot, l, c], [xr, top, l, c], [xr, bot, l, c]);
+            });
+            return S;
+          }
+          var M = G.M;
+          if (f < this_lockF) {
+            bracketsAt(f - colF, S, M);
+            if (f - colF >= 2 * scale) {
+              var w = M * Math.max(0, 1 - Math.exp(-K_MARK * (f - colF - 0.25 * scale) / scale));
+              var hgt = w * (props.mark && props.mark.aspect ? 1 / props.mark.aspect : 160.625 / 174.125);
+              S.mark = [G.cx - w / 2, G.markCy - hgt / 2, w, hgt];
+            }
+          } else {
+            bracketsAt(f - colF, S, M);
+            var u = (f - (this_lockF - 2.5 * scale)) / scale, pl = 1 - Math.exp(-K_LOCK * u);
+            var startL = G.cx - M / 2, dx = (G.groupL - startL) * pl;
+            var mh = M * (props.mark && props.mark.aspect ? 1 / props.mark.aspect : 160.625 / 174.125);
+            S.mark = [startL + dx, G.markCy - mh / 2, M, mh];
+            if (wmProp) {
+              var wx = startL + dx + M + G.gap;
+              if (wmIsText) S.wmText = [wx - 0, G.wmBase]; else S.wm = [wx, G.wmTop, G.wmW, G.wmH];
+            }
+          }
+          if (tagText && f >= this_tagF) S.tag = [G.cx - G.tagInk.ink / 2, G.tagBase];
+          return S;
+        }
+        var this_colF = colF, this_lockF = lockF, this_tagF = tagF;
+
+        /* ---- paint ---- */
+        var last = null, cur = null;
+        function box(node, b) {
+          if (!b) { node.style.display = "none"; return; }
+          node.style.display = "block"; node.style.left = b[0] + "px"; node.style.top = b[1] + "px"; node.style.width = b[2] + "px"; node.style.height = b[3] + "px";
+        }
+        function paint(S) {
+          barsEl.setAttribute("d", rectPath(S.bars)); faintEl.setAttribute("d", rectPath(S.faint));
+          var sp = bodyEl.childNodes;
+          if (S.n) {
+            bodyEl.style.display = "";
+            bodyEl.setAttribute("x", S.x + G.firstL); bodyEl.setAttribute("y", S.base);
+            for (var i = 0; i < sp.length; i++) sp[i].setAttribute("visibility", i < S.n ? "visible" : "hidden");
+          } else bodyEl.style.display = "none";
+          box(markEl, S.mark); box(wmEl, S.wm);
+          if (S.wmText) { wmTextEl.style.display = ""; wmTextEl.setAttribute("x", S.wmText[0] + (G.wmL || 0)); wmTextEl.setAttribute("y", S.wmText[1]); }
+          else wmTextEl.style.display = "none";
+          if (S.tag) { tagEl.style.display = ""; tagEl.setAttribute("x", S.tag[0] + G.tagL); tagEl.setAttribute("y", S.tag[1]); }
+          else tagEl.style.display = "none";
+        }
+        function apply(f) {
+          if (!latched && document.fonts && document.fonts.status === "loaded") { latched = true; layout(); }
+          cur = f; if (f === last) return; last = f; paint(stateAt(f));
+        }
+        /* one driver from a frame before t0 (empty) to the last frame; the
+           modifier paints the state, so seeking either way is exact */
+        var st = Math.max(0, t0 - 1 / FPS), f0 = -Math.round((t0 - st) * FPS), drv = { f: f0 };
+        tl.fromTo(drv, { f: f0 }, { f: N, duration: N / FPS + (t0 - st), ease: "none", immediateRender: false,
+          modifiers: { f: function (v) { apply(Math.floor(parseFloat(v) + 1e-3)); return v; } } }, st);
+        return t0 + (P ? 62 : lockF + 20 * scale) / FPS;
+      }
+    };
+  })();
+</script>

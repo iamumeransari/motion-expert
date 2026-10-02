@@ -1,108 +1,379 @@
 <style>
-  /* select-handles. The selection frame: four flat chips at the corners of a
-     box, tinted per chip, that glide from one box to the next on the snap
-     curve with a segmented motion streak, jump to a new box while the old
-     chips linger, burst out diagonally from a smaller box, or collapse onto a
-     point. Source strips: assets/frames/select-title-design-dense.jpg (frames 10
-     to 18), assets/frames/select-title-step-dense.jpg (frames 64 to 80) and
-     assets/frames/select-grow-dense.jpg (frames 758 to 818).
-     Measured: chip 24 px on the title cards and 26 px settled (38 px on
-     landing) on the select-grow tile; a glide runs five source frames (0.21 s)
-     on a cubic ease-out starting one frame before the cut, progress 0.42 to
-     0.49 on the first frame after the cut, 0.92 two frames later, 1.0 on the
-     sixth; the streak is the chip drawn again at 0.5, 1 and 1.5 frames of lag
-     (pieces 746 to 769 and 772 to 826 px on frame 10); the chips keep the
-     old colour until the cut and take the new one on it. On a jump (frame 72)
-     the new chips appear at once and the old ones stay three frames.
-     The root is a full-frame layer; every chip is positioned by transform
-     from the frame's top left, so nothing here reads layout. */
-  .el-select-handles { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
-  .el-select-handles .sh-chip { position: absolute; left: 0; top: 0; width: 24px; height: 24px; opacity: 0; }
+  /* select-handles. The four-chip selection that snaps to and grows with any
+     target: flat square chips on the corners of a box that glide from one box
+     to the next on the snap curve, drawn while they travel as a segmented
+     streak (a leading piece and a trailing smear with a gap, like a
+     multi-sample shutter), jump to a bigger box while the old chips linger
+     three frames, pop on with a landing size, or collapse to a point. Every
+     glide is sampled on the film's 16 fps picture cadence, so it steps.
+     Source: s1 shots 1 to 7 (frames 0 to 78), measured per frame in
+     work/replica/s1 (chip-rects); see library/select-handles.md.
+     The root is a full-frame layer and every chip is placed by transform from
+     its top left, so nothing here reads layout. */
+  .el-select-handles { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .el-select-handles .es-chip { position: absolute; left: 0; top: 0; opacity: 0; }
 </style>
 <script>
-  /* Shared handle builder. Copied verbatim into every element that draws a
-     selection (select-title, select-grow, type-on-select, icon-tile); the
-     first copy in a document wins. Change it here and re-copy. */
-  window.__esHandles = window.__esHandles || (function () {
-    var LAGS = [0, 0.5, 1, 1.5];
-    var FR = 1 / 24;
-    function scaleOf(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
-    function corners(box) { return [[box[0], box[1]], [box[2], box[1]], [box[0], box[3]], [box[2], box[3]]]; }
-    function colorOf(k, i) { var c = k.colors || k.color || "#ffffff"; return Array.isArray(c) ? c[i % c.length] : c; }
+  /* BEGIN es-shared */
+  /* es-shared. The helpers every editorial-select block uses: frame scale,
+     the film's picture cadence, zero-duration steps, a seeded PRNG, ES Serif
+     glyph metrics for arithmetic text layout, and the image slot. Copied
+     verbatim into every block file between the BEGIN and END markers by
+     work/blocks/shared/inject.py; the first copy in a document wins, so
+     change es-shared.src.js and re-inject rather than editing a copy. */
+  window.__esShared = window.__esShared || (function () {
+    var METRICS = { serif: {"cap":0.69,"x":0.499,"asc":0.802,"desc":-0.284,"adv":{" ":0.238,"!":0.312,"\"":0.402,"#":0.557,"$":0.54,"%":0.952,"&":0.759,"'":0.2,"(":0.374,")":0.374,"*":0.468,"+":0.56,",":0.315,"-":0.336,".":0.236,"/":0.36,"0":0.545,"1":0.545,"2":0.545,"3":0.545,"4":0.535,"5":0.515,"6":0.545,"7":0.545,"8":0.545,"9":0.545,":":0.315,";":0.315,"<":0.56,"=":0.56,">":0.56,"?":0.44,"@":0.884,"A":0.732,"B":0.635,"C":0.675,"D":0.774,"E":0.661,"F":0.678,"G":0.734,"H":0.834,"I":0.334,"J":0.399,"K":0.725,"L":0.617,"M":0.911,"N":0.783,"O":0.756,"P":0.592,"Q":0.755,"R":0.707,"S":0.557,"T":0.676,"U":0.776,"V":0.721,"W":1.12,"X":0.692,"Y":0.678,"Z":0.596,"[":0.349,"\\":0.36,"]":0.349,"^":0.561,"_":0.542,"`":0.418,"a":0.502,"b":0.596,"c":0.495,"d":0.597,"e":0.504,"f":0.339,"g":0.558,"h":0.57,"i":0.261,"j":0.273,"k":0.549,"l":0.263,"m":0.886,"n":0.587,"o":0.564,"p":0.602,"q":0.561,"r":0.401,"s":0.434,"t":0.345,"u":0.582,"v":0.522,"w":0.791,"x":0.531,"y":0.582,"z":0.451,"{":0.368,"|":0.307,"}":0.368,"~":0.56},"kern":{"Fi":0.021,"Tr":-0.016,"al":0.026,"ap":-0.009,"at":-0.008,"el":0.013,"gh":-0.012,"ho":0.009,"hy":-0.029,"id":0.015,"il":-0.028,"ll":-0.011,"lm":0.021,"rt":0.011,"ry":0.021},"ink":{"!":[0.081,-0.014,0.231,0.705],"\"":[0.04,0.437,0.361,0.762],"#":[0.025,0.0,0.533,0.671],"$":[0.053,-0.118,0.501,0.776],"%":[0.04,-0.028,0.912,0.701],"&":[0.026,-0.014,0.717,0.706],"'":[0.04,0.437,0.16,0.762],"(":[0.083,-0.195,0.34,0.77],")":[0.034,-0.195,0.291,0.77],"*":[0.019,0.363,0.45,0.771],"+":[0.032,0.077,0.53,0.595],",":[0.045,-0.186,0.234,0.137],"-":[0.042,0.224,0.294,0.301],".":[0.044,-0.015,0.191,0.135],"/":[0.004,-0.166,0.356,0.734],"0":[0.04,-0.014,0.506,0.68],"1":[0.082,-0.001,0.477,0.673],"2":[0.047,-0.001,0.502,0.68],"3":[0.046,-0.014,0.504,0.68],"4":[0.024,-0.009,0.542,0.696],"5":[0.024,-0.011,0.473,0.738],"6":[0.039,-0.014,0.504,0.68],"7":[0.052,0.0,0.504,0.666],"8":[0.044,-0.014,0.501,0.68],"9":[0.032,-0.016,0.501,0.68],":":[0.079,-0.013,0.237,0.496],";":[0.045,-0.185,0.237,0.496],"<":[0.058,0.081,0.503,0.596],"=":[0.032,0.201,0.53,0.477],">":[0.059,0.083,0.504,0.598],"?":[0.068,-0.014,0.376,0.707],"@":[0.039,-0.162,0.847,0.682],"A":[0.009,0.0,0.728,0.701],"B":[0.041,-0.009,0.593,0.698],"C":[0.047,-0.017,0.636,0.707],"D":[0.041,0.0,0.716,0.683],"E":[0.042,-0.003,0.618,0.689],"F":[0.042,0.001,0.59,0.691],"G":[0.047,-0.017,0.715,0.707],"H":[0.041,0.0,0.794,0.69],"I":[0.041,0.0,0.315,0.686],"J":[-0.028,-0.14,0.368,0.69],"K":[0.041,0.0,0.717,0.69],"L":[0.042,-0.002,0.591,0.684],"M":[0.036,-0.009,0.899,0.686],"N":[0.038,-0.007,0.747,0.69],"O":[0.047,-0.004,0.708,0.704],"P":[0.041,0.002,0.567,0.691],"Q":[0.047,-0.223,0.709,0.707],"R":[0.041,-0.011,0.694,0.69],"S":[0.041,-0.017,0.515,0.707],"T":[0.021,-0.003,0.664,0.682],"U":[0.036,-0.016,0.746,0.69],"V":[0.014,-0.006,0.714,0.69],"W":[0.014,-0.007,1.11,0.707],"X":[0.01,0.0,0.683,0.69],"Y":[0.021,0.0,0.67,0.69],"Z":[0.023,0.0,0.574,0.69],"[":[0.108,-0.165,0.317,0.739],"\\":[0.004,-0.166,0.356,0.734],"]":[0.032,-0.165,0.242,0.739],"^":[0.081,0.204,0.481,0.506],"_":[0.042,-0.072,0.5,0.005],"`":[0.078,0.579,0.275,0.791],"a":[0.028,-0.014,0.504,0.511],"b":[0.026,-0.012,0.565,0.751],"c":[0.029,-0.012,0.475,0.512],"d":[0.03,-0.012,0.597,0.762],"e":[0.027,-0.012,0.474,0.508],"f":[0.017,0.0,0.432,0.764],"g":[0.017,-0.254,0.544,0.511],"h":[0.005,0.001,0.571,0.758],"i":[0.01,0.001,0.268,0.715],"j":[-0.098,-0.25,0.217,0.748],"k":[0.0,0.001,0.544,0.762],"l":[-0.014,0.002,0.239,0.76],"m":[0.013,0.0,0.882,0.507],"n":[0.017,0.001,0.585,0.511],"o":[0.026,-0.013,0.534,0.506],"p":[0.01,-0.241,0.568,0.515],"q":[0.026,-0.24,0.562,0.514],"r":[0.01,0.0,0.405,0.507],"s":[0.038,-0.013,0.402,0.511],"t":[0.011,-0.012,0.339,0.596],"u":[-0.002,-0.011,0.573,0.511],"v":[-0.007,-0.012,0.55,0.496],"w":[-0.016,-0.008,0.796,0.498],"x":[-0.001,-0.001,0.529,0.5],"y":[0.011,-0.253,0.576,0.501],"z":[0.013,-0.001,0.437,0.5],"{":[0.047,-0.165,0.335,0.739],"|":[0.117,-0.25,0.19,0.773],"}":[0.034,-0.165,0.322,0.739],"~":[0.05,0.27,0.512,0.442]}} };
+
+    /* Scale from the 1920x1080 source to this frame. The short side carries
+       it, so a portrait or square frame keeps the source's type size. */
+    function k(props) { var f = (props && props.frame) || { w: 1920, h: 1080 }; return Math.min(f.w, f.h) / 1080; }
+    function fw(props) { return ((props && props.frame) || { w: 1920 }).w; }
+    function fh(props) { return ((props && props.frame) || { h: 1080 }).h; }
+
+    /* The film updates its picture 16 times a second inside 24 fps (frame f
+       with f mod 3 = 2 repeats f - 1), and parts of it run on twos. quant(t)
+       moves a time to the start of the picture it falls in, so any tween or
+       step placed through it lands on a picture the film could show.
+       cadence: "16" (default), "twos", "ones". */
+    function quant(t, cadence, fps) {
+      fps = fps || 24; var f = Math.round(t * fps * 1000) / 1000, fl = Math.floor(f + 1e-6);
+      if (cadence === "ones") return fl / fps;
+      if (cadence === "twos") return (fl - (fl % 2)) / fps;
+      return (fl % 3 === 2 ? fl - 1 : fl) / fps;
+    }
+    /* Sample a tween as held pictures: returns the list of times at which the
+       picture changes between t0 and t1 on the cadence. */
+    function pictures(t0, t1, cadence, fps) {
+      fps = fps || 24; var out = [], f0 = Math.ceil(t0 * fps - 1e-6), f1 = Math.floor(t1 * fps + 1e-6), last = null;
+      for (var f = f0; f <= f1; f++) { var q = quant(f / fps, cadence, fps); if (q !== last && q >= t0 - 1e-6) { out.push(q); last = q; } }
+      if (!out.length || out[out.length - 1] < t1 - 1e-6) out.push(t1);
+      return out;
+    }
+
+    /* A zero-duration step, the film's way of changing a picture. Steps after
+       the first on a node carry immediateRender false (CONTRACT.md). */
+    function step(tl, node, from, to, t, first) {
+      var v = {}; for (var p in to) v[p] = to[p];
+      v.duration = 0.0001; v.ease = "none"; if (!first) v.immediateRender = false;
+      tl.fromTo(node, from, v, Math.max(0, t));
+    }
+
+    function rng(seed) {
+      var s = (seed >>> 0) || 1;
+      return function () { s = (s + 0x6D2B79F5) >>> 0; var t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }
+
+    /* Lay out a string in ES Serif from its glyph metrics: returns pen x per
+       character (from the run's left edge, px), the advance width and the ink
+       box, at a font size in px and tracking in em. Pure arithmetic, so it is
+       right before the webfont arrives and render() never reads layout. */
+    function layout(text, size, tracking, face) {
+      var m = METRICS[face || "serif"], pens = [], x = 0, tr = (tracking || 0) * size;
+      var inkL = Infinity, inkR = -Infinity;
+      for (var i = 0; i < text.length; i++) {
+        var ch = text[i], a = m.adv[ch] != null ? m.adv[ch] : 0.5;
+        pens.push(x);
+        var b = m.ink[ch];
+        if (b) { inkL = Math.min(inkL, x + b[0] * size); inkR = Math.max(inkR, x + b[2] * size); }
+        x += a * size;
+        if (i + 1 < text.length) { x += tr; var kp = m.kern[ch + text[i + 1]]; if (kp) x += kp * size; }
+      }
+      if (inkL === Infinity) { inkL = 0; inkR = x; }
+      return { pens: pens, width: x, inkL: inkL, inkR: inkR, ink: inkR - inkL, cap: m.cap * size, xh: m.x * size, size: size };
+    }
+    /* The font size whose cap height is cap px. */
+    function sizeForCap(cap, face) { return cap / METRICS[face || "serif"].cap; }
+    /* Where the baseline sits below the top of a line-height:1 box, as a
+       share of the font size, so a glyph node can be placed by its baseline. */
+    function baseFrac(face) { var m = METRICS[face || "serif"]; return (1 - (m.asc - m.desc)) / 2 + m.asc; }
+
+    /* An image slot: a box that crops its picture by code. spec is
+         { src, fit: "cover" | "contain", focal: [x, y] (0..1), zoom (1),
+           cutout: src of the subject on transparency, label }
+       or a string src. Without a src it draws a labelled placeholder, which is
+       the code-and-slots view of the block. Returns the slot node; the picture
+       is its first child (class es-pic) so a block can move it inside the box. */
+    function slot(spec, w, h, name) {
+      if (typeof spec === "string") spec = { src: spec };
+      spec = spec || {};
+      var box = document.createElement("div");
+      box.className = "es-slot"; box.setAttribute("data-slot", name || "image");
+      box.style.cssText = "position:absolute;overflow:hidden;width:" + w + "px;height:" + h + "px;";
+      var fx = spec.focal ? spec.focal[0] : 0.5, fy = spec.focal ? spec.focal[1] : 0.5;
+      if (spec.src) {
+        var pic = document.createElement("div");
+        pic.className = "es-pic";
+        var z = spec.zoom || 1;
+        pic.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;background-image:url(\"" + spec.src + "\");background-repeat:no-repeat;background-size:" +
+          (spec.fit === "contain" ? "contain" : (z === 1 ? "cover" : (z * 100) + "% auto")) + ";background-position:" + (fx * 100) + "% " + (fy * 100) + "%;transform-origin:" + (fx * 100) + "% " + (fy * 100) + "%;";
+        box.appendChild(pic);
+      } else {
+        box.style.background = "repeating-linear-gradient(45deg, var(--color-mist) 0 2px, var(--color-ghost) 2px 14px)";
+        box.style.outline = "2px solid var(--color-ink-grey)"; box.style.outlineOffset = "-2px";
+        var lab = document.createElement("div");
+        lab.className = "es-slot-label"; lab.textContent = spec.label || name || "image";
+        lab.style.cssText = "position:absolute;left:8px;top:6px;font:500 " + Math.max(10, Math.min(18, h / 8)) + "px/1 var(--font-mono);color:var(--color-ink-grey);white-space:nowrap;";
+        box.appendChild(lab);
+      }
+      return box;
+    }
+    /* The cut-out layer for type-behind-subject: the same crop as slot(spec)
+       but showing spec.cutout, to sit above the type. Null when there is none. */
+    function cutout(spec, w, h, name) {
+      if (!spec || typeof spec === "string" || !spec.cutout) return null;
+      var c = {}; for (var p in spec) c[p] = spec[p]; c.src = spec.cutout;
+      var n = slot(c, w, h, (name || "image") + "-cutout"); n.classList.add("es-cutout"); return n;
+    }
+
+    /* A token colour by name ("violet" -> var(--color-violet)); any other
+       CSS colour passes through. */
+    function color(c, dflt) { c = c || dflt; return /^[a-z-]+$/.test(c) && c !== "white" && c !== "black" && c !== "transparent" ? "var(--color-" + c + ")" : c; }
+
+    return { METRICS: METRICS, k: k, fw: fw, fh: fh, quant: quant, pictures: pictures, step: step, rng: rng,
+             layout: layout, sizeForCap: sizeForCap, baseFrac: baseFrac, slot: slot, cutout: cutout, color: color, FR: 1 / 24 };
+  })();
+  /* END es-shared */
+  /* BEGIN es-select */
+  /* es-select. The selection engine behind select-handles, copied verbatim
+     into every block that draws a selection (genre-word-card and any block
+     that wraps a target in handles) by work/blocks/shared/inject.py; the first
+     copy in a document wins. Needs window.__esShared and __motionExpert.
+
+     Two ways to drive it.
+     keys (general): a list of targets over time; each key's chips sit on the
+       corners of its box and arrive from the previous box by a mode:
+         pop      appear at once (optionally landing large and settling)
+         glide    travel from the previous box on the snap ease, starting
+                  lead seconds before t, drawn as a segmented streak
+         jump     appear at once on the new box while the previous chips
+                  linger (the grow-with-target nest)
+         collapse travel inward to the box centre and vanish
+       Every glide is sampled on the film's picture cadence, so it steps the
+       way the source steps.
+     frames (preset): measured rectangles per source frame,
+       { "<f>": [[x0, y0, x1, y1, top, bottom], ...] }, f counted from t0,
+       each frame stepped at t0 + (f - 0.5) / 24 as the replica does. */
+  window.__esSelect = window.__esSelect || (function () {
+    var SH = window.__esShared;
+    function corners(b) { return [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]; }
+    function colorOf(key, spec, i) {
+      var c = key.colors || key.color || spec.colors || spec.color || "type-light";
+      c = Array.isArray(c) ? c[i % c.length] : c;
+      return /gradient\(/.test(c) ? c : SH.color(c);
+    }
+    /* The streak: while a chip travels it is drawn as two pieces, each the
+       sweep of the chip between two earlier sample times (in frames), with a
+       gap between them, like a multi-sample shutter. Measured on frames 10
+       and 12: a leading piece at the chip's position and a trailing smear
+       reaching back about a frame. streak: false draws a plain square. */
+    function piecesOf(spec) {
+      if (spec.streak === false) return [[0, 0]];
+      return (spec.streak && spec.streak.pieces) || [[0, 0.5], [0.75, 1.5]];
+    }
+    function chipPx(key, spec, props) { return (key.chip || spec.chip || 24 * SH.k(props)); }
+
+    /* General: one node per key x corner x streak copy. */
+    function buildKeys(layer, spec, props) {
+      var keys = spec.keys || [], pieces = piecesOf(spec);
+      for (var k = 0; k < keys.length; k++) {
+        var mode = k === 0 ? (keys[k].mode === "glide" ? "pop" : (keys[k].mode || "pop")) : (keys[k].mode || "glide");
+        var copies = (mode === "glide" || mode === "collapse") ? pieces.length : 1;
+        var w = chipPx(keys[k], spec, props);
+        for (var i = 0; i < 4; i++) for (var j = 0; j < copies; j++) {
+          var c = document.createElement("div");
+          c.className = "es-chip";
+          c.setAttribute("data-key", k); c.setAttribute("data-corner", i); c.setAttribute("data-copy", j);
+          var bg = colorOf(keys[k], spec, i);
+          c.style.cssText = "position:absolute;left:0;top:0;opacity:0;width:" + w + "px;height:" + w + "px;background:" + bg + ";";
+          layer.appendChild(c);
+        }
+      }
+    }
+    function animateKeys(tl, layer, t0, spec, props) {
+      var M = window.__motionExpert, keys = spec.keys || [], pieces = piecesOf(spec), FR = SH.FR;
+      var cad = spec.cadence || "16", ease = M.ease(spec.ease || "snap"), end = t0;
+      var exitAt = props.exitAt != null ? t0 + props.exitAt : (spec.exitAt != null ? t0 + spec.exitAt : null);
+      for (var k = 0; k < keys.length; k++) {
+        var key = keys[k];
+        var mode = k === 0 ? (key.mode === "glide" ? "pop" : (key.mode || "pop")) : (key.mode || "glide");
+        var w = chipPx(key, spec, props), half = w / 2;
+        var at = t0 + key.t;
+        var dur = key.dur != null ? key.dur : 6 * FR;
+        var lead = key.lead != null ? key.lead : FR;
+        var nxt = keys[k + 1];
+        var hide = nxt ? t0 + nxt.t - ((nxt.mode || "glide") === "glide" || nxt.mode === "collapse" ? (nxt.lead != null ? nxt.lead : FR) : 0) : exitAt;
+        if (nxt && nxt.mode === "jump") hide = t0 + nxt.t + (nxt.linger != null ? nxt.linger : 3 * FR);
+        var box = mode === "collapse" ? [(key.box[0] + key.box[2]) / 2, (key.box[1] + key.box[3]) / 2, (key.box[0] + key.box[2]) / 2, (key.box[1] + key.box[3]) / 2] : key.box;
+        var tc = corners(box), pc = k > 0 ? corners(keys[k - 1].box) : tc;
+        var chips = layer.querySelectorAll('.es-chip[data-key="' + k + '"]');
+        var from = key.chip_from ? key.chip_from / w : 1;
+        for (var n = 0; n < chips.length; n++) {
+          var ch = chips[n], i = Number(ch.getAttribute("data-corner")), j = Number(ch.getAttribute("data-copy"));
+          if (mode === "glide" || mode === "collapse") {
+            var start = at - lead, pc0 = pc[i], tc0 = tc[i], pz = pieces[j];
+            var tail = pieces[pieces.length - 1][1] * FR;
+            var pos = function (u) { var e = ease(Math.max(0, Math.min(1, (u - start) / dur))); return [pc0[0] + (tc0[0] - pc0[0]) * e, pc0[1] + (tc0[1] - pc0[1]) * e]; };
+            var pics = SH.pictures(start, start + dur + tail, cad);
+            var prev = { opacity: 0, x: pc0[0] - half, y: pc0[1] - half, width: w, height: w, rotation: 0 };
+            if (j === 0) { var on = { opacity: 1, x: prev.x, y: prev.y, width: w, height: w, rotation: 0 }; SH.step(tl, ch, prev, on, start, false); prev = on; }
+            for (var q = 0; q < pics.length; q++) {
+              /* each piece is the chip swept between two sample times: a
+                 rectangle as long as the sweep plus a chip, one chip wide,
+                 turned along the path, so a diagonal glide reads as a streak */
+              var a = pos(pics[q] - pz[0] * FR), b = pos(pics[q] - pz[1] * FR);
+              var dx = a[0] - b[0], dy = a[1] - b[1], len = Math.sqrt(dx * dx + dy * dy);
+              var ux = len ? dx / len : 1, uy = len ? dy / len : 0, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, L = len + w;
+              if (j > 0 && len >= 1) { mx -= ux; my -= uy; L -= 2; }
+              var rot = len >= 1 ? Math.round(Math.atan2(uy, ux) * 180 / Math.PI * 100) / 100 : 0;
+              if (Math.abs(Math.abs(rot) - 180) < 0.01) rot = 0;
+              var cur = { opacity: (j === 0 || len >= 1) ? 1 : 0, x: mx - L / 2, y: my - w / 2, width: L, height: w, rotation: rot };
+              if (q === pics.length - 1 && j > 0) cur.opacity = 0;
+              var same = cur.opacity === prev.opacity && Math.abs(cur.x - prev.x) < 0.01 && Math.abs(cur.y - prev.y) < 0.01 && Math.abs(cur.width - prev.width) < 0.01 && Math.abs(cur.height - prev.height) < 0.01 && cur.rotation === prev.rotation;
+              if (same) continue;
+              SH.step(tl, ch, prev, cur, pics[q], false); prev = cur;
+            }
+            var gone = mode === "collapse" ? start + dur + (key.hold != null ? key.hold : 2 * FR) : hide;
+            if (j === 0 && gone != null) SH.step(tl, ch, { opacity: 1 }, { opacity: 0 }, gone, false);
+            end = Math.max(end, start + dur);
+          } else {
+            var tx = tc[i][0] - half, ty = tc[i][1] - half;
+            SH.step(tl, ch, { opacity: 0, x: tx, y: ty, scale: from }, { opacity: 1, x: tx, y: ty, scale: from }, at, false);
+            if (from !== 1) {
+              var sp = SH.pictures(at, at + (key.settle != null ? key.settle : 3 * FR), cad), ps = from;
+              for (var r = 1; r < sp.length; r++) {
+                var s = from + (1 - from) * ease((sp[r] - at) / (sp[sp.length - 1] - at));
+                SH.step(tl, ch, { scale: ps }, { scale: s }, sp[r], false); ps = s;
+              }
+            }
+            if (hide != null) SH.step(tl, ch, { opacity: 1 }, { opacity: 0 }, hide, false);
+            end = Math.max(end, at + FR);
+          }
+        }
+      }
+      return end;
+    }
+
+    /* Preset: measured rectangles per frame, pooled nodes. */
+    function rectState(r) {
+      if (!r) return { opacity: 0 };
+      return { opacity: 1, left: r[0], top: r[1], width: r[2] - r[0], height: r[3] - r[1],
+               backgroundImage: "linear-gradient(" + r[4] + "," + (r[5] || r[4]) + ")" };
+    }
+    function buildFrames(layer, spec) {
+      var fr = spec.frames || {}, n = 0;
+      for (var f in fr) n = Math.max(n, fr[f].length);
+      var first = fr["0"] || [];
+      for (var i = 0; i < n; i++) {
+        var d = document.createElement("div"); d.className = "es-chip es-chip-r";
+        var st = rectState(first[i]);
+        d.style.cssText = "position:absolute;left:" + (st.left || 0) + "px;top:" + (st.top || 0) + "px;width:" + (st.width || 24) + "px;height:" + (st.height || 24) + "px;opacity:" + st.opacity + ";" + (st.backgroundImage ? "background-image:" + st.backgroundImage + ";" : "");
+        layer.appendChild(d);
+      }
+    }
+    function animateFrames(tl, layer, t0, spec, sc) {
+      var fr = spec.frames || {}, nodes = layer.querySelectorAll(".es-chip-r"), last = 0, FR = SH.FR;
+      sc = sc || 1;
+      for (var f in fr) last = Math.max(last, Number(f));
+      var endF = spec.f1 != null ? spec.f1 : last + 1;
+      for (var i = 0; i < nodes.length; i++) {
+        var prev = rectState((fr["0"] || [])[i]);
+        for (var f2 = 1; f2 <= endF; f2++) {
+          var cur = rectState((fr[String(f2)] || [])[i]);
+          if (JSON.stringify(cur) === JSON.stringify(prev)) continue;
+          var a = {}, b = {};
+          if (cur.opacity) { for (var p in cur) { b[p] = cur[p]; a[p] = prev.opacity ? prev[p] : cur[p]; } a.opacity = prev.opacity; }
+          else { a.opacity = prev.opacity; b.opacity = 0; }
+          SH.step(tl, nodes[i], a, b, t0 + (f2 - 0.5) * FR, false);
+          prev = cur;
+        }
+      }
+      return t0 + endF * FR;
+    }
+
+    /* Box helpers so any block can wrap a target: chip centres sit pad px
+       outside a target rectangle [x, y, w, h]. pad is a number or [px, py]. */
+    function around(rect, pad) {
+      var px = Array.isArray(pad) ? pad[0] : (pad || 0), py = Array.isArray(pad) ? pad[1] : (pad || 0);
+      return [rect[0] - px, rect[1] - py, rect[0] + rect[2] + px, rect[1] + rect[3] + py];
+    }
+
     return {
-      /* Append the chips for every key to layer (a full-frame node). */
-      build: function (layer, keys, props) {
-        var s = scaleOf(props);
-        for (var k = 0; k < keys.length; k++) {
-          var copies = (k === 0 || keys[k].mode === "jump" || keys[k].mode === "pop") ? 1 : LAGS.length;
-          for (var i = 0; i < 4; i++) for (var j = 0; j < copies; j++) {
-            var c = document.createElement("div");
-            c.className = "sh-chip";
-            c.setAttribute("data-key", k); c.setAttribute("data-corner", i); c.setAttribute("data-copy", j);
-            var w = (keys[k].chip_w || keys[k].chip || 24) * s, h = (keys[k].chip_h || keys[k].chip || 24) * s;
-            c.style.cssText = "position:absolute;left:0;top:0;opacity:0;width:" + w + "px;height:" + h + "px;background:" + colorOf(keys[k], i);
-            layer.appendChild(c);
-          }
+      build: function (layer, spec, props) { if (spec.frames) buildFrames(layer, spec); else buildKeys(layer, spec, props); },
+      animate: function (tl, layer, t0, spec, props) { return spec.frames ? animateFrames(tl, layer, t0, spec) : animateKeys(tl, layer, t0, spec, props); },
+      around: around
+    };
+  })();
+  /* END es-select */
+
+  window.__elements = window.__elements || {};
+  window.__elements["select-handles"] = (function () {
+    var SH = window.__esShared, SEL = window.__esSelect;
+    /* BEGIN presets */
+    var PRESETS = {"replica-s1-cards":{"source":"s1 shots 1 to 7, source frames 0 to 78","f1":79,"frames":{"0":[[808.5,418,832.5,442,"#d3c6d1","#d1c5cd"],[808.5,639,834.5,663,"#b99082","#b98b7d"],[1085.5,418,1109.5,442,"#cbc2ca","#cac1c8"],[1086.5,639,1109.5,663,"#a16253","#9a604f"]],"1":[[808.5,418,832.5,442,"#d3c6d1","#d1c5cd"],[808.5,639,832.5,663,"#b99286","#b98c7e"],[1085.5,418,1109.5,442,"#cbc2ca","#cac1c8"],[1086.5,639,1109.5,663,"#a16254","#9a6152"]],"2":[[808.5,418,832.5,442,"#d3c6d1","#d1c5cd"],[808.5,639,832.5,663,"#b99286","#b88b7e"],[1085.5,418,1109.5,442,"#cbc2ca","#cac1c8"],[1086.5,639,1109.5,663,"#a06154","#9a6152"]],"3":[[808.5,418,832.5,442,"#d3c6d1","#d1c5cd"],[808.5,639,832.5,663,"#ba9184","#b98c7e"],[1085.5,418,1109.5,442,"#cbc2ca","#cac1c8"],[1086.5,639,1109.5,663,"#a06154","#966254"]],"4":[[808.5,418,832.5,442,"#d3c6d1","#d1c5cd"],[808.5,639,831.5,663,"#b99284","#ba8c7e"],[1085.5,418,1109.5,442,"#cbc2ca","#cac1c8"],[1086.5,639,1109.5,663,"#9f6153","#99604e"]],"5":[[807.5,418,832.5,442,"#d3c6d1","#d1c5cd"],[808.5,639,831.5,663,"#b99284","#bb8e80"],[1085.5,418,1109.5,442,"#cbc2ca","#cac1c8"],[1086.5,639,1109.5,663,"#a06253","#9a604f"]],"6":[[807.5,418,832.5,442,"#d3c6d1","#d1c5cd"],[807.5,639,832.5,663,"#b79082","#be9081"],[1085.5,418,1110.5,442,"#cbc2ca","#cac1c8"],[1086.5,639,1111.5,663,"#a06152","#966050"]],"7":[[804.5,418,832.5,442,"#d3c7d1","#d1c5cd"],[804.5,639,831.5,663,"#b18b7d","#c19484"],[1086.5,418,1113.5,442,"#cbc1ca","#cac1c8"],[1086.5,639,1113.5,663,"#9d6252","#966050"]],"8":[[804.5,418,832.5,442,"#d3c7d1","#d1c5cd"],[804.5,639,831.5,663,"#b18b7d","#c19484"],[1086.5,418,1113.5,442,"#cbc1c9","#cac1c8"],[1086.5,639,1113.5,663,"#9d6252","#98604f"]],"9":[[797.5,418,830.5,442,"#d3c7d1","#d1c5ce"],[797.5,639,830.5,663,"#b0897b","#c09886"],[1087.5,418,1121.5,442,"#cbc1c9","#c8c2c7"],[1088.5,639,1121.5,663,"#9b6050","#9b6352"]],"10":[[745.5,418,770.5,442,"#c4a67c","#c6a77b"],[772.5,418,827.5,442,"#caa278","#c5a57e"],[745.5,639,770.5,663,"#cba681","#c4aa76"],[772.5,639,827.5,663,"#cda882","#c2a478"],[1092.5,418,1173.5,442,"#c09166","#bc9464"],[1092.5,639,1173.5,663,"#c59e74","#c19f72"]],"11":[[745.5,418,770.5,442,"#c4a67c","#c6a77b"],[772.5,418,827.5,442,"#caa278","#c5a57e"],[745.5,639,770.5,663,"#cba681","#c4aa76"],[772.5,639,827.5,663,"#cda782","#c2a478"],[1092.5,418,1173.5,442,"#c09166","#bd9364"],[1092.5,639,1173.5,663,"#c59e74","#c09f72"]],"12":[[694.5,418,750.5,442,"#caa780","#caa486"],[768.5,418,813.5,442,"#caa57c","#c5a57c"],[693.5,639,751.5,663,"#c9a883","#caae81"],[768.5,639,815.5,663,"#cba881","#c3a676"],[1104.5,418,1151.5,442,"#c19166","#be9567"],[1168.5,418,1224.5,442,"#bf8e60","#b99061"],[1104.5,639,1151.5,663,"#c4a175","#bea173"],[1168.5,639,1224.5,663,"#c09a6e","#c69c71"]],"13":[[686.5,418,727.5,442,"#cba77f","#cea788"],[686.5,639,728.5,663,"#ccab86","#cdae84"],[1190.5,418,1231.5,442,"#b88d61","#b99061"],[1190.5,639,1231.5,663,"#bf976d","#c99c72"]],"14":[[686.5,418,727.5,442,"#cba77f","#cea788"],[686.5,639,728.5,663,"#ccab86","#cead84"],[1190.5,418,1231.5,442,"#b88c61","#b98f60"],[1190.5,639,1231.5,663,"#be966c","#c99c72"]],"15":[[682.5,418,713.5,442,"#cba880","#cda787"],[682.5,639,713.5,663,"#cead8a","#cfaf86"],[1204.5,418,1235.5,442,"#b88d62","#b99061"],[1204.5,639,1235.5,663,"#bc966c","#c89d72"]],"16":[[682.5,418,708.5,442,"#cba880","#cea786"],[682.5,639,709.5,663,"#cdac88","#cfaf86"],[1209.5,418,1235.5,442,"#b88e63","#b99060"],[1208.5,639,1235.5,663,"#bb9366","#ca9c70"]],"17":[[682.5,418,708.5,442,"#cba880","#cda786"],[682.5,639,709.5,663,"#cdac88","#cfb086"],[1209.5,418,1235.5,442,"#b88d63","#b99060"],[1208.5,639,1236.5,663,"#ba9366","#c99d70"]],"18":[[680.5,418,707.5,442,"#cba880","#cda787"],[680.5,639,707.5,663,"#cdac8a","#ceb089"],[1210.5,418,1237.5,442,"#b88d63","#b99060"],[1210.5,639,1237.5,663,"#b99367","#c89d70"]],"19":[[676.5,418,706.5,442,"#cba880","#cba687"],[677.5,639,707.5,663,"#ceac89","#cfb088"],[1210.5,418,1241.5,442,"#b78d62","#b99061"],[1210.5,639,1240.5,663,"#bc9469","#c89d6f"]],"20":[[676.5,418,706.5,442,"#cba880","#cba687"],[677.5,639,707.5,663,"#cdac89","#cfb089"],[1211.5,418,1241.5,442,"#b78d62","#b99061"],[1210.5,639,1240.5,663,"#bb946a","#c79d6f"]],"21":[[668.5,418,704.5,442,"#cba785","#cea788"],[669.5,639,705.5,663,"#ceae8c","#cfb086"],[1213.5,418,1248.5,442,"#b98e64","#b99060"],[1212.5,639,1249.5,663,"#bc956b","#c99c70"]],"22":[[650.5,418,699.5,442,"#cba685","#cea889"],[650.5,639,699.5,663,"#cfaf8f","#ceaf86"],[1218.5,418,1267.5,442,"#b88e63","#b99060"],[1218.5,639,1267.5,663,"#c0966e","#c49b71"]],"23":[[650.5,418,699.5,442,"#cba685","#cea889"],[650.5,639,699.5,663,"#cfaf8f","#ceaf86"],[1218.5,418,1267.5,442,"#b88e63","#b99060"],[1218.5,639,1267.5,663,"#c0966e","#c49b71"]],"24":[[504.5,418,558.5,442,"#57443f","#59433f"],[607.5,418,686.5,442,"#5e5045","#5d554a"],[504.5,639,558.5,663,"#e9dae8","#e8dbe3"],[607.5,639,686.5,663,"#ebdae9","#e7dde7"],[1231.5,418,1311.5,442,"#bbadbc","#bdaebe"],[1359.5,418,1413.5,442,"#c9adbe","#c9afbe"],[1231.5,639,1311.5,663,"#99b0c8","#99b0c9"],[1359.5,639,1413.5,663,"#e5d7e7","#dfdae3"]],"25":[[475.5,418,550.5,442,"#564141","#56403c"],[592.5,418,651.5,442,"#574540","#584642"],[475.5,639,550.5,663,"#ebd8e8","#ebd9e2"],[592.5,639,651.5,663,"#ecd9e9","#e7dde7"],[1267.5,418,1326.5,442,"#c4b2c2","#c0afbe"],[1367.5,418,1442.5,442,"#cbadbe","#cbb0be"],[1267.5,639,1326.5,663,"#a1b3d0","#a2b4d0"],[1367.5,639,1442.5,663,"#e8d7e7","#e2dae3"]],"26":[[475.5,418,550.5,442,"#574141","#56403c"],[592.5,418,651.5,442,"#574440","#584742"],[475.5,639,550.5,663,"#ecd7e6","#ebd9e2"],[592.5,639,651.5,663,"#edd8e9","#e7dde7"],[1267.5,418,1326.5,442,"#c3b2c2","#c0afbe"],[1367.5,418,1442.5,442,"#cbadbe","#cab0be"],[1267.5,639,1326.5,663,"#a1b3d0","#a2b4d0"],[1367.5,639,1442.5,663,"#e8d6e7","#e3d9e3"]],"27":[[465.5,418,510.5,442,"#544341","#554440"],[464.5,639,510.5,663,"#ebd5e5","#edd7e3"],[1407.5,418,1453.5,442,"#d1b1c3","#dbc0ce"],[1408.5,639,1453.5,663,"#e7d6e5","#e3d9e3"]],"28":[[460.5,418,493.5,442,"#53443f","#514642"],[460.5,639,493.5,663,"#ead4e4","#ecd7e3"],[1424.5,418,1458.5,442,"#d5b6c9","#e2cada"],[1424.5,639,1458.5,663,"#e7d6e3","#e3d9e3"]],"29":[[460.5,418,493.5,442,"#524440","#514542"],[460.5,639,493.5,663,"#ead3e4","#edd7e3"],[1424.5,418,1458.5,442,"#d6b6ca","#e3cada"],[1424.5,639,1458.5,663,"#e7d6e3","#e3d9e3"]],"30":[[458.5,418,485.5,442,"#51453e","#514540"],[458.5,639,486.5,663,"#ead4e4","#ebd8e4"],[1432.5,418,1460.5,442,"#d9bccd","#e6d0df"],[1432.5,639,1460.5,663,"#e8d7e5","#e3d9e4"]],"31":[[458.5,418,482.5,442,"#52443e","#514541"],[458.5,639,483.5,663,"#ead4e4","#ebd8e4"],[1435.5,418,1460.5,442,"#dabcd1","#e5d0df"],[1435.5,639,1460.5,663,"#e8d6e5","#e3d9e3"]],"32":[[458.5,418,482.5,442,"#52433d","#4f443f"],[458.5,639,483.5,663,"#e9d4e4","#ebd8e4"],[1435.5,418,1460.5,442,"#d7b9d1","#e4cedc"],[1435.5,639,1460.5,663,"#e8d6e5","#e3d9e1"]],"33":[[458.5,418,484.5,442,"#52433d","#4f443f"],[458.5,639,484.5,663,"#ead4e4","#ecd8e4"],[1434.5,418,1460.5,442,"#d8b9d1","#e4cddc"],[1434.5,639,1460.5,663,"#ead6e5","#e3d9e2"]],"34":[[459.5,418,488.5,442,"#53433d","#50443f"],[459.5,639,488.5,663,"#ebd4e5","#eed7e3"],[1429.5,418,1459.5,442,"#d5b3cc","#e1c8d7"],[1429.5,639,1459.5,663,"#e8d5e4","#e3d9e3"]],"35":[[459.5,418,488.5,442,"#53423d","#50443e"],[459.5,639,488.5,663,"#ebd4e5","#eed7e3"],[1429.5,418,1459.5,442,"#d5b3cc","#e1c8d8"],[1429.5,639,1459.5,663,"#ead4e4","#e3d9e3"]],"36":[[462.5,418,498.5,442,"#52423d","#53433d"],[461.5,639,498.5,663,"#ebd4e5","#efd6e4"],[1420.5,418,1456.5,442,"#d2b0c8","#dcc0d3"],[1420.5,639,1456.5,663,"#e8d6e4","#e3d9e3"]],"37":[[468.5,418,527.5,442,"#455770","#465a70"],[534.5,418,558.5,442,"#43485b","#3e4a61"],[468.5,639,527.5,663,"#546b88","#576b85"],[534.5,639,558.5,663,"#4d6279","#4a667d"],[1359.5,418,1383.5,442,"#c7b6bd","#c2bcc2"],[1390.5,418,1450.5,442,"#c8bbc2","#c6bdc2"],[1359.5,639,1383.5,663,"#c5bebe","#c4bfbf"],[1390.5,639,1450.5,663,"#c8c0c1","#c6c0bf"]],"38":[[468.5,418,527.5,442,"#455770","#465a70"],[534.5,418,558.5,442,"#43485b","#3e4a61"],[468.5,639,527.5,663,"#546b88","#576b85"],[534.5,639,558.5,663,"#4d6279","#4a667d"],[1359.5,418,1383.5,442,"#c7b6bd","#c2bcc2"],[1390.5,418,1450.5,442,"#c8bbc2","#c6bdc2"],[1359.5,639,1383.5,663,"#c5bebe","#c4bfbf"],[1390.5,639,1450.5,663,"#c8c0c1","#c6c0bf"]],"39":[[483.5,418,532.5,442,"#374354","#3a4157"],[558.5,418,599.5,442,"#2e304b","#313345"],[483.5,639,532.5,663,"#4c617c","#4a667f"],[558.5,639,599.5,663,"#3c4d66","#404e6b"],[1298.5,418,1360.5,442,"#c1b9ba","#c2bbbb"],[1385.5,418,1435.5,442,"#c8b8c1","#c5bdc2"],[1298.5,639,1360.5,663,"#e0d2d3","#ddd5d6"],[1385.5,639,1435.5,663,"#cac1c2","#cbc1c0"]],"40":[[584.5,418,628.5,442,"#e1d5da","#e1d6da"],[584.5,639,629.5,663,"#5c5f75","#272b3c"],[1289.5,418,1334.5,442,"#c0b9b9","#cac4c5"],[1289.5,639,1334.5,663,"#e0d3d4","#ddd4d6"]],"41":[[584.5,418,628.5,442,"#e1d5da","#e1d6da"],[584.5,639,629.5,663,"#5c5f75","#272b3c"],[1289.5,418,1334.5,442,"#c0b9b9","#cac4c5"],[1289.5,639,1334.5,663,"#dfd3d4","#ddd4d6"]],"42":[[600.5,418,633.5,442,"#e6dadd","#e4dbe0"],[600.5,639,633.5,663,"#f0e3e8","#ece3e5"],[1284.5,418,1317.5,442,"#c4bbba","#d1cacd"],[1285.5,639,1317.5,663,"#ddd2d6","#dfd3d7"]],"43":[[607.5,418,635.5,442,"#ece3e4","#ebe3e5"],[607.5,639,635.5,663,"#f0e2e8","#ede4e5"],[1283.5,418,1310.5,442,"#d0c9c9","#d1cace"],[1283.5,639,1311.5,663,"#dbd2d5","#dfd2d6"]],"44":[[607.5,418,635.5,442,"#ece3e4","#ebe3e5"],[607.5,639,635.5,663,"#f1e2e8","#ede4e5"],[1283.5,418,1310.5,442,"#d0c9c8","#d1cace"],[1282.5,639,1311.5,663,"#dcd2d4","#dfd2d6"]],"45":[[610.5,418,635.5,442,"#ede3e2","#eae4e4"],[610.5,639,635.5,663,"#f1e2e8","#ece4e6"],[1282.5,418,1307.5,442,"#d3cccb","#d1cacd"],[1282.5,639,1307.5,663,"#dcd3d4","#ded2d6"]],"46":[[611.5,418,636.5,442,"#ede2e4","#eae3e5"],[611.5,639,636.5,663,"#f0e1e8","#ede3e5"],[1281.5,418,1307.5,442,"#d4cccb","#d1cace"],[1281.5,639,1307.5,663,"#dbd3d5","#e1d2d6"]],"47":[[611.5,418,636.5,442,"#ede2e4","#eae3e5"],[611.5,639,636.5,663,"#f0e1e8","#ede3e5"],[1281.5,418,1307.5,442,"#d4cccb","#d1cace"],[1281.5,639,1307.5,663,"#dbd3d5","#dfd2d5"]],"48":[[611.5,418,639.5,442,"#ede2e4","#ebe3e4"],[611.5,639,639.5,663,"#f3e1e8","#ede3e4"],[1278.5,418,1306.5,442,"#d4cdcb","#d1cace"],[1278.5,639,1306.5,663,"#dfd3d4","#e1d3d5"]],"49":[[613.5,418,646.5,442,"#ede2e3","#eae3e3"],[613.5,639,646.5,663,"#f4e1e9","#ece3e4"],[1272.5,418,1304.5,442,"#d5cece","#d1cace"],[1272.5,639,1305.5,663,"#dcd3d4","#dfd3d5"]],"50":[[613.5,418,646.5,442,"#ede2e3","#ebe3e3"],[613.5,639,646.5,663,"#f4e1e9","#ede3e4"],[1272.5,418,1304.5,442,"#d6cfce","#d1cacf"],[1272.5,639,1305.5,663,"#ded4d5","#e0d3d6"]],"51":[[617.5,418,663.5,442,"#ede2e5","#ebe4e5"],[617.5,639,663.5,663,"#f4e1e9","#ece3e4"],[1254.5,418,1300.5,442,"#d6cfce","#d1cacf"],[1254.5,639,1300.5,663,"#dfd3d4","#e0d3d5"]],"52":[[627.5,418,692.5,442,"#b7c3d3","#b7c3d4"],[706.5,418,751.5,442,"#b8c4d6","#b8c4d6"],[627.5,639,692.5,663,"#093962","#1b5078"],[706.5,639,751.5,663,"#07375e","#3b7c9d"],[1166.5,418,1212.5,442,"#b7c9dc","#b1c4db"],[1224.5,418,1291.5,442,"#b5c8da","#afc5d9"],[1166.5,639,1212.5,663,"#9fbfd5","#abc4e2"],[1224.5,639,1291.5,663,"#afc4db","#b2c5dc"]],"53":[[627.5,418,692.5,442,"#b7c3d3","#b7c3d4"],[706.5,418,751.5,442,"#b8c4d6","#b8c4d6"],[627.5,639,692.5,663,"#093962","#1b5078"],[706.5,639,751.5,663,"#07375e","#3b7c9d"],[1166.5,418,1212.5,442,"#b7c9dc","#b1c4db"],[1224.5,418,1291.5,442,"#b5c8da","#afc5d9"],[1166.5,639,1212.5,663,"#9fbfd5","#abc4e2"],[1224.5,639,1291.5,663,"#afc4db","#b2c5dc"]],"54":[[709.5,418,763.5,442,"#b8c3d6","#b7c4d6"],[709.5,639,763.5,663,"#08385f","#4a8aa9"],[1154.5,418,1209.5,442,"#b6c8db","#b1c4d9"],[1154.5,639,1209.5,663,"#9ebed5","#a8c2e0"]],"55":[[734.5,418,768.5,442,"#b7c2d3","#b7c3d6"],[734.5,639,768.5,663,"#0a3c63","#5a96b9"],[1149.5,418,1183.5,442,"#b5c7da","#b1c5d7"],[1149.5,639,1183.5,663,"#9cbed4","#a6c0df"]],"56":[[734.5,418,768.5,442,"#b7c3d3","#b7c3d6"],[734.5,639,768.5,663,"#093c64","#5895b7"],[1149.5,418,1183.5,442,"#b5c7da","#b1c5d7"],[1149.5,639,1183.5,663,"#9cbed5","#a6c0df"]],"57":[[742.5,418,770.5,442,"#b6c2d3","#b7c2d4"],[742.5,639,770.5,663,"#0a3c65","#5b97b9"],[1147.5,418,1175.5,442,"#b5c7da","#b1c4d9"],[1147.5,639,1175.5,663,"#9cbcd4","#a5bfdf"]],"58":[[745.5,418,771.5,442,"#b7c2d3","#b7c2d5"],[745.5,639,771.5,663,"#0a3c63","#5995b4"],[1147.5,418,1172.5,442,"#b4c7da","#b1c4d9"],[1146.5,639,1173.5,663,"#9cbbd4","#a6c0df"]],"59":[[745.5,418,771.5,442,"#b7c2d3","#b7c2d5"],[745.5,639,771.5,663,"#093a62","#5894b2"],[1147.5,418,1172.5,442,"#b5c7db","#b1c4d9"],[1146.5,639,1173.5,663,"#9abbd4","#a5bfdd"]],"60":[[745.5,418,771.5,442,"#b6c3d3","#b7c2d4"],[745.5,639,771.5,663,"#0a3962","#5390b2"],[1147.5,418,1172.5,442,"#b5c7da","#b1c4d8"],[1146.5,639,1172.5,663,"#9bbbd4","#a5bfdd"]],"61":[[741.5,418,771.5,442,"#b5c3d3","#b6c3d4"],[741.5,639,771.5,663,"#093a62","#5692b5"],[1147.5,418,1177.5,442,"#b4c6da","#b1c4d9"],[1147.5,639,1177.5,663,"#9bbbd4","#a5bfdf"]],"62":[[741.5,418,771.5,442,"#b6c4d4","#b7c3d4"],[741.5,639,771.5,663,"#0a3a62","#5892b4"],[1147.5,418,1177.5,442,"#b4c6da","#b1c4d9"],[1147.5,639,1177.5,663,"#9cbcd4","#a5bfde"]],"63":[[730.5,418,768.5,442,"#b6c3d4","#b7c3d6"],[730.5,639,768.5,663,"#0a3962","#548eb0"],[1150.5,418,1188.5,442,"#b2c6dc","#b1c4d7"],[1150.5,639,1188.5,663,"#9abdd5","#a5c2df"]],"64":[[698.5,418,761.5,442,"#e5e5e5","#e4e4e4"],[698.5,639,761.5,663,"#e4e4e4","#e5e5e5"],[1157.5,418,1219.5,442,"#e3e4e3","#e2e2e2"],[1157.5,639,1219.5,663,"#e3e3e3","#e3e3e3"]],"65":[[698.5,418,761.5,442,"#e5e5e5","#e4e4e4"],[698.5,639,761.5,663,"#e4e4e4","#e5e5e5"],[1157.5,418,1219.5,442,"#e3e4e3","#e2e2e2"],[1157.5,639,1219.5,663,"#e3e3e3","#e3e3e3"]],"66":[[536.5,418,599.5,442,"#e4e4e4","#e3e3e3"],[644.5,418,668.5,442,"#e1e1e1","#e3e3e3"],[676.5,418,744.5,442,"#e4e5e5","#e4e4e4"],[536.5,639,599.5,663,"#e4e4e4","#e9e9e9"],[644.5,639,668.5,663,"#e2e2e2","#e3e3e3"],[676.5,639,744.5,663,"#e4e4e4","#e5e5e5"],[1174.5,418,1242.5,442,"#e3e3e3","#e2e2e2"],[1249.5,418,1273.5,442,"#e0e0e0","#e4e3e3"],[1318.5,418,1382.5,442,"#e0e0e0","#dedede"],[1174.5,639,1242.5,663,"#e3e3e3","#e4e4e4"],[1249.5,639,1273.5,663,"#e2e2e2","#e2e2e2"],[1318.5,639,1382.5,663,"#e1e1e1","#e2e2e2"]],"67":[[515.5,418,593.5,442,"#e3e3e3","#e3e3e3"],[515.5,639,593.5,663,"#e4e4e4","#ebebeb"],[1324.5,418,1403.5,442,"#e0e0e0","#dedede"],[1324.5,639,1403.5,663,"#e1e1e1","#e9e9e9"]],"68":[[515.5,418,593.5,442,"#e3e3e3","#e3e3e3"],[515.5,639,593.5,663,"#e4e4e4","#ebebeb"],[1324.5,418,1403.5,442,"#e0e0e0","#dedede"],[1324.5,639,1403.5,663,"#e1e1e1","#e9e9e9"]],"69":[[506.5,418,547.5,442,"#e3e3e3","#e3e3e3"],[506.5,639,547.5,663,"#ebebeb","#ebebeb"],[1370.5,418,1411.5,442,"#e0e0e0","#dedede"],[1370.5,639,1411.5,663,"#eaeaea","#efefef"]],"70":[[503.5,418,534.5,442,"#e4e4e4","#e3e3e3"],[503.5,639,534.5,663,"#ebebeb","#ebebeb"],[1384.5,418,1414.5,442,"#dedede","#dedede"],[1384.5,639,1414.5,663,"#eeeeee","#efefef"]],"71":[[503.5,418,534.5,442,"#e4e4e4","#e3e3e3"],[503.5,639,534.5,663,"#ebebeb","#ebebeb"],[1384.5,418,1414.5,442,"#dddddd","#dedede"],[1384.5,639,1414.5,663,"#eeeeee","#efefef"]],"72":[[503.5,418,527.5,442,"#e3e3e3","#e3e3e3"],[503.5,639,527.5,663,"#e4e4e4","#e4e4e4"],[1391.5,418,1415.5,442,"#dddddd","#dddddd"],[1391.5,639,1415.5,663,"#e0e0e0","#e0e0e0"],[369.5,384.5,393.5,408.5,"#e3e3e3","#e3e3e3"],[369.5,671.5,393.5,695.5,"#ebebeb","#ebebeb"],[1525.5,384.5,1549.5,408.5,"#dbdadb","#dbdadb"],[1525.5,671.5,1549.5,695.5,"#eeeeee","#eeeeee"]],"73":[[503.5,418,527.5,442,"#e3e3e3","#e3e3e3"],[503.5,639,527.5,663,"#e3e3e3","#e3e3e3"],[1391.5,418,1415.5,442,"#dcdcdc","#dcdcdc"],[1391.5,639,1415.5,663,"#e0e0e0","#e0e0e0"],[369.5,384.5,393.5,408.5,"#e3e3e3","#e3e3e3"],[369.5,671.5,393.5,695.5,"#ebebeb","#ebebeb"],[1525.5,384.5,1549.5,408.5,"#d7d7d9","#d7d7d9"],[1525.5,671.5,1549.5,695.5,"#eeeeee","#eeeeee"]],"74":[[503.5,418,527.5,442,"#e3e3e3","#e3e3e3"],[503.5,639,527.5,663,"#e4e4e4","#e4e4e4"],[1391.5,418,1415.5,442,"#dcdcdc","#dcdcdc"],[1391.5,639,1415.5,663,"#dedede","#dedede"],[369.5,384.5,393.5,408.5,"#e3e3e3","#e3e3e3"],[369.5,671.5,393.5,695.5,"#ebebeb","#ebebeb"],[1525.5,384.5,1549.5,408.5,"#d4d4d5","#d4d4d5"],[1525.5,671.5,1549.5,695.5,"#eeeeee","#eeeeee"]],"75":[[369.5,384.5,393.5,408.5,"#dcdcdc","#dcdcdc"],[369.5,671.5,393.5,695.5,"#ebebeb","#ebebeb"],[1525.5,384.5,1549.5,408.5,"#d2d2d3","#d2d2d3"],[1525.5,671.5,1549.5,695.5,"#e1e0e3","#e1e0e3"]],"76":[[369.5,384.5,393.5,408.5,"#dcdcdc","#dcdcdc"],[369.5,671.5,393.5,695.5,"#dcdcdc","#dcdcdc"],[1525.5,384.5,1549.5,408.5,"#cececf","#cececf"],[1525.5,671.5,1549.5,695.5,"#d2d1d4","#d2d1d4"],[281.5,361.5,305.5,385.5,"#dcdcdc","#dcdcdc"],[281.5,693.5,305.5,717.5,"#dcdcdc","#dcdcdc"],[1614.5,361.5,1638.5,385.5,"#cecccd","#cecccd"],[1614.5,693.5,1638.5,717.5,"#dddddc","#dddddc"]],"77":[[369.5,384.5,393.5,408.5,"#dcdcdc","#dcdcdc"],[369.5,671.5,393.5,695.5,"#dcdcdc","#dcdcdc"],[1525.5,384.5,1549.5,408.5,"#cececf","#cececf"],[1525.5,671.5,1549.5,695.5,"#d2d1d4","#d2d1d4"],[281.5,361.5,305.5,385.5,"#dcdcdc","#dcdcdc"],[281.5,693.5,305.5,717.5,"#dcdcdc","#dcdcdc"],[1614.5,361.5,1638.5,385.5,"#cecccd","#cecccd"],[1614.5,693.5,1638.5,717.5,"#dddddc","#dddddc"]],"78":[[281.5,361.5,305.5,385.5,"#dcdcdc","#dcdcdc"],[281.5,693.5,305.5,717.5,"#dcdcdc","#dcdcdc"],[1614.5,361.5,1638.5,385.5,"#d3d3d3","#d3d3d3"],[1614.5,693.5,1638.5,717.5,"#dddddc","#dddddc"]]}},"shots":{"shot1":[0,9],"shot2":[10,23],"shot3":[24,36],"shot4":[37,51],"shot5":[52,63],"shot6":[64,71],"shot7":[72,78]}};
+    /* END presets */
+
+    /* "replica-s1-shotN" cuts that shot out of the measured s1 run and counts
+       frames from its first frame; "replica-s1-cards" is the whole run. */
+    function preset(name) {
+      if (PRESETS[name]) return PRESETS[name];
+      var m = /^replica-s1-(shot\d)$/.exec(name || "");
+      if (!m || !PRESETS.shots[m[1]]) return null;
+      var r = PRESETS.shots[m[1]], all = PRESETS["replica-s1-cards"].frames, out = {};
+      for (var f = r[0]; f <= r[1]; f++) if (all[String(f)]) out[String(f - r[0])] = all[String(f)];
+      return { frames: out, f1: r[1] - r[0] + 1 };
+    }
+
+    /* General props into an engine spec. Times are seconds after t0 and are
+       multiplied by durScale; key times may come from beats. */
+    function spec(props) {
+      if (props.preset) {
+        var p = preset(props.preset);
+        if (!p) throw new Error("select-handles: unknown preset " + props.preset);
+        var s = SH.fw(props) / 1920;
+        if (Math.abs(s - 1) > 1e-6) {
+          /* a preset in another frame size scales its rectangles from 1920 wide */
+          var sc = {}; for (var f in p.frames) sc[f] = p.frames[f].map(function (r) { return [r[0] * s, r[1] * s, r[2] * s, r[3] * s, r[4], r[5]]; });
+          return { frames: sc, f1: p.f1 };
         }
+        return p;
+      }
+      var ds = props.durScale || 1, FR = SH.FR, beats = props.beats;
+      var src = props.keys || (props.targets || []).map(function (t) { return t; });
+      var keys = src.map(function (t, i) {
+        var box = t.box || SEL.around(t.rect, t.pad != null ? t.pad : (props.pad != null ? props.pad : 0));
+        var tt = t.t != null ? t.t : (beats && beats[i] != null ? beats[i] : i * 0.5);
+        var o = {}; for (var kk in t) o[kk] = t[kk];
+        o.box = box; o.t = tt * (t.t != null ? ds : 1);
+        if (o.dur == null) o.dur = 6 * FR * ds; else o.dur *= ds;
+        if (o.lead != null) o.lead *= ds;
+        if (o.linger != null) o.linger *= ds;
+        if (o.settle != null) o.settle *= ds;
+        return o;
+      });
+      return { keys: keys, chip: props.chip != null ? props.chip : 24 * SH.k(props), color: props.color, colors: props.colors,
+               streak: props.streak, cadence: props.cadence, ease: props.ease, exitAt: props.exitAt };
+    }
+
+    return {
+      /* props (see select-handles.md):
+           preset: "replica-s1-shot1".."replica-s1-shot7" | "replica-s1-cards"
+           keys | targets: [{ t (s), box: [x0, y0, x1, y1] chip centres | rect: [x, y, w, h] + pad,
+                              mode: "pop" | "glide" | "jump" | "collapse", dur, lead, linger,
+                              chip, chip_from, color | colors }]
+           pad (px or [px, py]), chip (px, 24 at 1080), color | colors (tokens or CSS, per corner tl tr bl br),
+           streak (false | { pieces: [[a, b], ...] frames }), cadence ("16" | "twos" | "ones"),
+           ease (token, "snap"), durScale, beats, exitAt */
+      render: function (props) {
+        var el = document.createElement("div");
+        el.className = "el-select-handles";
+        el.style.width = SH.fw(props) + "px"; el.style.height = SH.fh(props) + "px";
+        el.__esSpec = spec(props);
+        SEL.build(el, el.__esSpec, props);
+        return el;
       },
-      /* Tween them. keys[].t are seconds after t0. Returns the settle time. */
-      animate: function (tl, layer, t0, keys, props) {
-        var M = window.__motionExpert, s = scaleOf(props), snap = M.ease("snap"), end = t0;
-        var exitAt = props.exitAt != null ? t0 + props.exitAt : null;
-        for (var k = 0; k < keys.length; k++) {
-          var key = keys[k];
-          var mode = k === 0 ? "pop" : (key.mode || "glide");
-          var w = (key.chip_w || key.chip || 24) * s, h = (key.chip_h || key.chip || 24) * s;
-          var from = key.chip_from ? (key.chip_from * s) / w : 1;
-          var at = t0 + key.t;
-          var nextT = k + 1 < keys.length ? t0 + keys[k + 1].t : exitAt;
-          var dur = (key.dur_frames || 5) * FR;
-          var lead = (key.lead_frames == null ? 1 : key.lead_frames) * FR;
-          var tc = corners(key.box), pc = k > 0 ? corners(keys[k - 1].box) : tc;
-          var hide = nextT;
-          if (k + 1 < keys.length && keys[k + 1].mode === "jump") hide = nextT + (keys[k + 1].linger_frames == null ? 3 : keys[k + 1].linger_frames) * FR;
-          var chips = layer.querySelectorAll('.sh-chip[data-key="' + k + '"]');
-          for (var n = 0; n < chips.length; n++) {
-            var ch = chips[n], i = Number(ch.getAttribute("data-corner")), j = Number(ch.getAttribute("data-copy"));
-            var tx = tc[i][0] * s - w / 2, ty = tc[i][1] * s - h / 2;
-            tl.fromTo(ch, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, at);
-            if (mode === "glide") {
-              var start = at - lead, lag = LAGS[j] * FR;
-              tl.fromTo(ch, { x: pc[i][0] * s - w / 2, y: pc[i][1] * s - h / 2, scale: from }, { x: tx, y: ty, scale: 1, duration: dur, ease: snap, immediateRender: false }, start + lag);
-              if (j > 0) tl.fromTo(ch, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, start + dur + lag);
-            } else {
-              tl.fromTo(ch, { x: tx, y: ty, scale: from }, { x: tx, y: ty, scale: 1, duration: from === 1 ? 0.0001 : (key.settle_frames || 3) * FR, ease: snap, immediateRender: false }, at);
-            }
-            if (hide != null) {
-              var fade = (k === keys.length - 1 && props.fade_frames) ? props.fade_frames * FR : 0.0001;
-              tl.fromTo(ch, { opacity: 1 }, { opacity: 0, duration: fade, ease: "none", immediateRender: false }, hide);
-            }
-          }
-          end = Math.max(end, at + dur + FR);
-        }
-        return end;
+      animate: function (tl, el, t0, props) {
+        return SEL.animate(tl, el, t0, el.__esSpec || spec(props), props);
       }
     };
   })();
-
-  window.__elements = window.__elements || {};
-  window.__elements["select-handles"] = {
-    /* props:
-         keys: [{ t, box: [x0, y0, x1, y1] (chip centres, px at 1920 wide),
-                  chip (px, default 24) or chip_w and chip_h, chip_from (px on landing),
-                  colors: [tl, tr, bl, br] or color (any CSS background),
-                  mode: "glide" (default) | "jump" | "pop",
-                  dur_frames (5), lead_frames (1), linger_frames (3 on a jump),
-                  settle_frames (3, size settle on a jump or pop) }]
-         exitAt: seconds after t0 when the chips disappear; fade_frames to fade instead. */
-    render: function (props) {
-      var el = document.createElement("div");
-      el.className = "el-select-handles";
-      window.__esHandles.build(el, props.keys || [], props);
-      return el;
-    },
-    animate: function (tl, el, t0, props) {
-      return window.__esHandles.animate(tl, el, t0, props.keys || [], props);
-    }
-  };
 </script>

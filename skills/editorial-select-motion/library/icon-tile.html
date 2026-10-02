@@ -1,159 +1,243 @@
 <style>
-  /* icon-tile. A flat violet tile carrying a mark, built in steps on paper:
-     it arrives with the mark printed faintly into it and a slow push in, its
-     corners notch out, the mark turns white and then black, the tile steps up
-     to about twice its size and keeps pushing in, selection chips arrive one
-     corner at a time, glide outward, are pressed black one after another and
-     pulled back in, then glide out again; the tile fades to lavender and the
-     whole group is carried off left by the accelerating camera pan of the
-     giant pass.
-     Source strips: assets/frames/icon-tile-dense.jpg (frames 179 to 192) and
-     assets/frames/lockup-icon-dense.jpg (frames 180 to 221), with
-     assets/frames/giant-word-pass-dense.jpg for the pan (frames 212 to 245).
-     Measured at 1920 x 1080, frames counted from the move's start (source
-     frame 180), tile centred on (960, 540): side 163 px on frame 0 growing to
-     178 px by frame 6 (cubic ease-out over 7 frames); notches 7 percent of
-     the side, pale on frame 3 and paper coloured from frame 4; mark faint
-     (about 12 percent ink) to frame 3, white frames 4 to 6, black from frame
-     7, half the tile's side; a one-frame step to 328 px on frame 10, then
-     growing to 384 px over 22 frames on the same curve; chips 0.088 of the
-     side, appearing 10 px out from each corner (diagonally) on frames 13, 16,
-     18 and 19 (top left, top right, bottom left, bottom right), gliding out to
-     43 px from frames 18, 19.5, 20.5 and 21, pulled back in to about 11 px from frames 27, 27.5, 29.5 and 30 while
-     pressed black on frames 27 to 29, 28 to 30, 28 to 30 and 30 to 32, and gliding out to 45 px from frames 32, 33, 33 and 34; tile colour
-     #A27AE7 stepping to lavender #C4ADE4 on frame 40; the pan starts on frame
-     32.5 and follows x = -37.7 (e^(0.128 t) - 1) px with t in frames, which
-     reaches -2089 px at the cut 31.5 frames later (fitted on the tile and the
-     giant word together, rms 15 px) (written here as an
-     exponential ease). The group (tile, mark, chips) scales as one, so chip
-     offsets are in px at the 384 px side. */
-  .el-icon-tile { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
-  .el-icon-tile .it-pan { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-  .el-icon-tile .it-group { position: absolute; left: 0; top: 0; width: 384px; height: 384px; transform-origin: 50% 50%; opacity: 0; }
-  .el-icon-tile .it-tile { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #A27AE7; }
-  .el-icon-tile .it-notch { position: absolute; width: 14px; height: 14px; background: #EEEEEE; opacity: 0; }
-  .el-icon-tile .it-mark { position: absolute; left: 25%; top: 25%; width: 50%; height: 50%; }
-  .el-icon-tile .it-mark svg, .el-icon-tile .it-mark img { width: 100%; height: 100%; display: block; }
+  /* icon-tile (block). A flat violet tile carrying a mark slot, built in
+     steps on paper: it arrives with the mark printed faintly into it and a
+     slow push in, its corners notch out, the mark turns white and then black,
+     the tile steps up to about twice its size and keeps pushing in, four
+     handle chips arrive one corner at a time, glide outward, are pressed
+     black one after another and pulled back in, then glide out again; the
+     tile steps to lavender and the whole group is carried off by the
+     accelerating camera pan of the giant pass.
+
+     Source: replica s2 frames 180 to 218 and s3 frames 219 to 243 (strips
+     assets/frames/icon-tile-dense.jpg, lockup-icon-dense.jpg,
+     giant-word-pass-dense.jpg). The film holds this move on its 16 fps
+     picture cadence (source frames 3k+1 and 3k+2 show one picture).
+
+     Two modes. preset "replica-s2-tile" replays the measured per-frame keys
+     of the passing replica (side, centre, chips, mark scale, colours) for 64
+     frames from source frame 180. The general mode builds the same per-frame
+     state from fitted curves at any size, frame and duration scale:
+       side 0.4245 S to 0.4635 S over 7 frames (snap), notches pale on 3 and
+       paper on 4, mark faint to 4, white 4 to 7, black from 7; step to
+       0.849 S on 10, then to S over 22 frames (snap); chips 0.0838 of the
+       side, arriving 10 px (at S 384) out from the corners on 13, 16, 18,
+       19, gliding out to 43 px from 18, 19.5, 20.5, 21 over 6 frames,
+       pressed black on 27, 28, 28, 30 for 3 frames while pulled in to 12 px,
+       gliding out to 45 px from 32, 33, 33, 34; lavender on 40; the pan
+       starts on 32.5 and follows dx (e^(4.032 u) - 1) / (e^4.032 - 1) over
+       31.5 frames, dx -1.088 W (fitted on the tile and the giant word
+       together, rms 15 px).
+     Every step lands half a frame early so the step frame shows the new
+     state; continuous curves are sampled per frame and then held on the
+     cadence. Colours default to tokens.css. */
+  .el-icon-tile { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .el-icon-tile .it-group { position: absolute; left: 0; top: 0; transform-origin: 50% 50%; opacity: 0; }
+  .el-icon-tile .it-tile { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: var(--color-violet, #A27AE7); }
+  .el-icon-tile .it-notch { position: absolute; opacity: 0; background: var(--color-paper, #EEEEEE); }
+  .el-icon-tile .it-mark { position: absolute; transform-origin: 50% 50%; }
   .el-icon-tile .it-mk { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; }
-  .el-icon-tile .it-chip { position: absolute; left: 0; top: 0; width: 34px; height: 34px; opacity: 0; }
+  .el-icon-tile .it-mk svg, .el-icon-tile .it-mk img { width: 100%; height: 100%; display: block; }
+  .el-icon-tile .it-chip { position: absolute; left: 0; top: 0; width: 32px; height: 32px; opacity: 0; transform-origin: 50% 50%; background: var(--color-violet, #A27AE7); }
 </style>
 <script>
   window.__elements = window.__elements || {};
   window.__elements["icon-tile"] = (function () {
     var FR = 1 / 24;
-    function S(props) { return (props.frame && props.frame.w ? props.frame.w : 1920) / 1920; }
-    /* A neutral four-lobed placeholder mark, used when props.mark is absent. */
-    var MARK = '<svg viewBox="0 0 100 100"><g fill="currentColor"><circle cx="50" cy="28" r="17"/><circle cx="50" cy="72" r="17"/><circle cx="28" cy="50" r="17"/><circle cx="72" cy="50" r="17"/></g><circle cx="50" cy="50" r="9" fill="var(--it-bg, #A27AE7)"/></svg>';
-    /* Per corner (tl, tr, bl, br): appear frame, distance on arrival, glides
-       as [start frame, distance px, frames], and the frames it is pressed
-       black [from, until]. */
-    var CHIPS = [
-      { at: 13, d0: 10, glides: [[18, 43, 6], [27, 11, 7], [32, 45, 6]], black: [27, 30] },
-      { at: 16, d0: 10, glides: [[19.5, 43, 6], [27.5, 13, 6], [33, 45, 6]], black: [28, 31] },
-      { at: 18, d0: 10, glides: [[20.5, 43, 6], [29.5, 14, 6], [33, 45, 7]], black: [28, 31] },
-      { at: 19, d0: 9, glides: [[21, 42, 8], [30, 10, 5], [34, 44, 7]], black: [30, 33] }
-    ];
+    var PRESETS = { "replica-s2-tile": {"frames":64,"cadence":"table","cy":540,"base":384,"side":[160.0,168.0,168.0,172.0,174.0,174.0,176.0,176.0,176.0,176.0,326.0,326.0,346.0,352.0,352.0,356.0,362.0,362.0,368.0,370.0,370.0,372.0,374.0,374.0,376.0,377.0,377.0,378.0,380.0,380.0,380.0,381.0,381.0,382.0,384.0,384.0,384.0,384.0,384.0,384,384,384,384,384,384,384,384,384,384,384,384,384,384,384,384,384,384,384,384,384,384,384,384,384],"cx":[960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,960.0,959.5,959.5,960.0,960.0,960.0,960.0,959.5,959.5,957.0,952.0,952.0,944.0,933.0,933.0,919.0,900.0,900.0,877.0,848.0,848.0,813.0,770.0,770.0,719.0,658.0,658.0,585.0,496.0,496.0,388.0,257.0,257.0,95.0,-95.0,-95.0,-330.0,-620.0,-620.0,-970.0],"chips":[[null,null,null,null],[null,null,null,null],[null,null,null,null],[null,null,null,null],[null,null,null,null],[null,null,null,null],[null,null,null,null],[null,null,null,null],[null,null,null,null],[null,null,null,null],[null,null,null,null],[null,null,null,null],[null,null,null,null],[[-188.4,-188.0,29.5,"v"],null,null,null],[[-188.2,-187.9,29.5,"v"],null,null,null],[[-191.7,-191.2,29.83,"v"],null,null,null],[[-193.9,-193.9,30.34,"v"],[191.0,-194.0,30.34,"v"],null,null],[[-193.9,-193.9,30.34,"v"],[191.0,-194.0,30.34,"v"],null,null],[[-196.0,-196.5,30.84,"v"],[193.5,-196.5,30.84,"v"],[-196.5,194.7,30.84,"v"],null],[[-209.6,-210.0,31.01,"v"],[195.5,-198.1,31.01,"v"],[-198.2,196.1,31.01,"v"],[195.1,196.2,31.01,"v"]],[[-209.6,-210.0,31.01,"v"],[195.5,-198.1,31.01,"v"],[-198.2,196.1,31.01,"v"],[195.1,196.2,31.01,"v"]],[[-223.0,-222.5,31.17,"v"],[213.6,-216.9,31.17,"v"],[-203.2,201.2,31.17,"v"],[196.4,197.5,31.17,"v"]],[[-228.5,-228.5,31.34,"v"],[223.5,-226.4,31.34,"v"],[-221.8,219.6,31.34,"v"],[209.5,210.0,31.34,"v"]],[[-228.5,-228.5,31.34,"v"],[223.5,-226.4,31.34,"v"],[-221.8,219.6,31.34,"v"],[209.5,210.0,31.34,"v"]],[[-231.9,-232.0,31.51,"v"],[227.5,-230.6,31.51,"v"],[-228.5,226.4,31.51,"v"],[221.6,223.4,31.51,"v"]],[[-233.0,-233.6,31.59,"v"],[230.1,-232.5,31.59,"v"],[-232.0,229.6,31.59,"v"],[228.0,228.0,31.59,"v"]],[[-233.0,-233.6,31.59,"v"],[230.1,-232.6,31.59,"v"],[-232.0,229.6,31.59,"v"],[228.0,228.0,31.59,"v"]],[[-233.0,-233.0,31.68,"k"],[231.4,-234.5,31.68,"v"],[-234.5,231.5,31.68,"v"],[229.9,231.4,31.68,"v"]],[[-224.0,-224.1,31.84,"k"],[228.0,-231.0,31.84,"k"],[-235.0,233.0,31.84,"k"],[231.5,232.9,31.84,"v"]],[[-224.0,-224.1,31.84,"k"],[228.0,-231.0,31.84,"k"],[-235.0,233.0,31.84,"k"],[231.5,232.9,31.84,"v"]],[[-214.4,-214.5,31.84,"v"],[218.0,-221.5,31.84,"k"],[-228.5,226.0,31.84,"k"],[231.0,232.0,31.84,"k"]],[[-204.3,-203.9,31.93,"v"],[208.0,-210.5,31.93,"v"],[-218.0,216.1,31.93,"v"],[222.4,223.4,31.93,"k"]],[[-204.3,-203.9,31.93,"v"],[208.0,-210.5,31.93,"v"],[-218.0,216.1,31.93,"v"],[222.4,223.4,31.93,"k"]],[[-222.0,-222.5,32.01,"v"],[205.0,-208.5,32.01,"v"],[-207.6,205.6,32.01,"v"],[212.3,213.4,32.01,"v"]],[[-230.6,-230.6,32.18,"v"],[223.5,-226.5,32.18,"v"],[-216.5,215.5,32.18,"v"],[202.1,203.1,32.18,"v"]],[[-230.6,-230.6,32.18,"v"],[223.5,-226.5,32.18,"v"],[-216.5,215.5,32.18,"v"],[202.2,203.2,32.18,"v"]],[[-234.6,-234.6,32.18,"v"],[229.5,-232.5,32.18,"v"],[-229.5,227.5,32.18,"v"],[219.6,221.5,32.18,"v"]],[[-237.4,-237.0,32.18,"v"],[232.5,-236.5,32.18,"v"],[-234.5,232.5,32.18,"v"],[228.5,229.5,32.18,"v"]],[[-237.4,-237.0,32.18,"v"],[232.5,-236.5,32.18,"v"],[-234.5,232.5,32.18,"v"],[228.5,229.5,32.18,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]],[[-238.5,-238.0,31.5,"v"],[235.5,-238.5,31.0,"v"],[-238.0,237.5,31.5,"v"],[235.5,236.5,31.0,"v"]]],"mark_scale":{"7":[0.932,0.94],"10":[1,1]},"notch":{"pale":3,"paper":4,"share":0.07291666666666667},"look":{"faint":0,"white":4,"black":7},"colors":{"tile":"#A27AE7","fade":"#C5AEE5","fade_at":40,"chip":"#A27AE7","chip_fade":"#9F7FE0","chip_press":"#0A0A0A","notch_pale":"#C9B3EE","notch":"#EEEEEE","notch_late":"#F1F1F1","ink":"#0A0A0A","ink_late":"#020202","white":"#F6F3FA","faint":"rgba(70, 30, 120, 0.13)"},"late_at":39} };
+    /* A neutral placeholder mark for an empty slot: four lobes, clearly not a logo. */
+    var MARK = '<svg viewBox="0 0 100 100"><g fill="currentColor"><circle cx="50" cy="28" r="17"/><circle cx="50" cy="72" r="17"/><circle cx="28" cy="50" r="17"/><circle cx="72" cy="50" r="17"/></g></svg>';
     var DIRS = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
-    function panEase(K) { var d = Math.exp(K) - 1; return function (u) { return (Math.exp(K * u) - 1) / d; }; }
+    function frameOf(props) { return props.frame && props.frame.w ? props.frame : { w: 1920, h: 1080 }; }
+    function preset(props) { return props.preset ? PRESETS[props.preset] || null : null; }
+    function baseSide(props) {
+      var P = preset(props); if (P) return P.base;
+      return props.size || Math.round(0.3556 * frameOf(props).h);
+    }
+    /* Colours: a tokens.json palette name ("violet") or any CSS colour. Steps
+       need concrete values, so names resolve against the palette here. */
+    function col(v) {
+      var M = window.__motionExpert, pal = (M && M.tokens && M.tokens.palette) || {};
+      return pal[v] || v;
+    }
+    /* The mark slot: inline SVG markup, or { svg } / { src, fit, scale, x, y }. */
+    function slot(props) {
+      var m = props.mark, o = { html: MARK, scale: 0.5, x: 0.5, y: 0.5, fit: "contain", img: false };
+      if (typeof m === "string") { if (/^\s*</.test(m)) o.html = m; else { o.html = '<img src="' + m + '" alt="">'; o.img = true; } }
+      else if (m && typeof m === "object") {
+        if (m.svg) o.html = m.svg; else if (m.src) { o.html = '<img src="' + m.src + '" alt="" style="object-fit:' + (m.fit || "contain") + '">'; o.img = true; }
+        if (m.scale) o.scale = m.scale; if (m.x != null) o.x = m.x; if (m.y != null) o.y = m.y;
+      }
+      return o;
+    }
+    function snapEase() { var M = window.__motionExpert; return M ? M.ease("snap") : function (u) { return 1 - Math.pow(1 - u, 3); }; }
+    function cl(u) { return u < 0 ? 0 : u > 1 ? 1 : u; }
+
+    /* Per-frame state from the preset's measured keys. */
+    function fromPreset(P, props) {
+      var C = Object.assign({}, P.colors, props.colors || {}), out = [];
+      for (var f = 0; f < P.frames; f++) {
+        var late = f >= P.late_at;
+        var look = f >= P.look.black ? "black" : f >= P.look.white ? "white" : "faint";
+        var ms = P.mark_scale; var mk = null;
+        for (var k in ms) if (+k <= f && (mk == null || +k > mk)) mk = +k;
+        var sc = mk == null ? [1, 1] : ms[mk];
+        var fade = f >= C.fade_at;
+        out.push({
+          side: P.side[f], cx: P.cx[f], cy: P.cy,
+          tile: fade ? C.fade : C.tile,
+          notch: f >= P.notch.paper ? (late ? C.notch_late : C.notch) : f >= P.notch.pale ? C.notch_pale : null,
+          nshare: late ? 28 / 384 : 27 / 384,
+          look: look, ink: late ? C.ink_late : C.ink, msx: sc[0], msy: sc[1],
+          chips: P.chips[f].map(function (c) { return c ? [c[0], c[1], c[2], c[3] === "k" ? C.chip_press : (fade ? C.chip_fade : C.chip)] : null; })
+        });
+      }
+      return out;
+    }
+
+    /* Per-frame state from the fitted curves (general mode). */
+    function fromCurves(props, beatsDefault) {
+      var F = frameOf(props), S = baseSide(props), u = S / 384, k = props.scale || 1, snap = snapEase();
+      var keys = Object.assign({}, beatsDefault || {}, props.keys || {});
+      var key = function (n, d) { return keys[n] != null ? keys[n] * 24 : d * k; };
+      var tW = key("white", 4), tB = key("black", 7), tStep = key("step", 10), tCh = key("chips", 13);
+      var tPr = key("press", 27), tOut = key("release", 32), tLav = key("lavender", 40), tPan = key("pan", 32.5);
+      var pan = props.pan === false ? null : Object.assign({ dx: -1.088 * F.w, dy: 0, frames: 31.5, K: 4.032 }, props.pan || {});
+      var panF = pan ? pan.frames * k : 0;
+      var N = props.duration ? Math.round(props.duration * 24) : Math.ceil(Math.max(tLav + 2, pan ? tPan + panF : tOut + 10 * k));
+      var cx0 = props.cx != null ? props.cx : F.w / 2, cy0 = props.cy != null ? props.cy : F.h / 2;
+      var C = Object.assign({ tile: "violet", fade: "lavender", chip: "violet", chip_fade: "violet", chip_press: "ink",
+        notch_pale: "lavender", notch: "paper", ink: "ink", white: "type-light" }, props.colors || {});
+      for (var ck in C) C[ck] = col(C[ck]);
+      var CH = [
+        { at: 0, out: 5, press: 0, pull: 0, rel: 0 },
+        { at: 3, out: 6.5, press: 1, pull: 0.5, rel: 1 },
+        { at: 5, out: 7.5, press: 1, pull: 2.5, rel: 1 },
+        { at: 6, out: 8, press: 3, pull: 3, rel: 2 }
+      ];
+      var chipsOn = props.chips !== false;
+      var out = [];
+      for (var f = 0; f < N; f++) {
+        var side = f < tStep ? S * (0.4245 + (0.4635 - 0.4245) * snap(cl(f / (7 * k)))) : S * (0.849 + (1 - 0.849) * snap(cl((f - tStep) / (22 * k))));
+        var px = 0, py = 0;
+        if (pan && f >= tPan) { var q = cl((f - tPan) / panF), e = (Math.exp(pan.K * q) - 1) / (Math.exp(pan.K) - 1); px = pan.dx * e; py = pan.dy * e; }
+        var fade = f >= tLav, chips = [null, null, null, null];
+        if (chipsOn && f >= tStep) for (var c = 0; c < 4; c++) {
+          var g = CH[c], at = tCh + g.at * k;
+          if (f < at) continue;
+          /* the distance runs leg by leg: out to 43, in to 12, out to 45 (px at S 384) */
+          var d = 10 * u, legs = [[tCh + g.out * k, 6 * k, 43 * u], [tPr + g.pull * k, 6 * k, 12 * u], [tOut + g.rel * k, 6.5 * k, 45 * u]];
+          for (var l = 0; l < legs.length; l++) { var L = legs[l]; if (f >= L[0]) d = d + (L[2] - d) * snap(cl((f - L[0]) / L[1])); }
+          var pr = f >= tPr + g.press * k && f < tPr + (g.press + 3) * k;
+          var hs = side / 2 + d;
+          chips[c] = [DIRS[c][0] * hs, DIRS[c][1] * hs, 0.0838 * side, pr ? C.chip_press : (fade ? C.chip_fade : C.chip)];
+        }
+        out.push({
+          side: side, cx: cx0 + px, cy: cy0 + py, tile: fade ? C.fade : C.tile,
+          notch: f >= tW ? C.notch : f >= 3 * k ? C.notch_pale : null, nshare: 27 / 384,
+          look: f >= tB ? "black" : f >= tW ? "white" : "faint", ink: C.ink, msx: 1, msy: 1, chips: chips
+        });
+      }
+      return cadence(out, props.cadence || "16fps", props.phase || 0);
+    }
+    /* Hold the picture: on 16 fps a frame whose index is 2 mod 3 repeats the
+       one before; on twos every odd frame repeats the even one. */
+    function cadence(st, mode, phase) {
+      if (mode === "ones") return st;
+      for (var f = 1; f < st.length; f++) {
+        var a = f + phase;
+        if ((mode === "16fps" && ((a % 3) + 3) % 3 === 2) || (mode === "twos" && a % 2 === 1)) st[f] = st[f - 1];
+      }
+      return st;
+    }
+
     return {
-      /* props: mark (inline SVG markup or an image url; default a neutral
-           placeholder), color (#A27AE7), fade_to (#C4ADE4), cx, cy (960, 540),
-           sizes { a: 163, b: 178, c: 328, d: 384 }, step_frame (10),
-           fade_frame (40), chips (override CHIPS), chips_on (true),
-           pan { frame: 32.5, frames: 31.5, dx: -2089, K: 4.032 } or false,
-           exitAt (seconds after t0). Frames count from t0 at 24 fps. */
+      /* props: preset ("replica-s2-tile") or general mode with size (final
+         side px, default 0.3556 H), cx, cy (frame centre), mark (slot), colors
+         ({ tile, fade, chip, chip_fade, chip_press, notch, notch_pale, ink },
+         token defaults), scale (duration scale, 1 = the film), keys
+         ({ white, black, step, chips, press, release, lavender, pan } in s from
+         t0, each snappable to a beat), beats (s from t0; fill step, chips,
+         press, pan when keys are absent), pan ({ dx, dy, frames, K } or
+         false), chips (false hides them), cadence ("16fps" | "twos" |
+         "ones"), phase (source frame index at t0, for the 16 fps grid),
+         duration (s), exitAt (s from t0). */
       render: function (props) {
-        var s = S(props), el = document.createElement("div");
-        el.className = "el-icon-tile";
-        var pan = document.createElement("div"); pan.className = "it-pan";
+        var F = frameOf(props), B = baseSide(props), sl = slot(props);
+        var el = document.createElement("div"); el.className = "el-icon-tile";
+        el.style.width = F.w + "px"; el.style.height = F.h + "px";
         var g = document.createElement("div"); g.className = "it-group";
-        var cx = props.cx == null ? 960 : props.cx, cy = props.cy == null ? 540 : props.cy;
-        g.style.left = (cx - 192) * s + "px"; g.style.top = (cy - 192) * s + "px";
-        g.style.width = 384 * s + "px"; g.style.height = 384 * s + "px";
-        g.style.setProperty("--it-bg", props.color || "#A27AE7");
-        var tile = document.createElement("div"); tile.className = "it-tile";
-        tile.style.background = props.color || "#A27AE7";
-        g.appendChild(tile);
-        var n = 27 * s, pos = [[0, 0], [384 * s - n, 0], [0, 384 * s - n], [384 * s - n, 384 * s - n]];
-        for (var i = 0; i < 4; i++) {
-          var no = document.createElement("div"); no.className = "it-notch";
-          no.style.left = pos[i][0] + "px"; no.style.top = pos[i][1] + "px"; no.style.width = n + "px"; no.style.height = n + "px";
-          g.appendChild(no);
-        }
+        g.style.width = B + "px"; g.style.height = B + "px";
+        var tile = document.createElement("div"); tile.className = "it-tile"; g.appendChild(tile);
+        for (var i = 0; i < 4; i++) { var n = document.createElement("div"); n.className = "it-notch"; n.setAttribute("data-c", i); g.appendChild(n); }
         var mark = document.createElement("div"); mark.className = "it-mark";
-        var src = props.mark || MARK;
-        var inner = /^\s*</.test(src) ? src : '<img src="' + src + '" alt="">';
-        var looks = [["faint", "rgba(70, 30, 120, 0.13)"], ["white", "#F6F3FA"], ["black", "#0A0A0A"]];
-        for (var k = 0; k < looks.length; k++) {
-          var mk = document.createElement("div"); mk.className = "it-mk"; mk.setAttribute("data-look", looks[k][0]);
-          mk.style.color = looks[k][1]; mk.innerHTML = inner;
+        mark.style.width = sl.scale * B + "px"; mark.style.height = sl.scale * B + "px";
+        mark.style.left = (sl.x * B - sl.scale * B / 2) + "px"; mark.style.top = (sl.y * B - sl.scale * B / 2) + "px";
+        ["faint", "white", "black"].forEach(function (look) {
+          var mk = document.createElement("div"); mk.className = "it-mk"; mk.setAttribute("data-look", look);
+          mk.innerHTML = sl.html;
+          if (sl.img) mk.style.filter = look === "white" ? "brightness(0) invert(1)" : "brightness(0)";
           mark.appendChild(mk);
-        }
-        g.appendChild(mark);
-        if (props.chips_on !== false) {
-          var cs = 34 * s;
-          for (var c = 0; c < 4; c++) for (var col = 0; col < 2; col++) {
-            var ch = document.createElement("div"); ch.className = "it-chip";
-            ch.setAttribute("data-corner", c); ch.setAttribute("data-col", col ? "k" : "v");
-            ch.style.width = cs + "px"; ch.style.height = cs + "px";
-            ch.style.background = col ? "#0A0A0A" : (props.color || "#A27AE7");
-            g.appendChild(ch);
-          }
-        }
-        pan.appendChild(g); el.appendChild(pan);
+        });
+        g.appendChild(mark); el.appendChild(g);
+        for (var c = 0; c < 4; c++) { var ch = document.createElement("div"); ch.className = "it-chip"; ch.setAttribute("data-c", c); el.appendChild(ch); }
         return el;
       },
       animate: function (tl, el, t0, props) {
-        var M = window.__motionExpert, s = S(props), snap = M.ease("snap");
+        var P = preset(props), B = baseSide(props);
+        var bd = {};
+        if (!P && props.beats && props.beats.length && !props.keys) ["step", "chips", "press", "pan"].forEach(function (n, i) { if (props.beats[i] != null) bd[n] = props.beats[i]; });
+        var st = P ? fromPreset(P, props) : fromCurves(props, bd);
+        var C = P ? Object.assign({}, P.colors, props.colors || {}) : null;
         var g = el.querySelector(".it-group"), tile = el.querySelector(".it-tile");
-        var sz = props.sizes || { a: 163, b: 178, c: 328, d: 384 };
-        var step = props.step_frame == null ? 10 : props.step_frame;
-        var T = function (f) { return t0 + f * FR; };
-        tl.fromTo(g, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, t0);
-        tl.fromTo(g, { scale: sz.a / 384 }, { scale: sz.b / 384, duration: 7 * FR, ease: snap, immediateRender: false }, t0);
-        tl.fromTo(g, { scale: sz.c / 384 }, { scale: sz.d / 384, duration: 22 * FR, ease: snap, immediateRender: false }, T(step));
-        var notches = el.querySelectorAll(".it-notch");
-        tl.fromTo(notches, { opacity: 0, backgroundColor: "#C9B3EE" }, { opacity: 1, backgroundColor: "#C9B3EE", duration: 0.0001, ease: "none", immediateRender: false }, T(3));
-        tl.fromTo(notches, { backgroundColor: "#C9B3EE" }, { backgroundColor: "#EEEEEE", duration: 0.0001, ease: "none", immediateRender: false }, T(4));
-        var mk = function (k) { return el.querySelector('.it-mk[data-look="' + k + '"]'); };
-        tl.fromTo(mk("faint"), { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, t0);
-        tl.fromTo(mk("faint"), { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, T(4));
-        tl.fromTo(mk("white"), { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, T(4));
-        tl.fromTo(mk("white"), { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, T(7));
-        tl.fromTo(mk("black"), { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, T(7));
-        var fadeF = props.fade_frame == null ? 40 : props.fade_frame;
-        tl.fromTo(tile, { backgroundColor: props.color || "#A27AE7" }, { backgroundColor: props.fade_to || "#C4ADE4", duration: 0.0001, ease: "none", immediateRender: false }, T(fadeF));
-        if (props.chips_on !== false) {
-          var plan = props.chips || CHIPS, cs = 34;
+        var notches = el.querySelectorAll(".it-notch"), mark = el.querySelector(".it-mark");
+        var looks = {}; el.querySelectorAll(".it-mk").forEach(function (m) { looks[m.getAttribute("data-look")] = m; });
+        var chips = el.querySelectorAll(".it-chip");
+        var faintCol = P ? C.faint : col((props.colors && props.colors.ink) || "ink"), whiteCol = P ? C.white : col((props.colors && props.colors.white) || "type-light");
+        looks.faint.style.color = faintCol; looks.white.style.color = whiteCol;
+        if (!P) looks.faint.style.opacity = 0;
+        var faintOp = P ? 1 : 0.13;
+        /* Steps land half a frame early. Never at a negative time: a GSAP
+           timeline that receives a child before zero shifts every existing
+           child later, which moved earlier blocks by half a frame per node. */
+        var at = function (f) { return Math.max(0, t0 + (f - 0.5) * FR); };
+        var last = new Map();
+        var step = function (node, vals, f) {
+          var prev = last.get(node), changed = !prev;
+          if (prev) for (var k in vals) if (prev[k] !== vals[k]) { changed = true; break; }
+          if (!changed) return;
+          var from = prev ? Object.assign({}, prev) : null;
+          if (!from) { from = {}; for (var k2 in vals) from[k2] = vals[k2]; if ("opacity" in vals) from.opacity = 0; }
+          tl.fromTo(node, from, Object.assign({}, vals, { duration: 0.0001, ease: "none", immediateRender: false }), at(f));
+          last.set(node, Object.assign({}, prev || {}, vals));
+        };
+        var r = function (v) { return Math.round(v * 100) / 100; };
+        for (var f = 0; f < st.length; f++) {
+          var s = st[f];
+          step(g, { opacity: 1, x: r(s.cx - B / 2), y: r(s.cy - B / 2), scale: s.side / B }, f);
+          step(tile, { backgroundColor: s.tile }, f);
+          var n = s.nshare * B;
+          for (var i = 0; i < 4; i++) {
+            var nv = { opacity: s.notch ? 1 : 0, width: n, height: n, left: (i % 2) * (B - n), top: (i > 1 ? 1 : 0) * (B - n) };
+            if (s.notch) nv.backgroundColor = s.notch;
+            step(notches[i], nv, f);
+          }
+          step(looks.faint, { opacity: s.look === "faint" ? faintOp : 0 }, f);
+          step(looks.white, { opacity: s.look === "white" ? 1 : 0 }, f);
+          step(looks.black, { opacity: s.look === "black" ? 1 : 0, color: s.ink }, f);
+          step(mark, { scaleX: s.msx, scaleY: s.msy }, f);
           for (var c = 0; c < 4; c++) {
-            var cfg = plan[c], dir = DIRS[c];
-            var cxl = (dir[0] < 0 ? 0 : 384), cyl = (dir[1] < 0 ? 0 : 384);
-            var at = function (d) { return { x: (cxl + dir[0] * d - cs / 2) * s, y: (cyl + dir[1] * d - cs / 2) * s }; };
-            var v = el.querySelector('.it-chip[data-corner="' + c + '"][data-col="v"]');
-            var k = el.querySelector('.it-chip[data-corner="' + c + '"][data-col="k"]');
-            var p0 = at(cfg.d0);
-            tl.fromTo([v, k], { x: p0.x, y: p0.y }, { x: p0.x, y: p0.y, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.at));
-            tl.fromTo(v, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.at));
-            var d = cfg.d0;
-            for (var j = 0; j < cfg.glides.length; j++) {
-              var gl = cfg.glides[j], a = at(d), b = at(gl[1]);
-              tl.fromTo([v, k], { x: a.x, y: a.y }, { x: b.x, y: b.y, duration: gl[2] * FR, ease: snap, immediateRender: false }, T(gl[0]));
-              d = gl[1];
-            }
-            if (cfg.black) {
-              tl.fromTo(k, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.black[0]));
-              tl.fromTo(v, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.black[0]));
-              tl.fromTo(k, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.black[1]));
-              tl.fromTo(v, { opacity: 0 }, { opacity: 1, duration: 0.0001, ease: "none", immediateRender: false }, T(cfg.black[1]));
-            }
+            var q = s.chips[c];
+            if (q) step(chips[c], { opacity: 1, x: r(s.cx + q[0] - 16), y: r(s.cy + q[1] - 16), scale: q[2] / 32, backgroundColor: q[3] }, f);
+            else if (last.get(chips[c])) step(chips[c], { opacity: 0 }, f);
           }
         }
-        var pan = props.pan === false ? null : (props.pan || { frame: 32.5, frames: 31.5, dx: -2089, K: 4.032 });
-        if (pan) {
-          tl.fromTo(el.querySelector(".it-pan"), { x: 0 }, { x: pan.dx * s, duration: pan.frames * FR, ease: panEase(pan.K), immediateRender: false }, T(pan.frame));
+        var end = t0 + (st.length - 0.5) * FR;
+        if (props.exitAt != null) {
+          var tx = t0 + props.exitAt;
+          tl.fromTo(g, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, tx);
+          chips.forEach(function (ch) { if (last.get(ch)) tl.fromTo(ch, { opacity: last.get(ch).opacity }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, tx); });
         }
-        if (props.exitAt != null) tl.fromTo(g, { opacity: 1 }, { opacity: 0, duration: 0.0001, ease: "none", immediateRender: false }, t0 + props.exitAt);
-        return T(32);
+        return P ? t0 + 32 * FR : end;
       }
     };
   })();

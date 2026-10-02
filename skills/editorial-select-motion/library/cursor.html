@@ -1,0 +1,333 @@
+<style>
+  /* cursor. The film's pointer (s4 shots 17 to 21, s5 shot 26): a rounded kite
+     with a white keyline and a translucent grey body, its tip on the point it
+     names. It travels in short ease-out hops of 4 to 10 frames on the film's
+     sixteen-a-second picture, leans with the hand, and squashes to 0.85 for one
+     picture when it clicks. Usable in any block: the drawing and travel live in
+     the es-cursor kit below, copied verbatim into blocks that carry a pointer. */
+  .el-cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+</style>
+<script>
+  window.__elements = window.__elements || {};
+  /* es-kit:begin */
+  /* es-kit v1: shared by every editorial-select block, copied verbatim; the
+     first copy in a document wins. Source: work/blocks/_shared/kit.js. */
+  if (!window.__esKit) window.__esKit = (function () {
+    var EPS = 0.0001, LEAD = 0.002, FPS = 24;
+    /* ES Serif metrics (units per 1000 em): advance, ink x range, kern pairs. */
+    var FM = {adv:{" ":238,"!":312,"\"":402,"#":557,"$":540,"%":952,"&":759,"'":200,"(":374,")":374,"*":468,"+":560,",":315,"-":336,".":236,"/":360,"0":545,"1":545,"2":545,"3":545,"4":535,"5":515,"6":545,"7":545,"8":545,"9":545,":":315,";":315,"<":560,"=":560,">":560,"?":440,"@":884,"A":732,"B":635,"C":675,"D":774,"E":661,"F":678,"G":734,"H":834,"I":334,"J":399,"K":725,"L":617,"M":911,"N":783,"O":756,"P":592,"Q":755,"R":707,"S":557,"T":676,"U":776,"V":721,"W":1120,"X":692,"Y":678,"Z":596,"[":349,"\\":360,"]":349,"^":561,"_":542,"`":418,"a":502,"b":596,"c":495,"d":597,"e":504,"f":339,"g":558,"h":570,"i":261,"j":273,"k":549,"l":263,"m":886,"n":587,"o":564,"p":602,"q":561,"r":401,"s":434,"t":345,"u":582,"v":522,"w":791,"x":531,"y":582,"z":451,"{":368,"|":307,"}":368,"~":560," ":238,"–":542,"—":856,"‘":231,"’":231,"“":453,"”":453,"…":869},ink:{"!":[81,231],"\"":[40,361],"#":[25,533],"$":[53,501],"%":[40,912],"&":[26,717],"'":[40,160],"(":[83,340],")":[34,291],"*":[19,450],"+":[32,530],",":[45,234],"-":[42,294],".":[44,191],"/":[4,356],"0":[40,506],"1":[82,477],"2":[47,502],"3":[46,504],"4":[24,542],"5":[24,473],"6":[39,504],"7":[52,504],"8":[44,501],"9":[32,501],":":[79,237],";":[45,237],"<":[58,503],"=":[32,530],">":[59,504],"?":[68,376],"@":[39,847],"A":[9,728],"B":[41,593],"C":[47,636],"D":[41,716],"E":[42,618],"F":[42,590],"G":[47,715],"H":[41,794],"I":[41,315],"J":[-28,368],"K":[41,717],"L":[42,591],"M":[36,899],"N":[38,747],"O":[47,708],"P":[41,567],"Q":[47,709],"R":[41,694],"S":[41,515],"T":[21,664],"U":[36,746],"V":[14,714],"W":[14,1110],"X":[10,683],"Y":[21,670],"Z":[23,574],"[":[108,317],"\\":[4,356],"]":[32,242],"^":[81,481],"_":[42,500],"`":[78,275],"a":[28,504],"b":[26,565],"c":[29,475],"d":[30,597],"e":[27,474],"f":[17,432],"g":[17,544],"h":[5,571],"i":[10,268],"j":[-98,217],"k":[0,544],"l":[-14,239],"m":[13,882],"n":[17,585],"o":[26,534],"p":[10,568],"q":[26,562],"r":[10,405],"s":[38,402],"t":[11,339],"u":[-2,573],"v":[-7,550],"w":[-16,796],"x":[-1,529],"y":[11,576],"z":[13,437],"{":[47,335],"|":[117,190],"}":[34,322],"~":[50,512],"–":[42,500],"—":[42,814],"‘":[38,206],"’":[26,193],"“":[38,428],"”":[26,415],"…":[79,790]},kern:{"Fi":21,"Tr":-16,"al":26,"ap":-9,"at":-8,"el":13,"gh":-12,"ho":9,"hy":-29,"id":15,"il":-28,"ll":-11,"lm":21,"rt":11,"ry":21}};
+    function bez(x1, y1, x2, y2) {
+      var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+      return function (p) {
+        if (p <= 0) return 0; if (p >= 1) return 1;
+        var lo = 0, hi = 1, t = p, x, i;
+        for (i = 0; i < 40; i++) { x = ((ax * t + bx) * t + cx) * t; if (Math.abs(x - p) < 1e-7) break; if (x < p) lo = t; else hi = t; t = (lo + hi) / 2; }
+        return ((ay * t + by) * t + cy) * t;
+      };
+    }
+    /* The style's fitted curves (tokens.css), as control points. */
+    var CURVE = { snap: [0.33, 1, 0.68, 1], drift: [0.15, 0.11, 0.614, 0.796], push: [0.336, -0.065, 0, 0.821], "push-hard": [0.772, 0.446, 0.15, 0.453],
+      pull: [0.924, 0.668, 0.604, 0.958], glide: [0.034, 0.665, 0.702, 1.023], reveal: [0.081, -0.525, 0, 0.951], rise: [0.15, 0.85, 0.3, 1],
+      pass: [0.45, 0.05, 0.55, 0.95], settle: [0.42, 0.543, 1, 1.076], zoom: [0.213, 0.313, 0.759, 0.883], linear: [0, 0, 1, 1] };
+    function curve(c) { var e = typeof c === "string" ? (CURVE[c] || CURVE.snap) : (c || CURVE.snap); return bez(e[0], e[1], e[2], e[3]); }
+    /* The film updates its picture 16 times a second inside 24 fps: frame f with
+       f mod 3 == 2 repeats f - 1. "twos" holds every second frame, "none" runs
+       on ones. phase shifts which frame repeats. Returns the time whose state
+       the frame at time t shows. */
+    function shown(t, cad, phase) {
+      if (!cad || cad === "none") return t;
+      var f = Math.floor(t * FPS + 1e-3), p = phase || 0, g = f;
+      if (cad === "16" || cad === 16) { if (((f - p) % 3 + 3) % 3 === 2) g = f - 1; }
+      else if (cad === "twos" || cad === 12) { if (((f - p) % 2 + 2) % 2 === 1) g = f - 1; }
+      return g / FPS;
+    }
+    /* A seek-safe ease that follows a fitted curve but only changes on the
+       cadence's picture updates, aligned to absolute timeline frames. */
+    function stepped(c, t0, dur, cad, phase) {
+      var f = curve(c);
+      if (!cad || cad === "none" || !(dur > 0)) return f;
+      return function (p) {
+        if (p >= 1) return 1;
+        var t = shown(t0 + p * dur + 1e-6, cad, phase), q = (t - t0) / dur;
+        return f(q < 0 ? 0 : q > 1 ? 1 : q);
+      };
+    }
+    /* Snap a time to the nearest frame on which the cadence shows a new picture. */
+    function snap(t, cad, phase) {
+      var f = Math.round(t * FPS);
+      if (cad === "16" || cad === 16) { while (((f - (phase || 0)) % 3 + 3) % 3 === 2) f++; }
+      else if (cad === "twos" || cad === 12) { if (((f - (phase || 0)) % 2 + 2) % 2 === 1) f++; }
+      return f / FPS;
+    }
+    /* Pure text measure from the font's own metrics: no layout read, so any word
+       at any size is known before paint. Returns advance, ink left and right
+       (px from the pen start) and cap height. */
+    function measure(text, size, track) {
+      var s = size / 1000, x = 0, inkL = null, inkR = 0, tr = (track || 0) * 1000, ch, i, a, k;
+      for (i = 0; i < text.length; i++) {
+        ch = text.charAt(i); a = FM.adv[ch]; if (a == null) a = FM.adv["n"];
+        k = i > 0 ? (FM.kern[text.charAt(i - 1) + ch] || 0) : 0; x += k;
+        var ink = FM.ink[ch];
+        if (ink) { if (inkL == null) inkL = x + ink[0]; inkR = x + ink[1]; }
+        x += a + (i < text.length - 1 ? tr : 0);
+      }
+      return { adv: x * s, inkL: (inkL || 0) * s, inkR: inkR * s, inkW: (inkR - (inkL || 0)) * s, cap: 0.69 * size };
+    }
+    /* Font size whose ink spans w px, or whose cap height is c px. */
+    function sizeForInk(text, w, track) { var m = measure(text, 1000, track); return 1000 * w / Math.max(1, m.inkW); }
+    function sizeForCap(c) { return c / 0.69; }
+    function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+    /* A token colour, falling back to a literal. */
+    function col(v, fb) { if (!v) return fb; return v.charAt(0) === "-" ? "var(" + v + ", " + (fb || "#000") + ")" : v; }
+    var uid = 0;
+    function id(p) { uid += 1; return (p || "es") + uid; }
+    /* An image slot: { src | frames: [src], fit: cover|contain|fill, focal: [x, y] in 0..1,
+       box: [x, y, w, h] in frame px (default the frame) }. Returns a div holding one
+       img per picture, positioned by object-fit and object-position. */
+    function slot(sp, W, H, cls) {
+      sp = sp || {};
+      var b = sp.box || [0, 0, W, H], el = document.createElement("div");
+      el.className = (cls || "") + " es-slot";
+      el.style.cssText = "position:absolute;left:" + b[0] + "px;top:" + b[1] + "px;width:" + b[2] + "px;height:" + b[3] + "px;overflow:hidden;";
+      var list = sp.frames || (sp.src ? [sp.src] : []), fo = sp.focal || [0.5, 0.5];
+      if (!list.length) { el.style.background = sp.color || "repeating-linear-gradient(45deg,#cfcfcf 0 22px,#d9d9d9 22px 44px)"; el.setAttribute("data-slot-empty", sp.name || "image"); }
+      for (var i = 0; i < list.length; i++) {
+        var im = document.createElement("img");
+        im.src = typeof list[i] === "string" ? list[i] : list[i].src; im.alt = "";
+        im.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;display:block;max-width:none;object-fit:" + (sp.fit || "cover") +
+          ";object-position:" + (fo[0] * 100) + "% " + (fo[1] * 100) + "%;" + (list.length > 1 ? "opacity:0;" : "");
+        el.appendChild(im);
+      }
+      return el;
+    }
+    /* Play a frame-sequence slot from t0, one picture per frame at fps; hold the last. */
+    function playSlot(tl, el, t0, fps, hold) {
+      var ims = el.querySelectorAll("img"), n = ims.length, fr = 1 / (fps || FPS), i;
+      if (n < 2) return t0;
+      for (i = 0; i < n; i++) {
+        step(tl, ims[i], { opacity: 0 }, { opacity: 1 }, t0 + i * fr);
+        if (i < n - 1 || hold === false) step(tl, ims[i], { opacity: 1 }, { opacity: 0 }, t0 + (i + 1) * fr);
+      }
+      return t0 + n * fr;
+    }
+    /* Hold-per-key state changes (measured per-frame keys): each key's values
+       hold until the next. map(key) returns the tween vars for that key. */
+    function keyed(tl, node, keys, t0, map, first) {
+      var prev = null;
+      for (var i = 0; i < keys.length; i++) {
+        var to = map(keys[i]), from = prev || to, v = {};
+        for (var k in to) v[k] = to[k];
+        v.duration = EPS; v.ease = "none"; v.immediateRender = !!(first && i === 0);
+        var at = t0 + keys[i].t - LEAD;
+        if (at < 0) { from = to; at = 0; v.immediateRender = true; }
+        tl.fromTo(node, from, v, at);
+        prev = to;
+      }
+      return prev;
+    }
+    /* A one-frame change (show, hide, swap) on the cadence. */
+    function step(tl, node, from, to, at) {
+      var v = {}; for (var k in to) v[k] = to[k];
+      v.duration = EPS; v.ease = "none"; v.immediateRender = false;
+      if (at - LEAD < 0) { tl.fromTo(node, to, v, 0); return; }
+      tl.fromTo(node, from, v, at - LEAD);
+    }
+    /* Beats: props.beats (seconds from t0) or n even beats over span. */
+    function beats(props, n, span) {
+      if (props.beats && props.beats.length) return props.beats.slice();
+      var out = []; for (var i = 0; i < n; i++) out.push(span * (i + 1) / (n + 1)); return out;
+    }
+    /* A marquee selection state as SVG markup: { x0, y0, x1, y1, op } is the
+       translucent fill, chips [[ax, ay, bx, by, o]] are square handles chip px
+       wide, each streaked as the hull of its square at a (where the last
+       picture left it) and at b (where it is now). */
+    function hull2(ax, ay, bx, by, h) {
+      var P = [[ax - h, ay - h], [ax + h, ay - h], [ax + h, ay + h], [ax - h, ay + h], [bx - h, by - h], [bx + h, by - h], [bx + h, by + h], [bx - h, by + h]];
+      P.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+      function cr(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+      var lo = [], up = [], i;
+      for (i = 0; i < P.length; i++) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], P[i]) <= 0) lo.pop(); lo.push(P[i]); }
+      for (i = P.length - 1; i >= 0; i--) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], P[i]) <= 0) up.pop(); up.push(P[i]); }
+      return lo.slice(0, -1).concat(up.slice(0, -1)).map(function (q) { return q[0].toFixed(1) + "," + q[1].toFixed(1); }).join(" ");
+    }
+    function sel(st, chip, color) {
+      var c = color || "#fff", h = (chip || 24) / 2, s = "";
+      if (st.op) s += '<rect x="' + Math.min(st.x0, st.x1) + '" y="' + Math.min(st.y0, st.y1) + '" width="' + Math.abs(st.x1 - st.x0) + '" height="' + Math.abs(st.y1 - st.y0) + '" style="fill:' + c + '" fill-opacity="' + st.op + '"/>';
+      var C = st.chips || [];
+      for (var i = 0; i < C.length; i++) s += '<polygon points="' + hull2(C[i][0], C[i][1], C[i][2], C[i][3], h) + '" style="fill:' + c + '" fill-opacity="' + (C[i][4] == null ? 1 : C[i][4]) + '"/>';
+      return s;
+    }
+    /* Start a measured key list part way in: times shift by -skip, and every key
+       at or before the new zero collapses into one starting key (the last wins). */
+    function shift(keys, skip) {
+      if (!skip) return keys;
+      var out = [], pre = null;
+      for (var i = 0; i < keys.length; i++) {
+        var k = {}, q; for (q in keys[i]) k[q] = keys[i][q]; k.t = keys[i].t - skip;
+        if (k.t <= 1e-6) { pre = k; pre.t = 0; } else { if (pre) { out.push(pre); pre = null; } out.push(k); }
+      }
+      if (pre) out.push(pre);
+      return out;
+    }
+    return { EPS: EPS, LEAD: LEAD, FPS: FPS, FM: FM, bez: bez, curve: curve, CURVE: CURVE, shown: shown, stepped: stepped, snap: snap,
+      measure: measure, sizeForInk: sizeForInk, sizeForCap: sizeForCap, esc: esc, col: col, id: id, slot: slot, playSlot: playSlot,
+      keyed: keyed, step: step, beats: beats, sel: sel, shift: shift };
+  })();
+  /* es-kit:end */
+  /* es-cursor:begin */
+  /* es-cursor v1: the film's pointer, copied verbatim into any block that
+     draws one; the first copy in a document wins. Source:
+     work/blocks/_shared/cursor-kit.js. Geometry is the s4 fit (cursor-shape.json):
+     a kite with its tip at the origin and its bisector along +x, corners
+     rounded (r1 at tip and wings, r2 at the notch), a white keyline sw wide
+     outside a translucent grey body that darkens what is under it. */
+  if (!window.__esCursor) window.__esCursor = (function () {
+    var SHAPE = { L: 178.908, half: 22.722, k: 0.70863, r1: 14.093, r2: 11.633, sw: 3.482 };
+    var FILL = "rgba(60,62,58,0.31)", STROKE = "rgb(235,235,235)";
+    function rounded(P, R, n) {
+      var out = [], N = P.length, i, k;
+      for (i = 0; i < N; i++) {
+        var p0 = P[(i + N - 1) % N], p1 = P[i], p2 = P[(i + 1) % N], r = R[i];
+        var ux = p0[0] - p1[0], uy = p0[1] - p1[1], ul = Math.hypot(ux, uy); ux /= ul; uy /= ul;
+        var vx = p2[0] - p1[0], vy = p2[1] - p1[1], vl = Math.hypot(vx, vy); vx /= vl; vy /= vl;
+        var ang = Math.acos(Math.max(-1, Math.min(1, ux * vx + uy * vy))), t = r / Math.tan(ang / 2);
+        var ax = p1[0] + ux * t, ay = p1[1] + uy * t, bx = p1[0] + vx * t, by = p1[1] + vy * t;
+        var sx = ux + vx, sy = uy + vy, sl = Math.hypot(sx, sy); sx /= sl; sy /= sl;
+        var cx = p1[0] + sx * r / Math.sin(ang / 2), cy = p1[1] + sy * r / Math.sin(ang / 2);
+        var a0 = Math.atan2(ay - cy, ax - cx), a1 = Math.atan2(by - cy, bx - cx), d = a1 - a0;
+        while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+        for (k = 0; k <= n; k++) { var th = a0 + d * k / n; out.push([cx + r * Math.cos(th), cy + r * Math.sin(th)]); }
+      }
+      return out;
+    }
+    function offset(P, d) {
+      var N = P.length, area = 0, i, L = [], out = [];
+      for (i = 0; i < N; i++) { var q = P[(i + N - 1) % N]; area += 0.5 * (q[0] * P[i][1] - P[i][0] * q[1]); }
+      var sg = area > 0 ? 1 : -1;
+      for (i = 0; i < N; i++) {
+        var a = P[i], b = P[(i + 1) % N], tx = b[0] - a[0], ty = b[1] - a[1], tl = Math.hypot(tx, ty); tx /= tl; ty /= tl;
+        L.push([a[0] + ty * sg * d, a[1] - tx * sg * d, tx, ty]);
+      }
+      for (i = 0; i < N; i++) {
+        var l1 = L[(i + N - 1) % N], l2 = L[i], det = l1[2] * (-l2[3]) - (-l2[2]) * l1[3];
+        var rx = l2[0] - l1[0], ry = l2[1] - l1[1], s = (rx * (-l2[3]) - (-l2[2]) * ry) / det;
+        out.push([l1[0] + l1[2] * s, l1[1] + l1[3] * s]);
+      }
+      return out;
+    }
+    function polyArea(P) { var a = 0, N = P.length; for (var i = 0; i < N; i++) { var q = P[(i + N - 1) % N]; a += 0.5 * (q[0] * P[i][1] - P[i][0] * q[1]); } return Math.abs(a); }
+    function paths(sh) {
+      sh = sh || SHAPE;
+      var h = sh.half * Math.PI / 180, L = sh.L;
+      var P = [[0, 0], [L * Math.cos(h), -L * Math.sin(h)], [sh.k * L, 0], [L * Math.cos(h), L * Math.sin(h)]];
+      var inner = rounded(P, [sh.r1, sh.r1, sh.r2, sh.r1], 12);
+      var op = offset(P, sh.sw); if (polyArea(op) < polyArea(P)) op = offset(P, -sh.sw);
+      var outer = rounded(op, [sh.r1 + sh.sw, sh.r1 + sh.sw, Math.max(0.5, sh.r2 - sh.sw), sh.r1 + sh.sw], 12);
+      return { inner: inner, outer: outer };
+    }
+    function d(P) { var s = "M"; for (var i = 0; i < P.length; i++) s += (i ? " L" : "") + P[i][0].toFixed(2) + " " + P[i][1].toFixed(2); return s + "Z"; }
+    /* The pointer node: a zero-size div whose origin is the tip. */
+    function node(opts) {
+      opts = opts || {};
+      var p = paths(opts.shape), el = document.createElement("div");
+      el.className = "es-cursor";
+      el.style.cssText = "position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;transform-origin:0 0;pointer-events:none;";
+      el.innerHTML = '<svg width="1" height="1" style="position:absolute;left:0;top:0;overflow:visible;display:block">' +
+        '<path fill="' + (opts.stroke || STROKE) + '" fill-rule="evenodd" d="' + d(p.outer) + " " + d(p.inner.slice().reverse()) + '"/>' +
+        '<path fill="' + (opts.fill || FILL) + '" d="' + d(p.inner) + '"/></svg>';
+      return el;
+    }
+    /* Measured per-frame keys [{ t, x, y, th, s, o }]: tip position, rotation in
+       degrees, scale (a click squash is s 0.85 on one picture), opacity. */
+    function keys(tl, el, K, t0, size) {
+      var z = size || 1, kit = window.__esKit;
+      kit.keyed(tl, el, K, t0, function (k) {
+        return { x: k.x, y: k.y, rotation: k.th == null ? 36 : k.th, scale: (k.s == null ? 1 : k.s) * z, opacity: k.o == null ? 1 : k.o, transformOrigin: "0px 0px" };
+      }, true);
+    }
+    /* General mode: stops [{ x, y, at, click, th, hop }] in px, at = arrival in
+       seconds from t0. Each hop leaves the last stop hop seconds before arrival
+       (default 4 frames plus 6 per frame height travelled, as the film's hops
+       run 4 to 10 frames) on the snap curve, stepped on the cadence. Rotation
+       rests at 36 degrees and leans up to +24 travelling left and -20 right; a
+       click squashes to 0.85 for clickFrames (2) frames on arrival. Returns the
+       last time anything changes. */
+    function travel(tl, el, stops, t0, o) {
+      o = o || {};
+      var kit = window.__esKit, cad = o.cadence || "16", z = o.size || 1, H = o.H || 1080, rest = o.rest == null ? 36 : o.rest;
+      var prev = null, end = t0;
+      for (var i = 0; i < stops.length; i++) {
+        var s = stops[i], at = t0 + (s.at || 0), th = s.th == null ? rest : s.th;
+        if (!prev) {
+          kit.keyed(tl, el, [{ t: 0 }], at, function () { return { x: s.x, y: s.y, rotation: th, scale: z, opacity: 1, transformOrigin: "0px 0px" }; }, true);
+        } else {
+          var dx = s.x - prev.x, dist = Math.hypot(dx, s.y - prev.y);
+          var hop = s.hop || (4 + 6 * dist / H) / 24, dep = Math.max(prev.at, at - hop), dur = Math.max(1 / 24, at - dep);
+          if (s.th == null) th = rest + Math.max(-20, Math.min(24, -40 * dx / H));
+          tl.fromTo(el, { x: prev.x, y: prev.y, rotation: prev.th }, { x: s.x, y: s.y, rotation: th, duration: dur, ease: kit.stepped(s.curve || o.curve || "snap", dep, dur, cad), immediateRender: false }, dep);
+          end = Math.max(end, dep + dur);
+        }
+        if (s.click) {
+          var c = kit.snap(at, cad), hold = (s.clickFrames || 2) / 24;
+          kit.step(tl, el, { scale: z }, { scale: 0.85 * z }, c);
+          kit.step(tl, el, { scale: 0.85 * z }, { scale: z }, c + hold);
+          end = Math.max(end, c + hold);
+        }
+        prev = { x: s.x, y: s.y, th: th, at: at };
+      }
+      if (o.exitAt != null) kit.step(tl, el, { opacity: 1 }, { opacity: 0 }, t0 + o.exitAt);
+      return end;
+    }
+    return { SHAPE: SHAPE, FILL: FILL, STROKE: STROKE, paths: paths, node: node, keys: keys, travel: travel };
+  })();
+  /* es-cursor:end */
+  window.__elements["cursor"] = (function () {
+    /* Measured per frame from the film (s4 cursor-track.json): [frame, x, y, rotation, scale];
+       a null row hides the pointer. Frame 0 is the preset's first source frame. */
+    var PRESETS = {
+      "replica-s4-shot18": { f0: 453, rows: [[0,1310.8,845.4,48,0.9],[1,1319.9,837.3,57,0.9],[2,1319.9,837.3,57,0.9],[3,1242.1,852,54,1],[4,1183.1,870,54,1],[5,1183.1,870,54,1],[6,1152.5,880.1,51,1],[7,1132.1,894.5,39,1],[8,1132.1,894.5,39,1],[9,1139.8,906.7,36,0.85],[10,1123.2,915.7,24,1],[11,1123.2,915.7,24,1],[12,1027.3,705.2,15,1],[13,961,498,27,1],[14,961,498,27,1],[15,950.5,385.1,51,1],[16,955,367.9,57,0.85],[17,955,367.9,57,0.85],[18,950.7,370,57,1],[19,958.3,367.9,60,1],[20,958.3,367.9,60,1],[21,1051.1,424,54,1],[22,1213,539.7,33,1],[23,1213,539.7,33,1],[24,1255.7,565.9,31,0.9]] },
+      "replica-s4-shot19": { f0: 478, rows: [[0,1253.3,566.4,30,0.9],[1,1253.3,566.4,30,0.9],[2,1248.9,563.3,30,1],[3,1251,558.7,33,1],[4,1251,558.7,33,1],[5,1252,559.7,33,1],[6,1265,561.1,36,1],[7,1265,561.1,36,1],[8,1299.4,564.1,42,1],[9,1366.5,569.1,51,1],[10,1366.5,569.1,51,1],[11,1498,573,63,1],[12,1828,555.1,90,1],[13,1828,555.1,90,1],[14,null]] }
+    };
+    function presetKeys(name) {
+      var P = PRESETS[name], out = [], last = null;
+      for (var i = 0; i < P.rows.length; i++) {
+        var r = P.rows[i];
+        if (r[1] == null) out.push({ t: r[0] / 24, x: last ? last.x : 0, y: last ? last.y : 0, th: last ? last.th : 36, s: 1, o: 0 });
+        else { last = { t: r[0] / 24, x: r[1], y: r[2], th: r[3], s: r[4], o: 1 }; out.push(last); }
+      }
+      return out;
+    }
+    return {
+      /* props: preset "replica-s4-shot18" | "replica-s4-shot19" (measured keys), or
+         general mode: stops [{ x, y, at, click, th, hop }] with x, y in px or as a
+         share of the frame when both are 1 or less; at in seconds from t0 (absent:
+         taken from beats); cadence "16" | "twos" | "none"; size (1 at 1080 tall,
+         scaled with the frame by default); shape { L, half, k, r1, r2, sw }; fill,
+         stroke; exitAt. */
+      render: function (props) {
+        var el = document.createElement("div");
+        el.className = "el-cursor";
+        el.appendChild(window.__esCursor.node({ shape: props.shape, fill: props.fill, stroke: props.stroke }));
+        return el;
+      },
+      animate: function (tl, el, t0, props) {
+        var C = window.__esCursor, kit = window.__esKit, node = el.firstChild;
+        var W = (props.frame && props.frame.w) || 1920, H = (props.frame && props.frame.h) || 1080;
+        if (props.preset && PRESETS[props.preset]) {
+          C.keys(tl, node, presetKeys(props.preset), t0, props.size || 1);
+          if (props.exitAt != null) kit.step(tl, node, { opacity: 1 }, { opacity: 0 }, t0 + props.exitAt);
+          return t0;
+        }
+        var stops = (props.stops || []).map(function (s) {
+          var px = Math.abs(s.x) <= 1 && Math.abs(s.y) <= 1;
+          var o = {}; for (var k in s) o[k] = s[k];
+          if (px) { o.x = s.x * W; o.y = s.y * H; }
+          return o;
+        });
+        var b = kit.beats(props, Math.max(0, stops.length - 1), props.exitAt || 2);
+        for (var i = 0; i < stops.length; i++) if (stops[i].at == null) stops[i].at = i === 0 ? 0 : b[i - 1];
+        return C.travel(tl, node, stops, t0, { cadence: props.cadence || "16", size: props.size || H / 1080, H: H, exitAt: props.exitAt, curve: props.curve });
+      }
+    };
+  })();
+</script>
