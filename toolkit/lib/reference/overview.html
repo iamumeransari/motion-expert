@@ -69,7 +69,7 @@
   html += "<p style='opacity:.65;font-size:14px'>Energy is the fingerprint's motion energy at 10Hz, normalised to the film's peak and drawn to scale. Each beat frame plays its exact source frames with the full overlay; press O on any frame to see the clean picture.</p>";
   info.innerHTML = html;
 
-  function row(label, px) { var r = h("div", "row"); r.appendChild(h("div", "lbl", label)); var t = h("div", "tr"); t.style.height = px + "px"; r.appendChild(t); lanes.appendChild(r); return t; }
+  function row(label, px) { var r = h("div", "row"); r.appendChild(h("div", "lbl", label)); var t = h("div", "tr"); t.setAttribute("data-time-axis", ""); t.style.height = px + "px"; r.appendChild(t); lanes.appendChild(r); return t; }
 
   var ax = row("time", 18); ax.style.background = "none";
   var step = Math.max(2, 2 * Math.ceil(END / 50));

@@ -131,7 +131,7 @@
   var rows = [];
   function lane(label, px) {
     var l = h("div", "mr-label"); l.appendChild(h("span", "mr-name", label));
-    var t = h("div", "mr-track");
+    var t = h("div", "mr-track"); t.setAttribute("data-time-axis", "");
     grid.appendChild(l); grid.appendChild(t); rows.push(px + "px");
     return t;
   }

@@ -470,7 +470,7 @@ def build(a):
            .replace("{{TITLE}}", html.escape(frames_meta[0]["title"])).replace("{{DATA}}", json.dumps(ov, separators=(",", ":"))))
     if write_if_changed(out / "00-overview.html", ovt):
         written.append("00-overview.html")
-    board = dict(title=spec.get("board_title") or f"{film_title} reference, beat by beat", size="1920x1080", frames=frames_meta)
+    board = dict(title=spec.get("board_title") or f"{film_title} reference, beat by beat", size="1920x1080", fps=round(fps, 3) if fps else 24, frames=frames_meta)
     write_if_changed(out / "board.json", json.dumps(board, indent=1) + "\n")
     report = dict(
         fingerprint=dict(path=str(fp_path.resolve()), sha256=sha256(fp_path), cuts=len(fp_cuts)),
