@@ -79,6 +79,33 @@ def load_plain(path: str) -> np.ndarray:
 
 # ----------------------------------------------------------------------------- measure
 
+
+def refine_tempo(oenv: np.ndarray, prior: float) -> float:
+    """librosa's tempo is a coarse prior (it read 136 BPM for the pilot's 140.3 BPM bed,
+    which drifts a full bar every 30 s). Search lags within 6% of the prior for the one
+    that maximises the onset autocorrelation at 1, 2, 4 and 8 beats together, then
+    refine the 4-beat peak with parabolic interpolation."""
+    fps = SR / HOP
+    x = oenv - oenv.mean()
+    n = len(x)
+    nfft = 1 << int(np.ceil(np.log2(2 * n)))
+    X = np.fft.rfft(x, nfft)
+    ac = np.fft.irfft(X * np.conj(X), nfft)[:n]
+    ac = ac / (ac[0] + 1e-12) * n / np.maximum(1, n - np.arange(n))
+    at = lambda l: float(ac[int(round(l))]) if 0 < round(l) < n else 0.0
+    b0 = 60.0 / prior * fps
+    best = max(((at(b) + at(2 * b) + at(4 * b) + at(8 * b), b) for b in b0 * np.linspace(0.94, 1.06, 97)
+                if 8 * b < n), default=None)
+    if best is None:
+        return prior
+    lo, hi = int(4 * best[1] * 0.98), min(n - 1, int(4 * best[1] * 1.02) + 1)
+    k = lo + int(np.argmax(ac[lo:hi]))
+    if lo < k < hi - 1:
+        y0, y1, y2 = ac[k - 1], ac[k], ac[k + 1]
+        den = y0 - 2 * y1 + y2
+        k = k + (0.5 * (y0 - y2) / den if den != 0 else 0.0)
+    return float(60.0 * fps * 4 / k)
+
 def measure_audio(y: np.ndarray, stems: dict | None = None) -> dict:
     import librosa
     import pyloudnorm as pyln
@@ -87,7 +114,21 @@ def measure_audio(y: np.ndarray, stems: dict | None = None) -> dict:
     oenv = librosa.onset.onset_strength(y=y, sr=SR, hop_length=HOP)
     tempo, bfr = librosa.beat.beat_track(onset_envelope=oenv, sr=SR, hop_length=HOP, tightness=100)
     tempo = float(np.atleast_1d(tempo)[0])
-    beats = librosa.frames_to_time(bfr, sr=SR, hop_length=HOP)
+    if tempo > 0:
+        tempo = refine_tempo(oenv, tempo)
+    if tempo > 0:
+        # a strictly even grid at the refined period, phased to the onsets: the tracker's
+        # own beats wander by tens of ms, which is the error cuts are snapped against
+        fps = SR / HOP
+        per = 60.0 / tempo * fps
+        best = max(((sum(oenv[int(round(ph + k * per))] for k in range(int((len(oenv) - 1 - ph) / per) + 1)), ph)
+                    for ph in np.arange(0, per, 0.25)))
+        ph = best[1]
+        exact = ph + per * np.arange(int((len(oenv) - 1 - ph) / per) + 1)
+        bfr = np.round(exact).astype(int)
+        beats = exact * HOP / SR
+    else:
+        beats = librosa.frames_to_time(bfr, sr=SR, hop_length=HOP)
     lufs = pyln.Meter(SR).integrated_loudness(y.astype(np.float64)) if dur > 0.5 else float("nan")
     out = {"duration": dur, "tempo_bpm": tempo if tempo > 0 and len(beats) > 4 else None,
            "lufs": float(lufs) if np.isfinite(lufs) else None}
