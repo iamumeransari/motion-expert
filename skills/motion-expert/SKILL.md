@@ -47,6 +47,12 @@ Run the steps in order and commit after each style passes. Ingest and fingerprin
 
 Then prove it in two stages. The replica is a frame-exact rebuild of the whole source from the style's own elements, using the source's frames as plates (`imagery.py plates-from-source`) and the source's on-screen words so glyph widths match; because it is calibration only it lives in `examples/replica/`, is never shipped, and none of its content enters the elements or prose. It runs the loop in replica mode, which scores per-frame similarity and optical-flow trajectories against the source, requires every cut on the same frame, every move to start and settle within one frame and every sound effect within one frame and 2 dB, and exports flip-sheets of any frames that diverge. A style is not trusted on new subjects until its replica passes, because a hand that cannot reproduce its own source exactly will drift further on anything new. After the replica passes, make two novel pieces on unrelated subjects, one of them in a format or length the source never used, and run them through the loop in novel mode. Add the style to `registry.json` with its source URL, capture date and status, symlink it into `~/.claude/skills`, then commit and push.
 
+## Blocks are the product
+
+The replica proves the hand; the blocks carry it into everything else. Once a replica passes, decompose it into blocks: each move or scene unit becomes a HyperFrames element with named image slots (size, crop, focal point and motion are code, the picture is not), text parameters set in the style's font, colour from tokens, and timing that scales inside the grammar's envelopes. Every block keeps two modes, an exact preset holding the replica's measured per-frame keys and a general mode built from the fitted curves, so the same block can reproduce its source shot frame for frame or carry a different word, a different image aspect and a different duration in a different story. The replica is then rebuilt from the blocks alone and must pass again, which proves the decomposition lost nothing.
+
+The customization layer is everything a block does not own: which images fill the slots (web images, generated stills or a client's own photography, graded into the style by `toolkit/imagery.py`), which words fill the text, and how blocks are sequenced. The code-and-slots view on the comparison board renders a composition with every slot drawn as a labelled placeholder, which is the clearest picture of what a block is. `blocks.json` in the style lists every block with what it does, its slots, its text parameters, its duration range, whether it is signature, and the source shots it came from, and new pieces are planned from that list first and from the grammar second, so a new concept can reuse a block, recombine several, or compose a new one inside the envelopes.
+
 ## Making a piece
 
 Write the script under `~/agent-core/voice.md`, voice it with `toolkit/tts.py` (house voice, eleven_v4, word timings returned, `--retime` to hit the style's pause profile since v4 has no speed control), and write `scene-plan.json` against the style's grammar and scenes. `toolkit/validate-plan.mjs` rejects any move that is neither in the library nor marked novel with a grammar note.
@@ -65,6 +71,7 @@ Fold every miss back. A fix that only touches the piece will recur on the next o
 |---|---|
 | `references/extraction.md` | Ingesting and measuring a new source, or a measurement looks wrong |
 | `references/grammar.md` | Writing a style's grammar, or composing a move the library does not have |
+| `blocks.json` (in each style) | Planning any new piece: the reusable blocks, their slots and parameters |
 | `references/storyboard.md` | Building the board and handling canvas comments |
 | `references/validation.md` | Running the loop, setting tolerance bands, or the loop will not converge |
 | `references/delivery.md` | Capturing a voice's delivery or voicing a piece |
