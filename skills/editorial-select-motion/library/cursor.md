@@ -27,7 +27,7 @@ No image slots and no text. Duration: a hop is 0.17 to 0.42 s, a whole travel 0.
 
 ## Proof
 
-`work/blocks/cursor/replica`: the preset over the clean plates of shot 18 scores mean SSIM 0.9980 (worst frame 0.997), relative flow error 0.101, PASS against source frames 453 to 477. `work/blocks/cursor/demo`: a 1080 by 1350 still of a teapot, the pointer arriving from the lower right, clicking the lid and the spout, and leaving right.
+`work/blocks/cursor/replica`: the preset over the clean plates of shot 18 scores mean SSIM 0.9984 (worst frame 0.998), relative flow error 0.094, PASS against source frames 453 to 477. `work/blocks/cursor/demo`: a 1080 by 1350 still of a teapot, the pointer arriving from the lower right, clicking the lid and the spout, and leaving right.
 
 ## What does not generalise
 
