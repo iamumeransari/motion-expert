@@ -2,7 +2,7 @@
  "file": "bed-01.wav",
  "model_id": "music_v2_5",
  "endpoint": "https://api.elevenlabs.io/v1/music",
- "song_id": "r36LBOLhZUIons6dPAk1",
+ "song_id": "3PXnYvQ1NKlaaGeCO0D6",
  "request": {
   "composition_plan": {
    "chunks": [
@@ -21,10 +21,10 @@
       "instrumental",
       "clean modern mix",
       "great production quality",
-      "staccato broadband percussive hits",
-      "one hit every half second",
+      "loud staccato full-band hits",
+      "one big hit every half second",
       "then sparse high clicky ticks",
-      "no kick drum yet"
+      "energetic"
      ],
      "negative_styles": [
       "vocals",
@@ -43,12 +43,10 @@
       "140 BPM",
       "in G minor",
       "electronic",
-      "drum-led",
-      "punchy, tight drums",
-      "busy rhythm",
       "driving four-on-the-floor kick",
       "punchy electronic groove",
-      "short synth stabs"
+      "short synth stabs",
+      "loud"
      ],
      "negative_styles": [
       "vocals",
@@ -67,14 +65,11 @@
       "140 BPM",
       "in G minor",
       "electronic",
-      "drum-led",
-      "punchy, tight drums",
-      "busy rhythm",
-      "breakdown",
-      "drums drop out completely",
-      "sustained airy synth pads",
-      "calm",
-      "sparse"
+      "ambient breakdown",
+      "soft sustained synth pads only",
+      "quiet and calm",
+      "very low energy",
+      "near silence between notes"
      ],
      "negative_styles": [
       "vocals",
@@ -83,7 +78,14 @@
       "spoken word",
       "choir",
       "vocal chops",
-      "fade out"
+      "fade out",
+      "drums",
+      "kick",
+      "snare",
+      "hi-hats",
+      "percussion",
+      "bass",
+      "loud"
      ]
     },
     {
@@ -93,12 +95,9 @@
       "140 BPM",
       "in G minor",
       "electronic",
-      "drum-led",
-      "punchy, tight drums",
-      "busy rhythm",
-      "sparse dry percussion returns",
-      "bass enters",
-      "building tension",
+      "sparse dry clicks",
+      "soft bass enters",
+      "building tension slowly",
       "rising noise swell in the last second"
      ],
      "negative_styles": [
@@ -108,7 +107,9 @@
       "spoken word",
       "choir",
       "vocal chops",
-      "fade out"
+      "fade out",
+      "kick drum",
+      "four-on-the-floor"
      ]
     },
     {
@@ -118,13 +119,11 @@
       "140 BPM",
       "in G minor",
       "electronic",
-      "drum-led",
-      "punchy, tight drums",
-      "busy rhythm",
       "full energy drop",
       "dense driving drums",
       "all elements in",
-      "punchy kick and snare"
+      "punchy kick and snare",
+      "loud"
      ],
      "negative_styles": [
       "vocals",
@@ -143,9 +142,6 @@
       "140 BPM",
       "in G minor",
       "electronic",
-      "drum-led",
-      "punchy, tight drums",
-      "busy rhythm",
       "one short punchy final phrase",
       "ends on a hard stop",
       "no fade out",
@@ -183,30 +179,41 @@
   "seconds": 47.333333333333336
  },
  "score": {
-  "total": 0.7893719221396438,
+  "total": 0.8304626746204861,
   "parts": {
-   "tempo": 0.9570524136893414,
+   "tempo": 0.963834549443779,
    "key": 1.0,
-   "arc": 0.38612364538393057,
-   "timbre": 0.7786043543026996,
-   "density": 0.8038038038038038
+   "arc": 0.4747770970567257,
+   "timbre": 0.9111532872297546,
+   "density": 0.6856856856856857
   },
-  "tempo_bpm": 139.8717955736395,
+  "tempo_bpm": 139.92440865580897,
   "key": "G minor"
  },
  "score_before_sculpt": {
-  "total": 0.7976484788990825,
+  "total": 0.8249815424282909,
   "parts": {
-   "tempo": 0.9567653011307907,
+   "tempo": 0.9635960142567617,
    "key": 1.0,
-   "arc": 0.4840516931153818,
-   "timbre": 0.7557534105466606,
-   "density": 0.7487019730010385
+   "arc": 0.4550052677962969,
+   "timbre": 0.8930023769972957,
+   "density": 0.7165109034267911
   },
-  "tempo_bpm": 139.8695687063792,
+  "tempo_bpm": 139.92255785999694,
   "key": "G minor"
  },
  "candidates": [
+  {
+   "i": 4,
+   "total": 0.8304626746204861,
+   "parts": {
+    "tempo": 0.963834549443779,
+    "key": 1.0,
+    "arc": 0.4747770970567257,
+    "timbre": 0.9111532872297546,
+    "density": 0.6856856856856857
+   }
+  },
   {
    "i": 1,
    "total": 0.7893719221396438,
@@ -216,6 +223,61 @@
     "arc": 0.38612364538393057,
     "timbre": 0.7786043543026996,
     "density": 0.8038038038038038
+   }
+  },
+  {
+   "i": 5,
+   "total": 0.7849194343571327,
+   "parts": {
+    "tempo": 0.9620278144832707,
+    "key": 1.0,
+    "arc": 0.3971847254806159,
+    "timbre": 0.7772062893738233,
+    "density": 0.7257257257257257
+   }
+  },
+  {
+   "i": 3,
+   "total": 0.7827039424795946,
+   "parts": {
+    "tempo": 0.9586446402129973,
+    "key": 1.0,
+    "arc": 0.41190868190555674,
+    "timbre": 0.7519253571484373,
+    "density": 0.7474747474747476
+   }
+  },
+  {
+   "i": 9,
+   "total": 0.7645125419264243,
+   "parts": {
+    "tempo": 0.959384532741553,
+    "key": 1.0,
+    "arc": 0.3612423030882537,
+    "timbre": 0.686263354413699,
+    "density": 0.828828828828829
+   }
+  },
+  {
+   "i": 8,
+   "total": 0.7493125133806214,
+   "parts": {
+    "tempo": 0.9579964517282569,
+    "key": 1.0,
+    "arc": 0.3610767983688564,
+    "timbre": 0.7625966765572962,
+    "density": 0.4904904904904904
+   }
+  },
+  {
+   "i": 6,
+   "total": 0.7382741121843437,
+   "parts": {
+    "tempo": 0.9579901138904644,
+    "key": 1.0,
+    "arc": 0.4132818855255855,
+    "timbre": 0.6526807834463287,
+    "density": 0.5505050505050506
    }
   },
   {
@@ -238,6 +300,17 @@
     "arc": 0.3791603418331888,
     "timbre": 0.5974145708752205,
     "density": 0.3233233233233235
+   }
+  },
+  {
+   "i": 7,
+   "total": 0.5242768100569002,
+   "parts": {
+    "tempo": 0.0,
+    "key": 1.0,
+    "arc": 0.5480505168925527,
+    "timbre": 0.7755207592978284,
+    "density": 0.7078651685393258
    }
   }
  ],

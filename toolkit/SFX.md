@@ -19,3 +19,13 @@ The match is a weighted mean of log-ratio closeness on duration, centroid, bandw
 ## Music
 
 `music.py generate` uses `POST /v1/music` with `model_id: music_v2_5` and a composition plan whose chunks follow the source's sections, scaled to the new length, each at least 3 s. A 5 s instrumental request and a 12 s plan both returned 200 on the house key, and the 12 s bed measured exactly the source's 136 BPM. `force_instrumental` only works with a plain prompt, so the plan keeps vocals out with negative styles instead. The scorer showed one failure worth knowing: with too few chunks for the length, sections merge and the arc flattens, which is why merging keeps the louder section's role.
+
+## Rebuilding a source's own effects (the Ideogram replica, 2026-10-02)
+
+When the target is one specific sound rather than a class, pass that sound's isolated residual as `--ref`: the candidates are then scored on MFCC and on log-mel spectral distance to it (mean absolute dB over the bands within 40 dB of either peak), and the kept file takes `--name`. Across 14 effects and two prompt rounds, the toolkit's class prompts landed broadband breakdown hits at 0.44 to 0.69 (7.5 to 10.5 dB spectral distance); asking for concrete objects ("a dry wooden knock", "a rimshot or a hand clap", "bright tape hiss static") moved the best of them to 0.6 to 0.8 and about 5.5 dB, and nothing reliably beat 0.5 on a tonal pop buried in dense drums.
+
+Short hits at low prompt influence (0.35 and 0.55) often come back near-silent, peaking 30 to 53 dB under full scale, and they used to win on spectral shape alone and then need 30 dB or more of gain. `generate` now scores any candidate peaking under -30 dBFS as 0 and marks it `near_silent`.
+
+Sound generation does not do pitch glides: asked for a sine sliding 4.5 to 3.7 kHz it returned noisy swells scoring 0.23 to 0.32, 15 to 32 dB off in spectrum. `sfx.py glide` resynthesises one instead, from an isolated tonal clip (the ridge tracked per 2.9 ms, a sine along it with its envelope, 0.94 and 0.95 against the replica's two glides at 1.1 and 1.3 dB) or from f0, f1 and a duration for a move the source never made.
+
+A generated clip placed against a source event matches its timing and level only when it also takes the event's shape: energy-matched by span, candidates missed compare.py's windowed level by up to 7 dB and its onset by up to 55 ms, because their envelopes differ. The replica's placement (work/sound-replica/make_plan.py) imprints the source event's 5 ms envelope onto the generated clip (the timbre stays generated), holds peaks within 1 dB of the source with a soft knee, and then corrects start and level from compare.py's own `exact_sound` until every event sits inside a frame and 2 dB.

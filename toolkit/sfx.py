@@ -1,7 +1,8 @@
 """SFX: build and serve a style's sound palette.
 
   sfx.py palette <sound.json> --style-dir DIR [--music music.json]
-  sfx.py generate DIR --class C [--target JSON|file] [--n 4] [--prompt TEXT] [--dry-run]
+  sfx.py generate DIR --class C [--target JSON|file] [--n 4] [--prompt TEXT] [--ref clip.wav] [--name F] [--dry-run]
+  sfx.py glide DIR (--from-clip tonal.wav | --f0 HZ --f1 HZ --duration S) [--ref clip] [--name F]
   sfx.py pick DIR --move PROPERTY [--class C] [--key start|peak|land|cut]
   sfx.py analyse <clip.wav>
 
@@ -15,8 +16,19 @@ generate asks ElevenLabs sound generation (POST /v1/sound-generation, model
 eleven_text_to_sound_v2) for n candidates at spread prompt_influence, trims each to its
 onset and to the class's envelope, measures it the way sound.py measures events, and
 scores it against the target profile and, when one exists, against the clean source
-clip by MFCC distance. The best is kept in DIR/sound/generated/ with its score and
-listed in palette.json. Prompting notes that held up are in toolkit/SFX.md.
+clip by MFCC distance and log-mel spectral distance. --ref names the source event to
+match instead (an isolated residual of the very sound being rebuilt, as in a replica),
+which then carries the spectral terms. The best is kept in DIR/sound/generated/ (as
+--name when given) with its score and listed in palette.json. Prompting notes that
+held up are in toolkit/SFX.md.
+
+glide synthesises a tonal pitch glide, the one effect shape sound generation does not
+return (asked for a sine sliding 4.5 to 3.7 kHz it gives a noisy swell 30 dB off in
+spectrum). From an isolated tonal clip it measures the ridge per 2.9 ms frame (peak
+bin in 2.6 to 6.2 kHz with parabolic interpolation, its magnitude) and resynthesises a
+sine along that trajectory and envelope; from f0, f1 and a duration it draws a glide
+falling linearly in octaves with the style's attack and decay. It is scored like a
+generated candidate and kept in sound/generated/ with origin "synth".
 
 pick returns the clip for a move: a clean source clip of the class first, else the best
 generated one, else exit 2 naming the generate command to run. Without --class the
@@ -127,9 +139,15 @@ def analyse(x: np.ndarray) -> dict:
     cls, conf, _ = S.classify(feats)
     l, r = float((x[:, 0] ** 2).sum()), float((x[:, 1] ** 2).sum())
     mf = librosa.feature.mfcc(y=m[: max(len(m), 2048)], sr=SR, n_mfcc=20, n_fft=1024, hop_length=256)
+    # time-averaged log-mel spectrum over the frames within 30 dB of the loudest, the
+    # spectral shape a candidate is compared on
+    pw = Mp.sum(0)
+    act = pw > pw.max() * 1e-3
+    logmel = 10 * np.log10(Mp[:, act].mean(1) + 1e-14)
     return {"duration": dur, "attack_ms": feats["attack_ms"], "decay_ms": feats["decay_ms"],
             "centroid_hz": f["centroid_hz"], "bandwidth_hz": f["bandwidth_hz"], "class": cls, "confidence": conf,
             "pan": (r - l) / (r + l + 1e-12), "peak_dbfs": float(env.max()), "mfcc_mean": mf.mean(1).tolist(),
+            "logmel": logmel.tolist(),
             "mfcc_std": mf.std(1).tolist(), "_feats": {k: v for k, v in feats.items() if k != "band"}}
 
 
@@ -155,9 +173,24 @@ def match(prof: dict, target: dict, ref: dict | None) -> dict:
         d = float(np.linalg.norm(a - b) / (np.linalg.norm(a) + 1e-9))
         parts["mfcc"] = max(0.0, 1 - d)
         w["mfcc"] = 0.35
-    have = {k: v for k, v in parts.items() if v is not None}
+        if ref.get("logmel") and prof.get("logmel"):
+            parts["spectrum"], parts["spectral_distance_db"] = spectrum_match(ref["logmel"], prof["logmel"])
+            w["spectrum"] = 0.35
+    have = {k: v for k, v in parts.items() if v is not None and k in w}
     total = sum(w[k] * v for k, v in have.items()) / sum(w[k] for k in have)
+    if "spectral_distance_db" in parts:
+        have["spectral_distance_db"] = parts["spectral_distance_db"]
     return {"total": total, "parts": have}
+
+
+def spectrum_match(a, b) -> tuple[float, float]:
+    """Mean absolute difference in dB between two level-normalised log-mel spectra, over
+    the bands where either is within 40 dB of its own peak; 0 dB scores 1, 15 dB scores 0."""
+    a, b = np.asarray(a), np.asarray(b)
+    use = (a > a.max() - 40) | (b > b.max() - 40)
+    a, b = a[use] - a[use].mean(), b[use] - b[use].mean()
+    d = float(np.mean(np.abs(a - b)))
+    return max(0.0, 1 - d / 15.0), d
 
 
 # ----------------------------------------------------------------------------- palette
@@ -197,7 +230,7 @@ def palette(sound_json: str, style_dir: str, music_json: str | None) -> dict:
                 prof = analyse(load(root / "source" / name))
                 src.append({"file": f"source/{name}", "t": e["t"], "level_db_rel_vo": e["level_db_rel_vo"],
                             "level_db_rel_mix": e.get("level_db_rel_mix"), "pan": e["pan"],
-                            "profile": {k: v for k, v in prof.items() if not k.startswith(("mfcc", "_"))}})
+                            "profile": {k: v for k, v in prof.items() if not k.startswith(("mfcc", "_", "logmel"))}})
         tgt = target_of(ev)
         tgt["class"] = cls
         classes[cls] = {"count": len(ev), "target": tgt, "source_clips": src,
@@ -254,7 +287,8 @@ def call(prompt: str, duration: float, influence: float, out: Path) -> tuple[int
     return r.status_code, r.text[:400]
 
 
-def generate(style_dir: str, cls: str, target_arg: str | None, n: int, prompt: str | None, dry: bool) -> dict:
+def generate(style_dir: str, cls: str, target_arg: str | None, n: int, prompt: str | None, dry: bool,
+             ref_clip: str | None = None, name: str | None = None) -> dict:
     root = Path(style_dir) / "sound"
     pal = json.loads((root / "palette.json").read_text())
     entry = pal["classes"].get(cls) or {"count": 0, "target": {"class": cls}, "source_clips": [], "generated": []}
@@ -264,7 +298,9 @@ def generate(style_dir: str, cls: str, target_arg: str | None, n: int, prompt: s
         target.update(extra)
     target["class"] = cls
     ref = None
-    if entry["source_clips"]:
+    if ref_clip:
+        ref = analyse(load(ref_clip))
+    elif entry["source_clips"]:
         ref = analyse(load(root / entry["source_clips"][0]["file"]))
     text = prompt or PROMPTS.get(cls, PROMPTS["other"]).format(**words_for(target))
     dur = target.get("duration") or 0.4
@@ -283,20 +319,100 @@ def generate(style_dir: str, cls: str, target_arg: str | None, n: int, prompt: s
         x = trim(load(raw), max_s=max(dur * 2.5, 0.12))
         prof = analyse(x)
         sc = match(prof, target, ref)
+        pk = 20 * math.log10(float(np.abs(x).max()) + 1e-12)
+        if pk < -30:
+            # a near-silent return (low prompt influence on a short hit often gives one) would
+            # need 30 dB of gain or more and brings its codec floor with it
+            sc = {"total": 0.0, "parts": sc["parts"], "near_silent_peak_dbfs": round(pk, 1)}
         cands.append((sc["total"], i, pi, x, prof, sc))
     cands.sort(key=lambda c: (-c[0], c[1]))
     best = cands[0]
     k = len(entry.get("generated", []))
-    name = f"{cls}_{k:02d}.wav"
+    name = name or f"{cls}_{k:02d}.wav"
     sf.write(root / "generated" / name, best[3], SR, subtype="PCM_16")
     rec = {"file": f"generated/{name}", "score": best[5], "prompt": text, "prompt_influence": best[2],
-           "duration_seconds": ask, "profile": {k2: v for k2, v in best[4].items() if not k2.startswith(("mfcc", "_"))},
-           "candidates": [{"prompt_influence": c[2], "score": c[0]} for c in cands]}
+           **({"ref": str(Path(ref_clip).resolve())} if ref_clip else {}),
+           "duration_seconds": ask, "profile": {k2: v for k2, v in best[4].items()
+                                                if not k2.startswith(("mfcc", "_", "logmel"))},
+           "candidates": [{"prompt_influence": c[2], "score": c[0],
+                           **({"near_silent": True} if "near_silent_peak_dbfs" in c[5] else {})} for c in cands]}
     entry.setdefault("generated", []).append(rec)
     entry["generated"].sort(key=lambda g: -g["score"]["total"])
     pal["classes"][cls] = entry
     (root / "palette.json").write_text(dumps(pal))
     shutil.rmtree(tmp, ignore_errors=True)
+    return rec
+
+
+# ----------------------------------------------------------------------------- glide
+
+def ridge_of(x: np.ndarray, band=(2600.0, 6200.0)) -> dict:
+    """Per-frame peak frequency and magnitude of the tonal ridge in an isolated clip."""
+    nfft, hop = 2048, 128
+    m = x.mean(1)
+    f, t, Z = ss.stft(m, fs=SR, nperseg=nfft, noverlap=nfft - hop, boundary=None, padded=False)
+    A = np.abs(Z)
+    k = np.where((f >= band[0]) & (f <= band[1]))[0]
+    j = k[0] + np.argmax(A[k], 0)
+    a, b_, c = (np.log(A[np.clip(j + d, 0, len(f) - 1), np.arange(A.shape[1])] + 1e-12) for d in (-1, 0, 1))
+    den = a - 2 * b_ + c
+    off = np.where(np.abs(den) > 1e-9, 0.5 * (a - c) / den, 0.0)
+    fr = (j + np.clip(off, -0.5, 0.5)) * SR / nfft
+    mag = A[j, np.arange(A.shape[1])]
+    return {"t": t.tolist(), "f": fr.tolist(), "mag": mag.tolist()}
+
+
+def synth_glide(track: dict, n: int) -> np.ndarray:
+    t, fq, mag = np.array(track["t"]), np.array(track["f"]), np.array(track["mag"])
+    live = mag > mag.max() * 10 ** (-40 / 20)
+    fq = ss.medfilt(fq, 5)
+    ts = np.arange(n) / SR
+    f_s = np.interp(ts, t[live], fq[live]) if live.any() else np.full(n, 4000.0)
+    a_s = np.interp(ts, t, np.where(live, mag, 0.0))
+    a_s = np.convolve(a_s, np.ones(64) / 64, "same")
+    y = np.sin(2 * np.pi * np.cumsum(f_s) / SR) * a_s
+    return np.stack([y, y], 1).astype(np.float32)
+
+
+def glide(style_dir: str, from_clip: str | None, f0: float | None, f1: float | None, dur: float | None,
+          ref_clip: str | None, name: str | None, attack_ms: float = 20.0, decay_ms: float = 60.0) -> dict:
+    root = Path(style_dir) / "sound"
+    (root / "generated").mkdir(parents=True, exist_ok=True)
+    pal_p = root / "palette.json"
+    pal = json.loads(pal_p.read_text()) if pal_p.exists() else {"classes": {}}
+    if from_clip:
+        src = load(from_clip)
+        tr = ridge_of(src)
+        y = synth_glide(tr, len(src))
+        # same power as the measured ridge
+        y *= math.sqrt(float((src ** 2).sum()) / (float((y ** 2).sum()) + 1e-14))
+        ref = analyse(src) if not ref_clip else analyse(load(ref_clip))
+        how = {"from_clip": str(Path(from_clip).resolve())}
+    else:
+        n = int((dur + decay_ms / 1000) * SR)
+        ts = np.arange(n) / SR
+        fq = f0 * 2 ** (np.log2(f1 / f0) * np.clip(ts / dur, 0, 1))
+        env = np.minimum(1, ts / (attack_ms / 1000)) * np.where(ts > dur, np.exp(-(ts - dur) / (decay_ms / 1000 / 4.6)), 1)
+        mono = 0.25 * np.sin(2 * np.pi * np.cumsum(fq) / SR) * env
+        y = np.stack([mono, mono], 1).astype(np.float32)
+        ref = analyse(load(ref_clip)) if ref_clip else None
+        how = {"f0": f0, "f1": f1, "duration": dur, "attack_ms": attack_ms, "decay_ms": decay_ms}
+    prof = analyse(y)
+    tgt = {k: ref[k] for k in ("duration", "centroid_hz", "bandwidth_hz", "attack_ms", "decay_ms")} if ref else \
+        {"duration": dur, "centroid_hz": (f0 * f1) ** 0.5, "attack_ms": attack_ms, "decay_ms": decay_ms}
+    tgt["class"] = ref["class"] if ref else prof["class"]
+    sc = match(prof, tgt, ref)
+    entry = pal["classes"].setdefault("other", {"count": 0, "target": {"class": "other"}, "source_clips": [],
+                                                "generated": []})
+    name = name or f"glide_{len(entry.get('generated', [])):02d}.wav"
+    sf.write(root / "generated" / name, y, SR, subtype="FLOAT")
+    rec = {"file": f"generated/{name}", "origin": "synth", "score": sc, "how": how,
+           **({"ref": str(Path(ref_clip or from_clip).resolve())} if (ref_clip or from_clip) else {}),
+           "profile": {k: v for k, v in prof.items() if not k.startswith(("mfcc", "_", "logmel"))}}
+    entry.setdefault("generated", []).append(rec)
+    entry["generated"].sort(key=lambda g: -g["score"]["total"])
+    if pal_p.exists():
+        pal_p.write_text(dumps(pal))
     return rec
 
 
@@ -341,7 +457,17 @@ def main():
     g.add_argument("--target")
     g.add_argument("--n", type=int, default=4)
     g.add_argument("--prompt")
+    g.add_argument("--ref", help="source event clip the candidates are matched against (MFCC and log-mel)")
+    g.add_argument("--name", help="file name for the kept candidate in sound/generated/")
     g.add_argument("--dry-run", action="store_true")
+    gl = sub.add_parser("glide")
+    gl.add_argument("style_dir")
+    gl.add_argument("--from-clip")
+    gl.add_argument("--f0", type=float)
+    gl.add_argument("--f1", type=float)
+    gl.add_argument("--duration", type=float)
+    gl.add_argument("--ref")
+    gl.add_argument("--name")
     k = sub.add_parser("pick")
     k.add_argument("style_dir")
     k.add_argument("--move", required=True)
@@ -353,12 +479,16 @@ def main():
     if a.cmd == "palette":
         out = palette(a.sound_json, a.style_dir, a.music)
     elif a.cmd == "generate":
-        out = generate(a.style_dir, a.cls, a.target, a.n, a.prompt, a.dry_run)
+        out = generate(a.style_dir, a.cls, a.target, a.n, a.prompt, a.dry_run, a.ref, a.name)
+    elif a.cmd == "glide":
+        if not a.from_clip and not (a.f0 and a.f1 and a.duration):
+            ap.error("glide needs --from-clip, or --f0, --f1 and --duration")
+        out = glide(a.style_dir, a.from_clip, a.f0, a.f1, a.duration, a.ref, a.name)
     elif a.cmd == "pick":
         out = pick(a.style_dir, a.move, a.cls, a.key)
     else:
         out = analyse(load(a.clip))
-        out = {k2: v for k2, v in out.items() if not k2.startswith(("mfcc", "_"))}
+        out = {k2: v for k2, v in out.items() if not k2.startswith(("mfcc", "_", "logmel"))}
     sys.stdout.write(dumps(out))
 
 
