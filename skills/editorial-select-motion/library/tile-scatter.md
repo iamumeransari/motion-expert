@@ -8,7 +8,7 @@ Source: s1 shot 8, film frames 79 to 127 (3.292 to 5.333 s), measured in `work/r
 
 ## Modes
 
-`preset: "replica-s1-shot8"` replays the replica's measured per-frame keys: the paper tone, the grid rules with their two pixel ink profile and their growth from 1 to 1.017, 195 tile poses (rectangle and frames per held pose), five words with pen, baseline and card corner on every frame, and the sentence's scale, pen and baseline per frame with the three glyphs that drop on frame 127 as the next shot's scramble starts. Words are set in ES Serif, refitted from the s1 traced ink (sizes 83 to 84.5 px, tracking 1.5 to 2.5 px; the sentence 86.75 px, tracking 0.2 px, glyph rms 1.0 px). Keys are source frames counted from frame 79 and step at t0 + (f - 0.5) / 24. The plan supplies `paper` and `images` (one per tile pose, the s1 calibration crops, replica mode only).
+`preset: "replica-s1-shot8"` replays the replica's measured per-frame keys: the paper tone, the grid rules with their two pixel ink profile and their growth from 1 to 1.017, 195 tile poses (rectangle and frames per held pose), five words with pen, baseline and card corner on every frame, and the sentence's scale, pen and baseline per frame with the three glyphs that drop on frame 127 as the next shot's scramble starts. Words are set in ES Serif, refitted from the s1 traced ink (sizes 83 to 84.5 px, tracking 1.5 to 2.5 px; the sentence 86.75 px, tracking 0.2 px, glyph rms 1.0 px). Keys are source frames counted from frame 79 and step at t0 + (f - 0.5) / 24. The keys, rects, sizes and grid geometry live in the block; the words, their tracking and pen offsets, the ink and card tones, the rule profile and the dropped glyph indices belong to the source and arrive as `props.replica` from the replica layer (references/sources.md), and the plan supplies `paper` and `images` (one per tile pose, replica mode only). Without `props.replica` the preset still plays its motion with `words` (or a placeholder) on token colours and flat rules.
 
 General mode builds the same choreography from rules: a seeded layout on the grid, landing times from `beats`, cell steps on the snap curve sampled on the cadence, and the gather on an ease-in.
 
@@ -29,7 +29,7 @@ General mode builds the same choreography from rules: a seeded layout on the gri
 | `tracking` | | px (default 2). |
 | `lineScale` | | line size relative to the words at the gather and at the end (default 1.14 to 1.34, the film's 1.102 to 1.294 on an 86.75 px line). The line wraps into up to three balanced rows when its swollen width would leave the 64 px margins, and only shrinks if three rows still do not fit. |
 
-Colours: `ink` (default `ink`), `card` (default `paper`), `ground` (default `paper-grid`); rules are `--color-grid-rule`, one pixel at the source scale. Pitch `grid: [120, 121.5]` px at 1080 (tokens `--grid-x`, `--grid-y`), rules through the frame centre.
+Colours: `ink` (default `ink`), `card` (default `paper`), `ground` (default `paper-grid`); `rule` (default `grid-rule`) for the rules, one pixel at the source scale. Each takes a token name or any CSS colour, and the preset takes the same `ink`, `ground` and `rule` plus `cardColor` as overrides. Type is `--font-serif`. Pitch `grid: [120, 121.5]` px at 1080 (tokens `--grid-x`, `--grid-y`), rules through the frame centre.
 
 ## Timing
 

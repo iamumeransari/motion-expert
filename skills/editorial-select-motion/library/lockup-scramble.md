@@ -8,7 +8,7 @@ Source: frames 128 to 179 of the film (5.333 to 7.500 s), rebuilt in work/replic
 
 ## Modes
 
-`preset: "replica-s2-lockup"` reproduces the source range frame for frame from 13 measured glyph states (every glyph fitted to its source frame in ES Serif or the cycle face: size, position, horizontal scale), the measured scale keys of the hold, and the frame 128 leftovers: the grid rules and the last photo tile of the scatter, which pass in as `grid` and `tile`. Steps land half a frame early, as in the replica.
+`preset: "replica-s2-lockup"` reproduces the source range frame for frame. The block holds only its motion: the frame each of the 13 type states lands on, which of them are passing scramble pictures, the cycle's face order, the measured scale keys of the hold and the end frame. The glyphs of every state (each fitted to its source frame in ES Serif or the cycle face: characters, size, position, horizontal scale) and the two sampled colours belong to the source, so they live in the replica layer (work/replica/presets/lockup-scramble.json) and arrive as `props.replica`, which work/replica/presets/apply.py writes into a replica plan; the block reads the merged preset through the shared runtime's `preset()`. A preset named without its replica layer falls back to the general mode. The frame 128 leftovers, the grid rules and the last photo tile of the scatter, pass in as `grid` and `tile`. Steps land half a frame early, as in the replica.
 
 Without a preset the general mode composes the same states arithmetically from glyph metrics (ES Serif from the shared table, the cycle faces from their own tables inside the block), so any words and any frame size work.
 
@@ -18,16 +18,20 @@ Without a preset the general mode composes the same states arithmetically from g
 |---|---|---|
 | `paper` | image, full frame | optional ground under everything (the replica uses the source's clean paper); leave out and the scene background shows |
 | `tile` | image | `{ src, fit, focal, zoom, rect: [x, y, w, h], until }`, a photo tile left over from a previous block, removed at `until` |
-| `grid` | code | `{ x0, dx, y0, dy, color, until }`, one px rules with a soft neighbour, removed at `until` |
+| `grid` | code | `{ x0, dx, y0, dy, color, shade, until }`, one px rules in `color` (default the grid-rule token) with a soft neighbour in `shade` (default a 4 percent wash of the ink token), removed at `until` |
 
 `until` is seconds after the block's start in the general mode and a frame index in the preset.
+
+With no words and no slots at all the general mode shows its code-and-slots view: the tile is drawn as a labelled placeholder at its default rect (centred, 270 by 274 px from 0.63 of the height) until the font cycle starts. `placeholders: true` or `false` forces that view on or off; the paper is never drawn as a placeholder, since the scene background stands in for it.
+
+Every colour and face the general mode draws comes from tokens or from props that default to tokens: the line in `ink` (ink token), arrivals in `incoming` (violet token), the faces through the `--font-serif`, `--font-mono`, `--font-pixel`, `--font-humanist`, `--font-bitmap` and `--font-grotesk` variables, the grid in `grid.color` and `grid.shade`, so another token set re-skins the block without touching it.
 
 ## Text parameters
 
 | prop | default | notes |
 |---|---|---|
 | `from` | none | the outgoing line, ES Serif at `fromCap` (77.6 px cap); without it the block opens on the black lockup |
-| `to` | "Introducing Ideogram 4.5" | the lockup |
+| `to` | "Headline Lockup 1.0" | the lockup, a neutral placeholder by default |
 | `lead` | 1 | how many words stay in the serif; the rest is the tail that cycles faces |
 | `cap` | 84.4 | lockup cap height in px at a 1080 short side; shrunk until the line fits inside `margin` (64) |
 | `x`, `y` | 0.4975, 0.4907 | centre of the cap band as frame shares |
@@ -58,4 +62,4 @@ Any line in and any line out, any length, any aspect: widths come from metrics, 
 
 ## Proof
 
-work/blocks/lockup-scramble. The preset rebuilt from this block alone (`plan-replica.json`, the clean paper plate and the frame 128 tile as slot fills) passes the replica bar against `source-replica-s2-lockup.mp4`: shot SSIM 0.9914 (worst frame 0.978), flow relative EPE 0.118, both measurable moves within a frame, 52 of 52 frames, offset 0 (`replica-2/cmp/report.md`, high quality; the draft `replica-1` scored 0.9906 and 0.120). `plan-demo.json` runs the general mode at 1080 by 1920 with other words and a stand-in tile (`demo/render.mp4`).
+work/blocks/lockup-scramble. The preset rebuilt from this block alone (`plan-replica.json` fed with the replica layer by apply.py, the clean paper plate and the frame 128 tile as slot fills, the grid's `shade` pinned to the source's measured wash) passes the replica bar against `source-replica-s2-lockup.mp4` at high quality: shot SSIM 0.9913 (worst frame 0.978 on frame 47), flow relative EPE 0.1187, both measurable moves within a frame, 52 of 52 frames, offset 0 (`co-2/cmp/report.md`). These are exactly the numbers of the earlier `replica-2` render re-scored with the current compare (`rescore-1`); 46 of 52 frames are bit-identical to it and frames 46 to 51 differ at 61 dB PSNR or better. `plan-demo.json` runs the general mode at 1080 by 1920 with other words and a stand-in tile (`demo-co-2/render.mp4`, draft), and `plan-noprops.json` runs it with no props at all, showing the labelled tile placeholder (`noprops-1/render.mp4`, draft).

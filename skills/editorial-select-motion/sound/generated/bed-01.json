@@ -161,7 +161,7 @@
   },
   "model_id": "music_v2_5"
  },
- "profile": "work/sound-replica/music.json (music.py measure of the Ideogram 4.5 film)",
+ "profile": "work/sound-replica/music.json (music.py measure of the source film)",
  "arc": ", from the plate's energy and music.json's sections):\n  0 to 5.5     staccato hits under the title cards, thinning to high ticks\n  5.5 to 13.14 four-on-the-floor drive\n  13.14 to 21.7 breakdown, drums out, sustained pads\n  21.7 to 28.55 sparse percussion and bass, swell into the drop\n  28.55 to 41.9 full drop\n  41.9 to 42.55 dead stop (cut in post: a 0.65 s gap is under the 3 s chunk minimum)\n  42.55 to 45.65 end-card phrase, then a hard stop into silence to 47.333",
  "post": {
   "dead_stop_s": [

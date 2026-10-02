@@ -8,9 +8,9 @@
      leaves the frame white over the picture.
 
      Source: replica s2 frames 216 to 218 and s3 frames 219 to 243 (strip
-     assets/frames/giant-word-pass-dense.jpg), on the film's 16 fps picture
-     cadence. Measured at 1920 x 1080: font-size 669.5 px in the traced line
-     face (ES Line), baseline settling at 779.8 px; the first word's rise is
+     ~/motion-expert/sources/editorial-select/frames/giant-word-pass-dense.jpg), on the film's 16 fps picture
+     cadence. Measured at 1920 x 1080: font-size 669.5 px in the traced
+     replica face, baseline settling at 779.8 px; the first word's rise is
      728 px decaying about 0.79 per picture (k 0.157 per frame) and lands
      24 frames after entry; the second word enters 18 frames later from
      370 px decaying 0.667 per picture (k 0.27); the pan is the icon-tile
@@ -20,9 +20,12 @@
      and projected on a -20 degree axis (mean error 0.013 inside the glyphs).
 
      preset "replica-s3-rush" replays those per-frame keys for 28 frames
-     from source frame 216 (glyph x positions, word offsets, white profiles,
-     ground frames from frame 12). The general mode builds the same state
-     from the fitted curves for any words, frame and duration scale. */
+     from source frame 216 (line origin, word offsets, whiteness axis and
+     field schedule, ground from frame 12). The words, glyph x positions,
+     face, measured colours and whiteness fields arrive from the replica
+     layer as props.replica. The general mode builds the same state from the
+     fitted curves for any words, frame and duration scale, its face and
+     colours from tokens or props. */
   .el-giant-type-pass { position: absolute; left: 0; top: 0; pointer-events: none; overflow: hidden; }
   .el-giant-type-pass svg { position: absolute; left: 0; top: 0; overflow: visible; }
   .el-giant-type-pass .gp-word { font-kerning: none; white-space: pre; }
@@ -30,16 +33,831 @@
   .el-giant-type-pass .gp-line { opacity: 0; }
 </style>
 <script>
+  /* BEGIN es-runtime */
+  /* es-runtime 2.0.0. The editorial-select runtime, one copy per block and
+     identical in all of them; the first copy in a document wins. Source and
+     docs: library/_runtime/ (inject.py splices it, never edit a copy). */
+  if (!window.__esRuntime) window.__esRuntime = (function () {
+    var R = { version: "2.0.0" };
+    /* core: what every module shares. The fitted curves as control points (the
+       union of tokens.css and the camera's fits from the source footage), one
+       cubic-bezier solver, and EditorialSelect Serif's glyph metrics in the two
+       shapes the text helpers read (em fractions for shared.layout, font units for
+       kit.measure), both derived from the one table es-serif-metrics.json. */
+    var core = R.core = (function () {
+      var FPS = 24, EPS = 0.0001;
+      var CURVE = { snap: [0.33, 1, 0.68, 1], drift: [0.15, 0.11, 0.614, 0.796], "drift-linear": [0.385, 0.326, 0.732, 0.781],
+        push: [0.336, -0.065, 0, 0.821], "push-hard": [0.772, 0.446, 0.15, 0.453], pull: [0.924, 0.668, 0.604, 0.958],
+        glide: [0.034, 0.665, 0.702, 1.023], reveal: [0.081, -0.525, 0, 0.951], rise: [0.15, 0.85, 0.3, 1],
+        pass: [0.45, 0.05, 0.55, 0.95], settle: [0.42, 0.543, 1, 1.076], zoom: [0.213, 0.313, 0.759, 0.883], linear: [0, 0, 1, 1],
+        "film-push": [0.587, -0.033, 0.263, 1.135], "film-pull": [0.473, 0.464, 0.332, 0.974], "film-tilt": [1.0, 0.937, 0.874, 0.965] };
+      function bez4(x1, y1, x2, y2) {
+        var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+        return function (p) {
+          if (p <= 0) return 0; if (p >= 1) return 1;
+          var lo = 0, hi = 1, t = p, x, i;
+          for (i = 0; i < 40; i++) { x = ((ax * t + bx) * t + cx) * t; if (Math.abs(x - p) < 1e-7) break; if (x < p) lo = t; else hi = t; t = (lo + hi) / 2; }
+          return ((ay * t + by) * t + cy) * t;
+        };
+      }
+      var M = {"upm":1000,"cap":690,"x":499,"asc":802,"desc":-284,"adv":{" ":238,"!":312,"\"":402,"#":557,"$":540,"%":952,"&":759,"'":200,"(":374,")":374,"*":468,"+":560,",":315,"-":336,".":236,"/":360,"0":545,"1":545,"2":545,"3":545,"4":535,"5":515,"6":545,"7":545,"8":545,"9":545,":":315,";":315,"<":560,"=":560,">":560,"?":440,"@":884,"A":732,"B":635,"C":675,"D":774,"E":661,"F":678,"G":734,"H":834,"I":334,"J":399,"K":725,"L":617,"M":911,"N":783,"O":756,"P":592,"Q":755,"R":707,"S":557,"T":676,"U":776,"V":721,"W":1120,"X":692,"Y":678,"Z":596,"[":349,"\\":360,"]":349,"^":561,"_":542,"`":418,"a":502,"b":596,"c":495,"d":597,"e":504,"f":339,"g":558,"h":570,"i":261,"j":273,"k":549,"l":263,"m":886,"n":587,"o":564,"p":602,"q":561,"r":401,"s":434,"t":345,"u":582,"v":522,"w":791,"x":531,"y":582,"z":451,"{":368,"|":307,"}":368,"~":560," ":238,"–":542,"—":856,"‘":231,"’":231,"“":453,"”":453,"…":869},"kern":{"Fi":21,"Tr":-16,"al":26,"ap":-9,"at":-8,"el":13,"gh":-12,"ho":9,"hy":-29,"id":15,"il":-28,"ll":-11,"lm":21,"rt":11,"ry":21},"ink":{"!":[81,-14,231,705],"\"":[40,437,361,762],"#":[25,0,533,671],"$":[53,-118,501,776],"%":[40,-28,912,701],"&":[26,-14,717,706],"'":[40,437,160,762],"(":[83,-195,340,770],")":[34,-195,291,770],"*":[19,363,450,771],"+":[32,77,530,595],",":[45,-186,234,137],"-":[42,224,294,301],".":[44,-15,191,135],"/":[4,-166,356,734],"0":[40,-14,506,680],"1":[82,-1,477,673],"2":[47,-1,502,680],"3":[46,-14,504,680],"4":[24,-9,542,696],"5":[24,-11,473,738],"6":[39,-14,504,680],"7":[52,0,504,666],"8":[44,-14,501,680],"9":[32,-16,501,680],":":[79,-13,237,496],";":[45,-185,237,496],"<":[58,81,503,596],"=":[32,201,530,477],">":[59,83,504,598],"?":[68,-14,376,707],"@":[39,-162,847,682],"A":[9,0,728,701],"B":[41,-9,593,698],"C":[47,-17,636,707],"D":[41,0,716,683],"E":[42,-3,618,689],"F":[42,1,590,691],"G":[47,-17,715,707],"H":[41,0,794,690],"I":[41,0,315,686],"J":[-28,-140,368,690],"K":[41,0,717,690],"L":[42,-2,591,684],"M":[36,-9,899,686],"N":[38,-7,747,690],"O":[47,-4,708,704],"P":[41,2,567,691],"Q":[47,-223,709,707],"R":[41,-11,694,690],"S":[41,-17,515,707],"T":[21,-3,664,682],"U":[36,-16,746,690],"V":[14,-6,714,690],"W":[14,-7,1110,707],"X":[10,0,683,690],"Y":[21,0,670,690],"Z":[23,0,574,690],"[":[108,-165,317,739],"\\":[4,-166,356,734],"]":[32,-165,242,739],"^":[81,204,481,506],"_":[42,-72,500,5],"`":[78,579,275,791],"a":[28,-14,504,511],"b":[26,-12,565,751],"c":[29,-12,475,512],"d":[30,-12,597,762],"e":[27,-12,474,508],"f":[17,0,432,764],"g":[17,-254,544,511],"h":[5,1,571,758],"i":[10,1,268,715],"j":[-98,-250,217,748],"k":[0,1,544,762],"l":[-14,2,239,760],"m":[13,0,882,507],"n":[17,1,585,511],"o":[26,-13,534,506],"p":[10,-241,568,515],"q":[26,-240,562,514],"r":[10,0,405,507],"s":[38,-13,402,511],"t":[11,-12,339,596],"u":[-2,-11,573,511],"v":[-7,-12,550,496],"w":[-16,-8,796,498],"x":[-1,-1,529,500],"y":[11,-253,576,501],"z":[13,-1,437,500],"{":[47,-165,335,739],"|":[117,-250,190,773],"}":[34,-165,322,739],"~":[50,270,512,442],"–":[42,224,500,301],"—":[42,224,814,301],"‘":[38,473,206,764],"’":[26,473,193,764],"“":[38,473,428,764],"”":[26,473,415,764],"…":[79,-14,790,142]}};
+      function emMetrics() {
+        var u = M.upm, o = { cap: M.cap / u, x: M.x / u, asc: M.asc / u, desc: M.desc / u, adv: {}, kern: {}, ink: {} }, c;
+        for (c in M.adv) o.adv[c] = M.adv[c] / u;
+        for (c in M.kern) o.kern[c] = M.kern[c] / u;
+        for (c in M.ink) o.ink[c] = [M.ink[c][0] / u, M.ink[c][1] / u, M.ink[c][2] / u, M.ink[c][3] / u];
+        return o;
+      }
+      function unitMetrics() {
+        var o = { adv: {}, ink: {}, kern: {} }, c;
+        for (c in M.adv) o.adv[c] = M.adv[c];
+        for (c in M.ink) o.ink[c] = [M.ink[c][0], M.ink[c][2]];
+        for (c in M.kern) o.kern[c] = M.kern[c];
+        return o;
+      }
+      return { FPS: FPS, EPS: EPS, CURVE: CURVE, bez4: bez4, METRICS: M, emMetrics: emMetrics, unitMetrics: unitMetrics };
+    })();
+
+    /* shared: frame scale, the picture cadence as quantised times, zero-duration
+       steps placed at their time, a seeded PRNG, glyph-metric text layout in em
+       fractions, and the background-image slot. Was es-shared v1 (camera, select,
+       crop, billboard, ghost, lockup, tile-scatter, genre-word-card). */
+    R.shared = (function () {
+      var METRICS = { serif: core.emMetrics() };
+
+      /* Scale from the 1920x1080 source to this frame. The short side carries
+         it, so a portrait or square frame keeps the source's type size. */
+      function k(props) { var f = (props && props.frame) || { w: 1920, h: 1080 }; return Math.min(f.w, f.h) / 1080; }
+      function fw(props) { return ((props && props.frame) || { w: 1920 }).w; }
+      function fh(props) { return ((props && props.frame) || { h: 1080 }).h; }
+
+      /* The film updates its picture 16 times a second inside 24 fps (frame f
+         with f mod 3 = 2 repeats f - 1), and parts of it run on twos. quant(t)
+         moves a time to the start of the picture it falls in, so any tween or
+         step placed through it lands on a picture the film could show.
+         cadence: "16" (default), "twos", "ones". */
+      function quant(t, cadence, fps) {
+        fps = fps || 24; var f = Math.round(t * fps * 1000) / 1000, fl = Math.floor(f + 1e-6);
+        if (cadence === "ones") return fl / fps;
+        if (cadence === "twos") return (fl - (fl % 2)) / fps;
+        return (fl % 3 === 2 ? fl - 1 : fl) / fps;
+      }
+      /* Sample a tween as held pictures: returns the list of times at which the
+         picture changes between t0 and t1 on the cadence. */
+      function pictures(t0, t1, cadence, fps) {
+        fps = fps || 24; var out = [], f0 = Math.ceil(t0 * fps - 1e-6), f1 = Math.floor(t1 * fps + 1e-6), last = null;
+        for (var f = f0; f <= f1; f++) { var q = quant(f / fps, cadence, fps); if (q !== last && q >= t0 - 1e-6) { out.push(q); last = q; } }
+        if (!out.length || out[out.length - 1] < t1 - 1e-6) out.push(t1);
+        return out;
+      }
+
+      /* A zero-duration step, the film's way of changing a picture. Steps after
+         the first on a node carry immediateRender false (CONTRACT.md). */
+      function step(tl, node, from, to, t, first) {
+        var v = {}; for (var p in to) v[p] = to[p];
+        v.duration = 0.0001; v.ease = "none"; if (!first) v.immediateRender = false;
+        tl.fromTo(node, from, v, Math.max(0, t));
+      }
+
+      function rng(seed) {
+        var s = (seed >>> 0) || 1;
+        return function () { s = (s + 0x6D2B79F5) >>> 0; var t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      }
+
+      /* Lay out a string in ES Serif from its glyph metrics: returns pen x per
+         character (from the run's left edge, px), the advance width and the ink
+         box, at a font size in px and tracking in em. Pure arithmetic, so it is
+         right before the webfont arrives and render() never reads layout. */
+      function layout(text, size, tracking, face) {
+        var m = METRICS[face || "serif"], pens = [], x = 0, tr = (tracking || 0) * size;
+        var inkL = Infinity, inkR = -Infinity;
+        for (var i = 0; i < text.length; i++) {
+          var ch = text[i], a = m.adv[ch] != null ? m.adv[ch] : 0.5;
+          pens.push(x);
+          var b = m.ink[ch];
+          if (b) { inkL = Math.min(inkL, x + b[0] * size); inkR = Math.max(inkR, x + b[2] * size); }
+          x += a * size;
+          if (i + 1 < text.length) { x += tr; var kp = m.kern[ch + text[i + 1]]; if (kp) x += kp * size; }
+        }
+        if (inkL === Infinity) { inkL = 0; inkR = x; }
+        return { pens: pens, width: x, inkL: inkL, inkR: inkR, ink: inkR - inkL, cap: m.cap * size, xh: m.x * size, size: size };
+      }
+      /* The font size whose cap height is cap px. */
+      function sizeForCap(cap, face) { return cap / METRICS[face || "serif"].cap; }
+      /* Where the baseline sits below the top of a line-height:1 box, as a
+         share of the font size, so a glyph node can be placed by its baseline. */
+      function baseFrac(face) { var m = METRICS[face || "serif"]; return (1 - (m.asc - m.desc)) / 2 + m.asc; }
+
+      /* An image slot: a box that crops its picture by code. spec is
+           { src, fit: "cover" | "contain", focal: [x, y] (0..1), zoom (1),
+             cutout: src of the subject on transparency, label }
+         or a string src. Without a src it draws a labelled placeholder, which is
+         the code-and-slots view of the block. Returns the slot node; the picture
+         is its first child (class es-pic) so a block can move it inside the box. */
+      function slot(spec, w, h, name) {
+        if (typeof spec === "string") spec = { src: spec };
+        spec = spec || {};
+        var box = document.createElement("div");
+        box.className = "es-slot"; box.setAttribute("data-slot", name || "image");
+        box.style.cssText = "position:absolute;overflow:hidden;width:" + w + "px;height:" + h + "px;";
+        var fx = spec.focal ? spec.focal[0] : 0.5, fy = spec.focal ? spec.focal[1] : 0.5;
+        if (spec.src) {
+          var pic = document.createElement("div");
+          pic.className = "es-pic";
+          var z = spec.zoom || 1;
+          pic.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;background-image:url(\"" + spec.src + "\");background-repeat:no-repeat;background-size:" +
+            (spec.fit === "contain" ? "contain" : (z === 1 ? "cover" : (z * 100) + "% auto")) + ";background-position:" + (fx * 100) + "% " + (fy * 100) + "%;transform-origin:" + (fx * 100) + "% " + (fy * 100) + "%;";
+          box.appendChild(pic);
+        } else {
+          box.style.background = "repeating-linear-gradient(45deg, var(--color-mist) 0 2px, var(--color-ghost) 2px 14px)";
+          box.style.outline = "2px solid var(--color-ink-grey)"; box.style.outlineOffset = "-2px";
+          var lab = document.createElement("div");
+          lab.className = "es-slot-label"; lab.textContent = spec.label || name || "image";
+          lab.style.cssText = "position:absolute;left:8px;top:6px;font:500 " + Math.max(10, Math.min(18, h / 8)) + "px/1 var(--font-mono);color:var(--color-ink-grey);white-space:nowrap;";
+          box.appendChild(lab);
+        }
+        return box;
+      }
+      /* The cut-out layer for type-behind-subject: the same crop as slot(spec)
+         but showing spec.cutout, to sit above the type. Null when there is none. */
+      function cutout(spec, w, h, name) {
+        if (!spec || typeof spec === "string" || !spec.cutout) return null;
+        var c = {}; for (var p in spec) c[p] = spec[p]; c.src = spec.cutout;
+        var n = slot(c, w, h, (name || "image") + "-cutout"); n.classList.add("es-cutout"); return n;
+      }
+
+      /* A token colour by name ("violet" -> var(--color-violet)); any other
+         CSS colour passes through. */
+      function color(c, dflt) { c = c || dflt; return /^[a-z-]+$/.test(c) && c !== "white" && c !== "black" && c !== "transparent" ? "var(--color-" + c + ")" : c; }
+
+      return { METRICS: METRICS, k: k, fw: fw, fh: fh, quant: quant, pictures: pictures, step: step, rng: rng,
+               layout: layout, sizeForCap: sizeForCap, baseFrac: baseFrac, slot: slot, cutout: cutout, color: color, FR: 1 / 24 };
+    })();
+
+    /* kit: fitted curves, the picture cadence as an ease (shown, stepped, snap),
+       glyph-metric measure in font units, the img slot and frame sequences,
+       measured per-frame keys (keyed, shift) and steps placed LEAD before their
+       time, and the marquee selection drawing. Was es-kit v1 (cursor, marquee,
+       type-behind, card-wipe, giant-word-rise, type-fill-echo). */
+    R.kit = (function () {
+      var EPS = 0.0001, LEAD = 0.002, FPS = 24;
+      /* ES Serif metrics (units per 1000 em): advance, ink x range, kern pairs. */
+      var FM = core.unitMetrics();
+      var bez = core.bez4;
+      /* The style's fitted curves (tokens.css), as control points. */
+      var CURVE = core.CURVE;
+      function curve(c) { var e = typeof c === "string" ? (CURVE[c] || CURVE.snap) : (c || CURVE.snap); return bez(e[0], e[1], e[2], e[3]); }
+      /* The film updates its picture 16 times a second inside 24 fps: frame f with
+         f mod 3 == 2 repeats f - 1. "twos" holds every second frame, "none" runs
+         on ones. phase shifts which frame repeats. Returns the time whose state
+         the frame at time t shows. */
+      function shown(t, cad, phase) {
+        if (!cad || cad === "none") return t;
+        var f = Math.floor(t * FPS + 1e-3), p = phase || 0, g = f;
+        if (cad === "16" || cad === 16) { if (((f - p) % 3 + 3) % 3 === 2) g = f - 1; }
+        else if (cad === "twos" || cad === 12) { if (((f - p) % 2 + 2) % 2 === 1) g = f - 1; }
+        return g / FPS;
+      }
+      /* A seek-safe ease that follows a fitted curve but only changes on the
+         cadence's picture updates, aligned to absolute timeline frames. */
+      function stepped(c, t0, dur, cad, phase) {
+        var f = curve(c);
+        if (!cad || cad === "none" || !(dur > 0)) return f;
+        return function (p) {
+          if (p >= 1) return 1;
+          var t = shown(t0 + p * dur + 1e-6, cad, phase), q = (t - t0) / dur;
+          return f(q < 0 ? 0 : q > 1 ? 1 : q);
+        };
+      }
+      /* Snap a time to the nearest frame on which the cadence shows a new picture. */
+      function snap(t, cad, phase) {
+        var f = Math.round(t * FPS);
+        if (cad === "16" || cad === 16) { while (((f - (phase || 0)) % 3 + 3) % 3 === 2) f++; }
+        else if (cad === "twos" || cad === 12) { if (((f - (phase || 0)) % 2 + 2) % 2 === 1) f++; }
+        return f / FPS;
+      }
+      /* Pure text measure from the font's own metrics: no layout read, so any word
+         at any size is known before paint. Returns advance, ink left and right
+         (px from the pen start) and cap height. */
+      function measure(text, size, track) {
+        var s = size / 1000, x = 0, inkL = null, inkR = 0, tr = (track || 0) * 1000, ch, i, a, k;
+        for (i = 0; i < text.length; i++) {
+          ch = text.charAt(i); a = FM.adv[ch]; if (a == null) a = FM.adv["n"];
+          k = i > 0 ? (FM.kern[text.charAt(i - 1) + ch] || 0) : 0; x += k;
+          var ink = FM.ink[ch];
+          if (ink) { if (inkL == null) inkL = x + ink[0]; inkR = x + ink[1]; }
+          x += a + (i < text.length - 1 ? tr : 0);
+        }
+        return { adv: x * s, inkL: (inkL || 0) * s, inkR: inkR * s, inkW: (inkR - (inkL || 0)) * s, cap: 0.69 * size };
+      }
+      /* Font size whose ink spans w px, or whose cap height is c px. */
+      function sizeForInk(text, w, track) { var m = measure(text, 1000, track); return 1000 * w / Math.max(1, m.inkW); }
+      function sizeForCap(c) { return c / 0.69; }
+      function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+      /* A token colour, falling back to a literal. */
+      function col(v, fb) { if (!v) return fb; return v.charAt(0) === "-" ? "var(" + v + ", " + (fb || "#000") + ")" : v; }
+      var uid = 0;
+      function id(p) { uid += 1; return (p || "es") + uid; }
+      /* An image slot: { src | frames: [src], fit: cover|contain|fill, focal: [x, y] in 0..1,
+         box: [x, y, w, h] in frame px (default the frame) }. Returns a div holding one
+         img per picture, positioned by object-fit and object-position. */
+      function slot(sp, W, H, cls) {
+        sp = sp || {};
+        var b = sp.box || [0, 0, W, H], el = document.createElement("div");
+        el.className = (cls || "") + " es-slot";
+        el.style.cssText = "position:absolute;left:" + b[0] + "px;top:" + b[1] + "px;width:" + b[2] + "px;height:" + b[3] + "px;overflow:hidden;";
+        var list = sp.frames || (sp.src ? [sp.src] : []), fo = sp.focal || [0.5, 0.5];
+        if (!list.length) { el.style.background = sp.color || "repeating-linear-gradient(45deg,#cfcfcf 0 22px,#d9d9d9 22px 44px)"; el.setAttribute("data-slot-empty", sp.name || "image"); }
+        for (var i = 0; i < list.length; i++) {
+          var im = document.createElement("img");
+          im.src = typeof list[i] === "string" ? list[i] : list[i].src; im.alt = "";
+          im.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;display:block;max-width:none;object-fit:" + (sp.fit || "cover") +
+            ";object-position:" + (fo[0] * 100) + "% " + (fo[1] * 100) + "%;" + (list.length > 1 ? "opacity:0;" : "");
+          el.appendChild(im);
+        }
+        return el;
+      }
+      /* Play a frame-sequence slot from t0, one picture per frame at fps; hold the last. */
+      function playSlot(tl, el, t0, fps, hold) {
+        var ims = el.querySelectorAll("img"), n = ims.length, fr = 1 / (fps || FPS), i;
+        if (n < 2) return t0;
+        for (i = 0; i < n; i++) {
+          step(tl, ims[i], { opacity: 0 }, { opacity: 1 }, t0 + i * fr);
+          if (i < n - 1 || hold === false) step(tl, ims[i], { opacity: 1 }, { opacity: 0 }, t0 + (i + 1) * fr);
+        }
+        return t0 + n * fr;
+      }
+      /* Hold-per-key state changes (measured per-frame keys): each key's values
+         hold until the next. map(key) returns the tween vars for that key. */
+      function keyed(tl, node, keys, t0, map, first) {
+        var prev = null;
+        for (var i = 0; i < keys.length; i++) {
+          var to = map(keys[i]), from = prev || to, v = {};
+          for (var k in to) v[k] = to[k];
+          v.duration = EPS; v.ease = "none"; v.immediateRender = !!(first && i === 0);
+          var at = t0 + keys[i].t - LEAD;
+          if (at < 0) { from = to; at = 0; v.immediateRender = true; }
+          tl.fromTo(node, from, v, at);
+          prev = to;
+        }
+        return prev;
+      }
+      /* A one-frame change (show, hide, swap) on the cadence. */
+      function step(tl, node, from, to, at) {
+        var v = {}; for (var k in to) v[k] = to[k];
+        v.duration = EPS; v.ease = "none"; v.immediateRender = false;
+        if (at - LEAD < 0) { tl.fromTo(node, to, v, 0); return; }
+        tl.fromTo(node, from, v, at - LEAD);
+      }
+      /* Beats: props.beats (seconds from t0) or n even beats over span. */
+      function beats(props, n, span) {
+        if (props.beats && props.beats.length) return props.beats.slice();
+        var out = []; for (var i = 0; i < n; i++) out.push(span * (i + 1) / (n + 1)); return out;
+      }
+      /* A marquee selection state as SVG markup: { x0, y0, x1, y1, op } is the
+         translucent fill, chips [[ax, ay, bx, by, o]] are square handles chip px
+         wide, each streaked as the hull of its square at a (where the last
+         picture left it) and at b (where it is now). */
+      function hull2(ax, ay, bx, by, h) {
+        var P = [[ax - h, ay - h], [ax + h, ay - h], [ax + h, ay + h], [ax - h, ay + h], [bx - h, by - h], [bx + h, by - h], [bx + h, by + h], [bx - h, by + h]];
+        P.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+        function cr(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+        var lo = [], up = [], i;
+        for (i = 0; i < P.length; i++) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], P[i]) <= 0) lo.pop(); lo.push(P[i]); }
+        for (i = P.length - 1; i >= 0; i--) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], P[i]) <= 0) up.pop(); up.push(P[i]); }
+        return lo.slice(0, -1).concat(up.slice(0, -1)).map(function (q) { return q[0].toFixed(1) + "," + q[1].toFixed(1); }).join(" ");
+      }
+      function sel(st, chip, color) {
+        var c = color || "#fff", h = (chip || 24) / 2, s = "";
+        if (st.op) s += '<rect x="' + Math.min(st.x0, st.x1) + '" y="' + Math.min(st.y0, st.y1) + '" width="' + Math.abs(st.x1 - st.x0) + '" height="' + Math.abs(st.y1 - st.y0) + '" style="fill:' + c + '" fill-opacity="' + st.op + '"/>';
+        var C = st.chips || [];
+        for (var i = 0; i < C.length; i++) s += '<polygon points="' + hull2(C[i][0], C[i][1], C[i][2], C[i][3], h) + '" style="fill:' + c + '" fill-opacity="' + (C[i][4] == null ? 1 : C[i][4]) + '"/>';
+        return s;
+      }
+      /* Start a measured key list part way in: times shift by -skip, and every key
+         at or before the new zero collapses into one starting key (the last wins). */
+      function shift(keys, skip) {
+        if (!skip) return keys;
+        var out = [], pre = null;
+        for (var i = 0; i < keys.length; i++) {
+          var k = {}, q; for (q in keys[i]) k[q] = keys[i][q]; k.t = keys[i].t - skip;
+          if (k.t <= 1e-6) { pre = k; pre.t = 0; } else { if (pre) { out.push(pre); pre = null; } out.push(k); }
+        }
+        if (pre) out.push(pre);
+        return out;
+      }
+      return { EPS: EPS, LEAD: LEAD, FPS: FPS, FM: FM, bez: bez, curve: curve, CURVE: CURVE, shown: shown, stepped: stepped, snap: snap,
+        measure: measure, sizeForInk: sizeForInk, sizeForCap: sizeForCap, esc: esc, col: col, id: id, slot: slot, playSlot: playSlot,
+        keyed: keyed, step: step, beats: beats, sel: sel, shift: shift };
+    })();
+
+    /* select: the selection engine behind select-handles, used by every
+       block that draws a selection (select-handles, genre-word-card and any
+       block that wraps a target in handles). Needs R.shared and the toolkit's
+       window.__motionExpert.
+
+       Two ways to drive it.
+       keys (general): a list of targets over time; each key's chips sit on the
+         corners of its box and arrive from the previous box by a mode:
+           pop      appear at once (optionally landing large and settling)
+           glide    travel from the previous box on the snap ease, starting
+                    lead seconds before t, drawn as a segmented streak
+           jump     appear at once on the new box while the previous chips
+                    linger (the grow-with-target nest)
+           collapse travel inward to the box centre and vanish
+         Every glide is sampled on the film's picture cadence, so it steps the
+         way the source steps.
+       frames (preset): measured rectangles per source frame,
+         { "<f>": [[x0, y0, x1, y1, top, bottom], ...] }, f counted from t0,
+         each frame stepped at t0 + (f - 0.5) / 24 as the replica does. */
+    R.select = (function () {
+      var SH = R.shared;
+      function corners(b) { return [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]; }
+      function colorOf(key, spec, i) {
+        var c = key.colors || key.color || spec.colors || spec.color || "type-light";
+        c = Array.isArray(c) ? c[i % c.length] : c;
+        return /gradient\(/.test(c) ? c : SH.color(c);
+      }
+      /* The streak: while a chip travels it is drawn as two pieces, each the
+         sweep of the chip between two earlier sample times (in frames), with a
+         gap between them, like a multi-sample shutter. Measured on frames 10
+         and 12: a leading piece at the chip's position and a trailing smear
+         reaching back about a frame. streak: false draws a plain square. */
+      function piecesOf(spec) {
+        if (spec.streak === false) return [[0, 0]];
+        return (spec.streak && spec.streak.pieces) || [[0, 0.5], [0.75, 1.5]];
+      }
+      function chipPx(key, spec, props) { return (key.chip || spec.chip || 24 * SH.k(props)); }
+
+      /* General: one node per key x corner x streak copy. */
+      function buildKeys(layer, spec, props) {
+        var keys = spec.keys || [], pieces = piecesOf(spec);
+        for (var k = 0; k < keys.length; k++) {
+          var mode = k === 0 ? (keys[k].mode === "glide" ? "pop" : (keys[k].mode || "pop")) : (keys[k].mode || "glide");
+          var copies = (mode === "glide" || mode === "collapse") ? pieces.length : 1;
+          var w = chipPx(keys[k], spec, props);
+          for (var i = 0; i < 4; i++) for (var j = 0; j < copies; j++) {
+            var c = document.createElement("div");
+            c.className = "es-chip";
+            c.setAttribute("data-key", k); c.setAttribute("data-corner", i); c.setAttribute("data-copy", j);
+            var bg = colorOf(keys[k], spec, i);
+            c.style.cssText = "position:absolute;left:0;top:0;opacity:0;width:" + w + "px;height:" + w + "px;background:" + bg + ";";
+            layer.appendChild(c);
+          }
+        }
+      }
+      function animateKeys(tl, layer, t0, spec, props) {
+        var M = window.__motionExpert, keys = spec.keys || [], pieces = piecesOf(spec), FR = SH.FR;
+        var cad = spec.cadence || "16", ease = M.ease(spec.ease || "snap"), end = t0;
+        var exitAt = props.exitAt != null ? t0 + props.exitAt : (spec.exitAt != null ? t0 + spec.exitAt : null);
+        for (var k = 0; k < keys.length; k++) {
+          var key = keys[k];
+          var mode = k === 0 ? (key.mode === "glide" ? "pop" : (key.mode || "pop")) : (key.mode || "glide");
+          var w = chipPx(key, spec, props), half = w / 2;
+          var at = t0 + key.t;
+          var dur = key.dur != null ? key.dur : 6 * FR;
+          var lead = key.lead != null ? key.lead : FR;
+          var nxt = keys[k + 1];
+          var hide = nxt ? t0 + nxt.t - ((nxt.mode || "glide") === "glide" || nxt.mode === "collapse" ? (nxt.lead != null ? nxt.lead : FR) : 0) : exitAt;
+          if (nxt && nxt.mode === "jump") hide = t0 + nxt.t + (nxt.linger != null ? nxt.linger : 3 * FR);
+          var box = mode === "collapse" ? [(key.box[0] + key.box[2]) / 2, (key.box[1] + key.box[3]) / 2, (key.box[0] + key.box[2]) / 2, (key.box[1] + key.box[3]) / 2] : key.box;
+          var tc = corners(box), pc = k > 0 ? corners(keys[k - 1].box) : tc;
+          var chips = layer.querySelectorAll('.es-chip[data-key="' + k + '"]');
+          var from = key.chip_from ? key.chip_from / w : 1;
+          for (var n = 0; n < chips.length; n++) {
+            var ch = chips[n], i = Number(ch.getAttribute("data-corner")), j = Number(ch.getAttribute("data-copy"));
+            if (mode === "glide" || mode === "collapse") {
+              var start = at - lead, pc0 = pc[i], tc0 = tc[i], pz = pieces[j];
+              var tail = pieces[pieces.length - 1][1] * FR;
+              var pos = function (u) { var e = ease(Math.max(0, Math.min(1, (u - start) / dur))); return [pc0[0] + (tc0[0] - pc0[0]) * e, pc0[1] + (tc0[1] - pc0[1]) * e]; };
+              var pics = SH.pictures(start, start + dur + tail, cad);
+              var prev = { opacity: 0, x: pc0[0] - half, y: pc0[1] - half, width: w, height: w, rotation: 0 };
+              if (j === 0) { var on = { opacity: 1, x: prev.x, y: prev.y, width: w, height: w, rotation: 0 }; SH.step(tl, ch, prev, on, start, false); prev = on; }
+              for (var q = 0; q < pics.length; q++) {
+                /* each piece is the chip swept between two sample times: a
+                   rectangle as long as the sweep plus a chip, one chip wide,
+                   turned along the path, so a diagonal glide reads as a streak */
+                var a = pos(pics[q] - pz[0] * FR), b = pos(pics[q] - pz[1] * FR);
+                var dx = a[0] - b[0], dy = a[1] - b[1], len = Math.sqrt(dx * dx + dy * dy);
+                var ux = len ? dx / len : 1, uy = len ? dy / len : 0, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, L = len + w;
+                if (j > 0 && len >= 1) { mx -= ux; my -= uy; L -= 2; }
+                var rot = len >= 1 ? Math.round(Math.atan2(uy, ux) * 180 / Math.PI * 100) / 100 : 0;
+                if (Math.abs(Math.abs(rot) - 180) < 0.01) rot = 0;
+                var cur = { opacity: (j === 0 || len >= 1) ? 1 : 0, x: mx - L / 2, y: my - w / 2, width: L, height: w, rotation: rot };
+                if (q === pics.length - 1 && j > 0) cur.opacity = 0;
+                var same = cur.opacity === prev.opacity && Math.abs(cur.x - prev.x) < 0.01 && Math.abs(cur.y - prev.y) < 0.01 && Math.abs(cur.width - prev.width) < 0.01 && Math.abs(cur.height - prev.height) < 0.01 && cur.rotation === prev.rotation;
+                if (same) continue;
+                SH.step(tl, ch, prev, cur, pics[q], false); prev = cur;
+              }
+              var gone = mode === "collapse" ? start + dur + (key.hold != null ? key.hold : 2 * FR) : hide;
+              if (j === 0 && gone != null) SH.step(tl, ch, { opacity: 1 }, { opacity: 0 }, gone, false);
+              end = Math.max(end, start + dur);
+            } else {
+              var tx = tc[i][0] - half, ty = tc[i][1] - half;
+              SH.step(tl, ch, { opacity: 0, x: tx, y: ty, scale: from }, { opacity: 1, x: tx, y: ty, scale: from }, at, false);
+              if (from !== 1) {
+                var sp = SH.pictures(at, at + (key.settle != null ? key.settle : 3 * FR), cad), ps = from;
+                for (var r = 1; r < sp.length; r++) {
+                  var s = from + (1 - from) * ease((sp[r] - at) / (sp[sp.length - 1] - at));
+                  SH.step(tl, ch, { scale: ps }, { scale: s }, sp[r], false); ps = s;
+                }
+              }
+              if (hide != null) SH.step(tl, ch, { opacity: 1 }, { opacity: 0 }, hide, false);
+              end = Math.max(end, at + FR);
+            }
+          }
+        }
+        return end;
+      }
+
+      /* Preset: measured rectangles per frame, pooled nodes. */
+      function rectState(r) {
+        if (!r) return { opacity: 0 };
+        return { opacity: 1, left: r[0], top: r[1], width: r[2] - r[0], height: r[3] - r[1],
+                 backgroundImage: "linear-gradient(" + r[4] + "," + (r[5] || r[4]) + ")" };
+      }
+      function buildFrames(layer, spec) {
+        var fr = spec.frames || {}, n = 0;
+        for (var f in fr) n = Math.max(n, fr[f].length);
+        var first = fr["0"] || [];
+        for (var i = 0; i < n; i++) {
+          var d = document.createElement("div"); d.className = "es-chip es-chip-r";
+          var st = rectState(first[i]);
+          d.style.cssText = "position:absolute;left:" + (st.left || 0) + "px;top:" + (st.top || 0) + "px;width:" + (st.width || 24) + "px;height:" + (st.height || 24) + "px;opacity:" + st.opacity + ";" + (st.backgroundImage ? "background-image:" + st.backgroundImage + ";" : "");
+          layer.appendChild(d);
+        }
+      }
+      function animateFrames(tl, layer, t0, spec, sc) {
+        var fr = spec.frames || {}, nodes = layer.querySelectorAll(".es-chip-r"), last = 0, FR = SH.FR;
+        sc = sc || 1;
+        for (var f in fr) last = Math.max(last, Number(f));
+        var endF = spec.f1 != null ? spec.f1 : last + 1;
+        for (var i = 0; i < nodes.length; i++) {
+          var prev = rectState((fr["0"] || [])[i]);
+          for (var f2 = 1; f2 <= endF; f2++) {
+            var cur = rectState((fr[String(f2)] || [])[i]);
+            if (JSON.stringify(cur) === JSON.stringify(prev)) continue;
+            var a = {}, b = {};
+            if (cur.opacity) { for (var p in cur) { b[p] = cur[p]; a[p] = prev.opacity ? prev[p] : cur[p]; } a.opacity = prev.opacity; }
+            else { a.opacity = prev.opacity; b.opacity = 0; }
+            SH.step(tl, nodes[i], a, b, t0 + (f2 - 0.5) * FR, false);
+            prev = cur;
+          }
+        }
+        return t0 + endF * FR;
+      }
+
+      /* Box helpers so any block can wrap a target: chip centres sit pad px
+         outside a target rectangle [x, y, w, h]. pad is a number or [px, py]. */
+      function around(rect, pad) {
+        var px = Array.isArray(pad) ? pad[0] : (pad || 0), py = Array.isArray(pad) ? pad[1] : (pad || 0);
+        return [rect[0] - px, rect[1] - py, rect[0] + rect[2] + px, rect[1] + rect[3] + py];
+      }
+
+      return {
+        build: function (layer, spec, props) { if (spec.frames) buildFrames(layer, spec); else buildKeys(layer, spec, props); },
+        animate: function (tl, layer, t0, spec, props) { return spec.frames ? animateFrames(tl, layer, t0, spec) : animateKeys(tl, layer, t0, spec, props); },
+        around: around
+      };
+    })();
+
+    /* camera: the film's camera moves as presets for any image slot or
+       container (camera-rig, billboard, crop-select and any block that moves a
+       picture). Was es-camera v1.
+
+       A move is a scale about an origin plus a travel and a roll, run on one of
+       the film's cadences. Scale interpolates in log space, which is how every
+       preset below was fitted, so a pull from 1 to 0.4 reads as an even camera
+       move rather than a slowing one. Every preset is measured from the source:
+         push         film 822 to 834 (shots 34 and 35, the lying model), the push
+                      with its cut punch removed: x1.100 over 12 frames, fitted
+                      bezier 0.587 -0.033 0.263 1.135 (rms 0.026), 16 fps cadence
+         punch        the punch-in on the cut at film 828: x1.097 in one frame
+         push-soft    fingerprint move 52 (film 600 on): x1.34 over 13 frames, push curve
+         push-hard    fingerprint move 48 (film 522 on): x1.47 over 13 frames, push-hard curve
+         pull-back    s7 shot I (film 958 to 992), tracked board plane: x0.407 over
+                      35 frames, log-scale bezier 0.473 0.464 0.332 0.974 (rms 0.003),
+                      centre travel -33, +26 px, on ones (real footage)
+         pull-steady  s7 shots B to H, the median steady pull: -1.99 percent per
+                      frame (range -0.92 to -2.39), linear, on ones
+         pull-settle  fingerprint move 67 (shot 38): x0.82 over 13 frames, settle curve
+         drift        fingerprint move 29 (shot 14 studio drift): 0.035 W by 0.025 H
+                      over 20 frames, drift curve, on ones
+         tilt         fingerprint move 66 (shot 37): -0.06 H over 13 frames,
+                      bezier 1.0 0.937 0.874 0.965, on ones
+         hold         no motion
+       cam = { preset, at (s after t0), dur (s) or frames, scale (duration
+               multiplier), from, to (scale), dx, dy (px at 1920, or "0.05W",
+               "-0.03H"), r (deg), origin [fx, fy] (0..1 of the node box),
+               ease (token name or bezier), cadence "16" | "twos" | "ones",
+               phase (which frame of three repeats, default 2),
+               keys: [[frame, s, x, y, r], ...] exact per-frame states, or
+               mats: [[frame, m0..m8], ...] exact per-frame homographies (row
+               major, frame px), both stepped on their frames }
+       or an array of such moves, each starting from where the last one ended. */
+    R.camera = (function () {
+      var FPS = 24, EPS = 0.0001;
+      var CURVE = core.CURVE;
+      var PRESETS = {
+        push: { to: 1.100, frames: 12, ease: "film-push", cadence: "16" },
+        punch: { to: 1.097, frames: 0, cadence: "16" },
+        "push-soft": { to: 1.34, frames: 13, ease: "push", cadence: "16" },
+        "push-hard": { to: 1.47, frames: 13, ease: "push-hard", cadence: "16" },
+        "pull-back": { to: 0.407, frames: 35, ease: "film-pull", cadence: "ones", dx: -33, dy: 26 },
+        "pull-steady": { rate: -0.0199, frames: 16, ease: "linear", cadence: "ones" },
+        "pull-settle": { to: 0.82, frames: 13, ease: "settle", cadence: "ones" },
+        drift: { dx: "0.035W", dy: "0.025H", frames: 20, ease: "drift", cadence: "ones" },
+        tilt: { dy: "-0.06H", frames: 13, ease: "film-tilt", cadence: "ones" },
+        hold: { frames: 0 }
+      };
+      function bez(e) { return core.bez4(e[0], e[1], e[2], e[3]); }
+      function curve(c) { return bez(typeof c === "string" ? (CURVE[c] || CURVE.linear) : (c || CURVE.linear)); }
+      function fsz(props) { var f = (props && props.frame) || {}; return { w: f.w || 1920, h: f.h || 1080 }; }
+      function len(v, props, axis) {
+        if (v == null) return 0;
+        var F = fsz(props);
+        if (typeof v === "string") { var m = /^(-?\d*\.?\d+)([HW])$/.exec(v.trim()); if (m) return Number(m[1]) * (m[2] === "H" ? F.h : F.w); return Number(v) || 0; }
+        return v * F.w / 1920;
+      }
+      /* The time of the picture a frame shows: on the 16 fps cadence frame f with
+         (f - phase + 2) mod 3 == 2 repeats f - 1 (phase 2 is the film's own). */
+      function shown(t, cad, phase) {
+        if (!cad || cad === "ones") return t;
+        var f = Math.floor(t * FPS + 1e-4), g = f, p = phase == null ? 2 : phase;
+        if (cad === "16" || cad === 16) { if ((((f - p) % 3) + 3) % 3 === 0) g = f - 1; }
+        else if (cad === "twos" || cad === 12) { if ((((f - (p % 2)) % 2) + 2) % 2 === 1) g = f - 1; }
+        return g / FPS;
+      }
+      /* Resolve one move into numbers: start time, duration, the scale ratio,
+         travel and roll, the curve, cadence and origin. */
+      function resolve(c, props) {
+        var P = PRESETS[c.preset || "hold"] || PRESETS.hold, k = c.scale || 1;
+        var frames = c.frames != null ? c.frames : (c.dur != null ? c.dur * FPS : P.frames * k);
+        var dur = Math.max(0, frames / FPS);
+        var ratio;
+        if (c.to != null && c.from != null) ratio = c.to / c.from;
+        else if (c.to != null) ratio = c.to;
+        else if (P.rate != null) ratio = Math.exp(P.rate * frames);
+        else ratio = P.to != null ? P.to : 1;
+        return { at: c.at || 0, dur: dur, from: c.from != null ? c.from : 1, ratio: ratio,
+          dx: len(c.dx != null ? c.dx : P.dx, props), dy: len(c.dy != null ? c.dy : P.dy, props),
+          r: c.r != null ? c.r : (P.r || 0), ease: curve(c.ease || P.ease || "linear"),
+          cadence: c.cadence || P.cadence || "16", phase: c.phase, origin: c.origin || [0.5, 0.5] };
+      }
+      function list(cam) { return !cam ? [] : (Array.isArray(cam) ? cam : [cam]); }
+      /* The state at t seconds after t0, pure, for anything that must follow the
+         camera (an overlay, a label) without being inside the moved node. */
+      function sample(cam, t, props) {
+        var st = { s: 1, x: 0, y: 0, r: 0 }, L = list(cam);
+        for (var i = 0; i < L.length; i++) {
+          var c = L[i];
+          if (c.keys) { var kk = null; for (var j = 0; j < c.keys.length; j++) if (c.keys[j][0] / FPS <= t + 1e-6) kk = c.keys[j]; if (kk) st = { s: kk[1], x: kk[2], y: kk[3], r: kk[4] || 0 }; continue; }
+          var m = resolve(c, props); if (i === 0 && c.from != null) st.s = m.from;
+          var q = m.dur > 0 ? (shown(t, m.cadence, m.phase) - m.at) / m.dur : (t >= m.at ? 1 : 0);
+          var e = m.ease(q < 0 ? 0 : q > 1 ? 1 : q);
+          if (t < m.at) break;
+          st = { s: st.s * Math.pow(m.ratio, e), x: st.x + m.dx * e, y: st.y + m.dy * e, r: st.r + m.r * e };
+          if (q < 1) break;
+        }
+        return st;
+      }
+      /* A GSAP ease that holds pictures on the cadence and maps progress so a
+         linear tween from a to b lands on the curve (log space for scale). */
+      function stepper(m, t0, map) {
+        return function (p) {
+          if (p >= 1) return 1; if (p <= 0) return 0;
+          var t = t0 + m.at + p * m.dur, q = (shown(t + 1e-6, m.cadence, m.phase) - t0 - m.at) / m.dur;
+          return map(m.ease(q < 0 ? 0 : q > 1 ? 1 : q));
+        };
+      }
+      /* Tween node (a picture or a container) through the move(s). Returns the
+         time the camera settles. box = { w, h } of the node, for the origin. */
+      function apply(tl, node, t0, cam, props) {
+        var L = list(cam), st = { s: 1, x: 0, y: 0, r: 0 }, end = t0, first = true;
+        if (!L.length) return t0;
+        if (L[0].origin) node.style.transformOrigin = (L[0].origin[0] * 100) + "% " + (L[0].origin[1] * 100) + "%";
+        for (var i = 0; i < L.length; i++) {
+          var c = L[i];
+          if (c.mats) { applyMats(tl, node, t0, c.mats); end = Math.max(end, t0 + c.mats[c.mats.length - 1][0] / FPS); first = false; continue; }
+          if (c.keys) {
+            for (var j = 0; j < c.keys.length; j++) {
+              var kk = c.keys[j], f = kk[0], to = { s: kk[1], x: kk[2], y: kk[3], r: kk[4] || 0 };
+              var t = f <= 0 ? t0 : t0 + (f - 0.25) / FPS;
+              var v = { scale: to.s, x: to.x, y: to.y, rotation: to.r, duration: EPS, ease: "none" };
+              if (!first) v.immediateRender = false;
+              tl.fromTo(node, { scale: st.s, x: st.x, y: st.y, rotation: st.r }, v, t);
+              st = to; first = false; end = Math.max(end, t);
+            }
+            continue;
+          }
+          var m = resolve(c, props);
+          if (i === 0 && c.from != null) st.s = m.from;
+          var nx = { s: st.s * m.ratio, x: st.x + m.dx, y: st.y + m.dy, r: st.r + m.r };
+          var a = st.s, b = nx.s, lr = Math.log(m.ratio);
+          var scaleMap = function (a, b, lr) { return function (e) { return Math.abs(b - a) < 1e-9 ? e : (a * Math.exp(lr * e) - a) / (b - a); }; }(a, b, lr);
+          var lin = function (e) { return e; };
+          var t1 = t0 + m.at;
+          if (m.dur <= 0) {
+            var v0 = { scale: nx.s, x: nx.x, y: nx.y, rotation: nx.r, duration: EPS, ease: "none" };
+            if (!first) v0.immediateRender = false;
+            tl.fromTo(node, { scale: st.s, x: st.x, y: st.y, rotation: st.r }, v0, t1);
+          } else {
+            var vs = { scale: nx.s, duration: m.dur, ease: stepper(m, t0, scaleMap) };
+            var vt = { x: nx.x, y: nx.y, rotation: nx.r, duration: m.dur, ease: stepper(m, t0, lin) };
+            if (!first) { vs.immediateRender = false; vt.immediateRender = false; }
+            tl.fromTo(node, { scale: st.s }, vs, t1);
+            tl.fromTo(node, { x: st.x, y: st.y, rotation: st.r }, vt, t1);
+          }
+          st = nx; first = false; end = Math.max(end, t1 + m.dur);
+        }
+        return end;
+      }
+      /* Exact per-frame homographies (row-major 3x3 in frame px), written as CSS
+         variables under a matrix3d so GSAP never decomposes them. */
+      function matVars(m) {
+        return { "--c0": m[0], "--c1": m[3], "--c3": m[6] * 1e6, "--c4": m[1], "--c5": m[4], "--c7": m[7] * 1e6, "--c12": m[2], "--c13": m[5], "--c15": m[8] };
+      }
+      function matStyle(node, m) {
+        node.style.transformOrigin = "0 0";
+        node.style.transform = "matrix3d(var(--c0), var(--c1), 0, calc(var(--c3) / 1000000), var(--c4), var(--c5), 0, calc(var(--c7) / 1000000), 0, 0, 1, 0, var(--c12), var(--c13), 0, var(--c15))";
+        var v = matVars(m); for (var k in v) node.style.setProperty(k, v[k]);
+      }
+      function applyMats(tl, node, t0, mats) {
+        matStyle(node, mats[0][1]);
+        for (var j = 1; j < mats.length; j++) {
+          var f = mats[j][0], v = matVars(mats[j][1]); v.duration = EPS; v.ease = "none";
+          if (j > 1) v.immediateRender = false;
+          tl.fromTo(node, matVars(mats[j - 1][1]), v, t0 + (f - 0.25) / FPS);
+        }
+      }
+      return { PRESETS: PRESETS, CURVE: CURVE, curve: curve, sample: sample, apply: apply, shown: shown, resolve: resolve, matStyle: matStyle, FPS: FPS };
+    })();
+
+    /* cursor: the film's pointer for any block that draws one (cursor,
+       marquee-select, type-behind-subject). Was es-cursor v1. Geometry is the s4 fit (cursor-shape.json):
+       a kite with its tip at the origin and its bisector along +x, corners
+       rounded (r1 at tip and wings, r2 at the notch), a white keyline sw wide
+       outside a translucent grey body that darkens what is under it. */
+    R.cursor = (function () {
+      var SHAPE = { L: 178.908, half: 22.722, k: 0.70863, r1: 14.093, r2: 11.633, sw: 3.482 };
+      var FILL = "rgba(60,62,58,0.31)", STROKE = "rgb(235,235,235)";
+      function rounded(P, R, n) {
+        var out = [], N = P.length, i, k;
+        for (i = 0; i < N; i++) {
+          var p0 = P[(i + N - 1) % N], p1 = P[i], p2 = P[(i + 1) % N], r = R[i];
+          var ux = p0[0] - p1[0], uy = p0[1] - p1[1], ul = Math.hypot(ux, uy); ux /= ul; uy /= ul;
+          var vx = p2[0] - p1[0], vy = p2[1] - p1[1], vl = Math.hypot(vx, vy); vx /= vl; vy /= vl;
+          var ang = Math.acos(Math.max(-1, Math.min(1, ux * vx + uy * vy))), t = r / Math.tan(ang / 2);
+          var ax = p1[0] + ux * t, ay = p1[1] + uy * t, bx = p1[0] + vx * t, by = p1[1] + vy * t;
+          var sx = ux + vx, sy = uy + vy, sl = Math.hypot(sx, sy); sx /= sl; sy /= sl;
+          var cx = p1[0] + sx * r / Math.sin(ang / 2), cy = p1[1] + sy * r / Math.sin(ang / 2);
+          var a0 = Math.atan2(ay - cy, ax - cx), a1 = Math.atan2(by - cy, bx - cx), d = a1 - a0;
+          while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+          for (k = 0; k <= n; k++) { var th = a0 + d * k / n; out.push([cx + r * Math.cos(th), cy + r * Math.sin(th)]); }
+        }
+        return out;
+      }
+      function offset(P, d) {
+        var N = P.length, area = 0, i, L = [], out = [];
+        for (i = 0; i < N; i++) { var q = P[(i + N - 1) % N]; area += 0.5 * (q[0] * P[i][1] - P[i][0] * q[1]); }
+        var sg = area > 0 ? 1 : -1;
+        for (i = 0; i < N; i++) {
+          var a = P[i], b = P[(i + 1) % N], tx = b[0] - a[0], ty = b[1] - a[1], tl = Math.hypot(tx, ty); tx /= tl; ty /= tl;
+          L.push([a[0] + ty * sg * d, a[1] - tx * sg * d, tx, ty]);
+        }
+        for (i = 0; i < N; i++) {
+          var l1 = L[(i + N - 1) % N], l2 = L[i], det = l1[2] * (-l2[3]) - (-l2[2]) * l1[3];
+          var rx = l2[0] - l1[0], ry = l2[1] - l1[1], s = (rx * (-l2[3]) - (-l2[2]) * ry) / det;
+          out.push([l1[0] + l1[2] * s, l1[1] + l1[3] * s]);
+        }
+        return out;
+      }
+      function polyArea(P) { var a = 0, N = P.length; for (var i = 0; i < N; i++) { var q = P[(i + N - 1) % N]; a += 0.5 * (q[0] * P[i][1] - P[i][0] * q[1]); } return Math.abs(a); }
+      function paths(sh) {
+        sh = sh || SHAPE;
+        var h = sh.half * Math.PI / 180, L = sh.L;
+        var P = [[0, 0], [L * Math.cos(h), -L * Math.sin(h)], [sh.k * L, 0], [L * Math.cos(h), L * Math.sin(h)]];
+        var inner = rounded(P, [sh.r1, sh.r1, sh.r2, sh.r1], 12);
+        var op = offset(P, sh.sw); if (polyArea(op) < polyArea(P)) op = offset(P, -sh.sw);
+        var outer = rounded(op, [sh.r1 + sh.sw, sh.r1 + sh.sw, Math.max(0.5, sh.r2 - sh.sw), sh.r1 + sh.sw], 12);
+        return { inner: inner, outer: outer };
+      }
+      function d(P) { var s = "M"; for (var i = 0; i < P.length; i++) s += (i ? " L" : "") + P[i][0].toFixed(2) + " " + P[i][1].toFixed(2); return s + "Z"; }
+      /* The pointer node: a zero-size div whose origin is the tip. */
+      function node(opts) {
+        opts = opts || {};
+        var p = paths(opts.shape), el = document.createElement("div");
+        el.className = "es-cursor";
+        el.style.cssText = "position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;transform-origin:0 0;pointer-events:none;";
+        el.innerHTML = '<svg width="1" height="1" style="position:absolute;left:0;top:0;overflow:visible;display:block">' +
+          '<path fill="' + (opts.stroke || STROKE) + '" fill-rule="evenodd" d="' + d(p.outer) + " " + d(p.inner.slice().reverse()) + '"/>' +
+          '<path fill="' + (opts.fill || FILL) + '" d="' + d(p.inner) + '"/></svg>';
+        return el;
+      }
+      /* Measured per-frame keys [{ t, x, y, th, s, o }]: tip position, rotation in
+         degrees, scale (a click squash is s 0.85 on one picture), opacity. */
+      function keys(tl, el, K, t0, size) {
+        var z = size || 1, kit = R.kit;
+        kit.keyed(tl, el, K, t0, function (k) {
+          return { x: k.x, y: k.y, rotation: k.th == null ? 36 : k.th, scale: (k.s == null ? 1 : k.s) * z, opacity: k.o == null ? 1 : k.o, transformOrigin: "0px 0px" };
+        }, true);
+      }
+      /* General mode: stops [{ x, y, at, click, th, hop }] in px, at = arrival in
+         seconds from t0. Each hop leaves the last stop hop seconds before arrival
+         (default 4 frames plus 6 per frame height travelled, as the film's hops
+         run 4 to 10 frames) on the snap curve, stepped on the cadence. Rotation
+         rests at 36 degrees and leans up to +24 travelling left and -20 right; a
+         click squashes to 0.85 for clickFrames (2) frames on arrival. Returns the
+         last time anything changes. */
+      function travel(tl, el, stops, t0, o) {
+        o = o || {};
+        var kit = R.kit, cad = o.cadence || "16", z = o.size || 1, H = o.H || 1080, rest = o.rest == null ? 36 : o.rest;
+        var prev = null, end = t0;
+        for (var i = 0; i < stops.length; i++) {
+          var s = stops[i], at = t0 + (s.at || 0), th = s.th == null ? rest : s.th;
+          if (!prev) {
+            kit.keyed(tl, el, [{ t: 0 }], at, function () { return { x: s.x, y: s.y, rotation: th, scale: z, opacity: 1, transformOrigin: "0px 0px" }; }, true);
+          } else {
+            var dx = s.x - prev.x, dist = Math.hypot(dx, s.y - prev.y);
+            var hop = s.hop || (4 + 6 * dist / H) / 24, dep = Math.max(prev.at, at - hop), dur = Math.max(1 / 24, at - dep);
+            if (s.th == null) th = rest + Math.max(-20, Math.min(24, -40 * dx / H));
+            tl.fromTo(el, { x: prev.x, y: prev.y, rotation: prev.th }, { x: s.x, y: s.y, rotation: th, duration: dur, ease: kit.stepped(s.curve || o.curve || "snap", dep, dur, cad), immediateRender: false }, dep);
+            end = Math.max(end, dep + dur);
+          }
+          if (s.click) {
+            var c = kit.snap(at, cad), hold = (s.clickFrames || 2) / 24;
+            kit.step(tl, el, { scale: z }, { scale: 0.85 * z }, c);
+            kit.step(tl, el, { scale: 0.85 * z }, { scale: z }, c + hold);
+            end = Math.max(end, c + hold);
+          }
+          prev = { x: s.x, y: s.y, th: th, at: at };
+        }
+        if (o.exitAt != null) kit.step(tl, el, { opacity: 1 }, { opacity: 0 }, t0 + o.exitAt);
+        return end;
+      }
+      return { SHAPE: SHAPE, FILL: FILL, STROKE: STROKE, paths: paths, node: node, keys: keys, travel: travel };
+    })();
+
+    /* preset: the replica layer. A block's PRESETS hold only motion and geometry
+       (times, positions, scales, curves, slot rects); everything that belongs to
+       the source (its words, traced glyphs, plate paths, sampled colours, per-shot
+       calibration) lives outside the skill in work/replica/presets/<block>.json and
+       arrives as props.replica. preset(PRESETS, props) returns the named preset
+       with props.replica merged over it, props.replica alone when the block has no
+       motion preset of that name, or null in general mode. Objects merge key by
+       key; an array of objects merges element by element; anything else in the
+       overlay replaces. */
+    R.preset = (function () {
+      function plain(v) { return v && typeof v === "object" && !Array.isArray(v); }
+      function merge(a, b) {
+        if (b === undefined) return a;
+        if (Array.isArray(a) && Array.isArray(b) && b.length && b.every(function (x) { return plain(x) || x == null; })) {
+          var out = a.slice(), n = Math.max(a.length, b.length);
+          for (var i = 0; i < n; i++) out[i] = b[i] == null ? a[i] : merge(a[i], b[i]);
+          return out;
+        }
+        if (plain(a) && plain(b)) {
+          var o = {}, k;
+          for (k in a) o[k] = a[k];
+          for (k in b) o[k] = merge(a[k], b[k]);
+          return o;
+        }
+        return b;
+      }
+      function preset(PRESETS, props) {
+        var name = props && props.preset, base = name && PRESETS ? PRESETS[name] : null, over = props && props.replica;
+        if (!name && !over) return null;
+        if (!base && !over) return null;
+        return base ? merge(base, over) : merge({}, over);
+      }
+      preset.merge = merge;
+      return preset;
+    })();
+    return R;
+  })();
+  window.__esShared = window.__esShared || window.__esRuntime.shared;
+  window.__esKit = window.__esKit || window.__esRuntime.kit;
+  window.__esSelect = window.__esSelect || window.__esRuntime.select;
+  window.__esCamera = window.__esCamera || window.__esRuntime.camera;
+  window.__esCursor = window.__esCursor || window.__esRuntime.cursor;
+  /* END es-runtime */
   window.__elements = window.__elements || {};
   window.__elements["giant-type-pass"] = (function () {
     var FR = 1 / 24, NS = "http://www.w3.org/2000/svg", NSTOPS = 40;
-    var PRESETS = { "replica-s3-rush": {"frames":28,"white2d":{"uris":["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAABECAAAAABvt67YAAAAO0lEQVR42u3UyQkAMAgAMO3+O9sR+rKCJG9RPDACAAAAfsicKmz2zJ5+U9J6xZyefspKlx+XrwoAAMtdsYACCLLt3RwAAAAASUVORK5CYII=","data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAABECAAAAABvt67YAAAAgklEQVR42u3W0QqAIAyF4R19/2dedxEkZXZQiv+7jGRsrq0IAAAA4Dc0JUSen5ZVGc8ILK0JnK1KR6XN4exk+wBpj4hr1RP4kKDUdaJ4vtSHtZMnY2ngylx3vCd+/276RmZGRGTOb66Rwrn3sXpLvmwf1y/+07waoCWwZFcBAAAADhtx4gsx+Zx6tAAAAABJRU5ErkJggg==","data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAABECAAAAABvt67YAAADjElEQVR42r1Za3OjSBCTNOPbqvv/v/V2155p3QdehuAAA4RUClclRtMvtbphwv4ryd2H/ja7s7sb0+/bv3D5LOFnLt8FTPEY8kXA5Io3F8hz6HyNuSu+XDOa1wKLe2AX0PkCWPpQkvEwMLmVVDS2T+ErkktpAF4eaiPVTrpaqfmr+VgSLdy8L5vXH9bOP0zphLNOuDppJZPiC4+fB14ktTTCEoT7nz2gpyxW5ngg2r7R1TOD+ejtZRq7IY4wSaurE8eC8tCND2V4PlXATGqtp9zW1XOnRbLsQXk47AOxVpOnpbGgCJAiCBxKsTau7iLMLAIUudo/rnL1G2Gyi/AjmSBs0P11c4w7+5hAk4YcP5RciR4yiwBtEwcNPgbsdyrhAwRpgLdazGWISZrkSFcHaTOf0VpA6kpYkgHEjwAnuS8jR4oExMTVO0g7N1cxCPfMEQjCqjPVdxXwexmPGjklUGTxP5Wu09/v7McoJoNUSiAkohyQAedUJk0hZdGhlMoWbXJ2pBbgkgggyi8AoiTDNQIbI4XZ2iQWMq6aKLRhiKq2v/YKfpwXT0wSrwCrUSMAlmJ3/fH7efwksGE4/hL+Y5caLq+owSOiqwV4KJxnAep/xbWU6loDPNCWkxrml16AuGai/i2MUl7PV4DSbsLOZzYp5fe/gP/8rmHUapBvmb1BI03ANfdhfvKX7bAjYt7A4A3ebHI1B1WNAsUgewiyE0IEwY0ZuSmrJ1r2sw5ii+Aag3xKODXxxzShxTMiokcG2Rs9Q9Z1XB1TOyjsj0CTkNco/Tpgh6aPtAFotsH8vFg7DByzUIX6WXgYiakPwsfXtsXwrOkQTF3oybf2d0k5LVKEHB7cpe0jgQndXOEvzfdCITB5PgSQDygFq9eb74XA84pxFrJCrxrYt3vZD+y5DW95TZiSMuWIG9qiv6TXuPogSElJHxae1wmBWXm635OTpHQfsJfIJuGOvySJ4h5B0C5vY3h6GKyO2p9kpwBKak+HHtkSQIXtiBp9Hd+4Nh5NNoCnc4FruCOULu7f6aD9FnPFYnIYKBygIyYq5YYSODPCDCa7CvRTCTNY37ehH0glXg8AUftMI4FNtZl04l2I+/UPbHVtYdprXljH/malG2UdkfdYPG68AHerJxD3vxqYdw7HkGucv7n1HcCw3xYuneQbIj0O7+vw+ZLXwnwncO9av+isxfiR904XXv8DFUrN0jFoLYYAAAAASUVORK5CYII=","data:image/png;base64,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","data:image/png;base64,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","data:image/png;base64,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","data:image/png;base64,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","data:image/png;base64,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","data:image/png;base64,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","data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAABECAAAAABvt67YAAAD1ElEQVR42sVZXY/bNhCcWVLy+doESf//b8tLngs0vUPOFsmdPpCybJ/vw7DoCrbkDwHDJWeHsys61jokCAB08jo71TcAWw0XvOruFYGvQ47rAuswlW8uSLusGTFo/F8iBmBw3X+Na9ThYtg6/xqx+kHCpTtP9YKtOa3fYNvawFooTkF+gqujD30iXigkSn4Xcl1gEwHhfNU7R3w4XFKdgTao7sDLusrlEA1C5L0i1iFwd0mmOwEvO2IdQVE/cp2Dnuez9WW0qkE4wtYdWM0DhS/o9drAhOqJails8sXyaB1gXhJi6nTWiSDmVZWLnzcIMZzPta0mjO8MS2CIdvqnXbPVfR719S3NIOj6NRYgXsMxigc/LQEkSkZxLy7pXpsEJEnuU0opp+LXuUx+fk204M0lxexJCJJ9lIvz0mg+1QJHFRck2E+rCTa9bNKheVAEyDXXeOEeq3yxSbUIUlILmWTex1vl+L3cUytqKIIEAkNMml6edy+fB+YHactLySbQfE4omgAZVfKUbyOXTq58XS8DINUoLQms1JJ7XIvFIi4rDK0IkEswIRj3KCkVu6Lev1K2SbIpliB3EIQsjsHAlTcJnkMbQBKAF6+Mo22+PNgV9TE/rgH5+kM9jMqTQABEGLcPNzuQN7JJi/Wx6kjKPslAQFQYn3/kbbxt5z1C5oXMEyCBQJn2xgAAyE/P/+z/Lra2udTCw8OFytP06+cvEfCn32n7eCu5pNfQOucYCcWo4k8FZMpm27++Pca1tyVe4HYBH6bgXyMhjbTHL9+H2GGL0OKr648BZfNnGjcGgeOQv/Hr73i7i36bfhQFCgzBt0OMAM0Cg+fMvtaHYt0Jo8OMkLkBtvnDLfbtIVJ1Umg6mANyBGO8RSv08d3Nf9Fq5Gru4wrgyyp1KiCX6rO2abGxvSpopMUVaoZ3b9Cc12w1HGkgLXYrYY6cSTVbBACLAl1e4l2aH3J3q8MIguSlN3BllEopjQU0eCk5pc7AhCCVkh2ItWhXmXb7Xb5H7eQlZae1mPO02+2z9weWlzR5jsGNopSnlxf073NJpZScPeVpNBLQtPs3D6GnVguAXMXFUlLav2AIZsYChs0QO0+zJMksK0+OAgHwGGLouzu1KlWghziAFqw+sKBb7CsdtQ3gQ0ojDGYkhQCqazpJapONjedxBDkPBSv3QI4ealKC5JK7u7ix5MsCWL/mSy0OJYGQXBxCVmmNJhL9uj6Hvi2DXIIYEeeHuwJj/yYTApRnxz03J/ool86b4oPyoUlf6/SOHfpjbA7WWk8z7h0eDVTkeFJMAfoP2SxtfutiGiQAAAAASUVORK5CYII=","data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAABECAAAAABvt67YAAAD1UlEQVR42sVZXXPbNhDcPYCU5TaZpP//t+Ulz51pak8skcBtHwCSkkx/aESoHJuUZc4sD9jb2zvSsdUhQQCgs5+LU/kFYJvhglfdvSHwdchxW2DNS/nmhtTLlhGDxv8lYgAG1/33uEQdVsPW5Z8Rmx8kXLrzUi/YmtL6DbZtDayF4hTkZ7g6+dAm4oVCouR3IdcKmwgIl7veOOL5cEllBepDNQde9lUuh2gQIu8VsebA3SWZ7gS8VMTyBFntyHUJepnP1pbRKgbhBFt3YDVnCq/o9dbAhMqJqils8sXyaBtgrgkxdb7qRBDTpsrFzxuEGC7X2jYTxnceS2CIdv5Pu6bUfR719S3VIOj6PRYgXsMxirOflgASOSG7Z5d0ryIBSZL7MI5jGrNf5zL5+T3Rgje1FJMnIUi2US5OW6PpVBocFVyQYDutJlj1skqHpociQG65xwv3WOSLVapFkJJqyCTTMd4qx+/lnmpTQxEkEBjiqOHl+fDyeWB+kLZcSzaB5lNC0QTIqJyGdBu5dHbl634ZAKlKaUlgoZbc41YsFrGuMLQsQC7BhGA8Io9jtiv6/StlmySrYglyB0HIYh8M3LhI8BLaAJIAPHthHG335cGu6I/5cQ/I1x/KYVQaBAIgQr9/uNmBvJFNWqyPFUeSj6MMBESF/vlH2sfbKu8JMlcyT4AEAnk4GgMAID09/3P8O9vW5lILD+cLlYbh189fIuBPv8f9463kkl5D65JjJBSjsj9lkGMy2//17TFuXZa4wu0MPgzBv0ZC6mmPX753sUGJ0OKry5cBeffn2O8MAvsufePX3/F2F/02/SgKFBiC77sYAZoFBk+Jba0PxVIJo8OMkLkBtvvDLbadIVJlUWiazQHZgzHeohX6+O7qv2glclX3cQXwukqdC8haf1aLFivbi4JGWtygZ3j3Bk15zdrDkQbSYrMW5sSZFLNFALAo0OU53mX4IXe38hhBkDy3Bi6MUs65soAGzzmNY2NgQpByTg7E0rQrD4fjId2jd/I8JqfVmNNwOByTtweW52HwFIMbBSgNLy9oP+eScs45+ZiG3khAw+Hf1IWWWi0AcmUXcx7H4wu6YGbMYNh1sfEyS5LMktKQmSEAHkMMbatT7VIFeogdaMHKCwu6xbbSUcYA3o1jD4MZSSGAappOkupiY+ep70hOj4KNZyAnLzUpQXLJ3V3c2TibT8HaDV9KcygJhORiF5JyHTSRaDf1mee2DHJJYEScXu4KbF0kJCFAaXLc03CijXLpcijeKc1D+tKnN5zQn2Kzszp6mnDv8GqgIMezZgrQf46DbX7iTIf8AAAAAElFTkSuQmCC","data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAABECAAAAABvt67YAAAB1klEQVR42u1Y23aDIBDcWUj//2970ijTB5VgAwoGSZMDb6Iye5kdFuCkxeDDjMqLRgfuwB24A/9fYDI+b1+h0x8danZWfzowc4H5Ko/RDLhIQFAxJFonY0lTUeoxAiCckXrNcI7EjuJXDjU/UjLhNjjMeh6vCgIN9mOssANwLXIYqCakmrITGb5koywG826+PQibz4FwKdBPaPrLajXLmE/2cAjzAxGs6KVoq46x6weKSXe3yp6538+1xHG4KKYEi9yGi0EEOG07sf2cGsMPxehsnft2ThVFkom8Q0IwSxHIOAST7rqIpd0j/3MpgPBGMWqWQgYszLM5BnMq2rjFHQjF6JwiW0QZroMzI+/nWnX+BoZEVLmYXubxFXdZRhmvosZznCKakkxOkUOlDsxdcVG/3N14W1SVx2rcMbKOrSqO8R4HYanhWF/NaAS48QMQCCpyGnrGiHOgtA2MrpGx21cXISfe6BdVw4YHmzlGBqO4T0lC1BJYgg34JMPVp9Nf7YYPMQ/31UfUG9GWRs/FXXF6tYie3VWHOyUD422Dm4iRKwmZzDn/7EQXNgx0rt2hDfA1TsHM7QZ3mfijCxPb4JpcouLhodH5mG9xMJd+l9mBO/B7AP8CpLeZuqzZ+8IAAAAASUVORK5CYII=","data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAABECAAAAABvt67YAAAB+ElEQVR42u1Z0Y6DMAyzQ///hyfqe2g7WqCDIkbvDiahSWXETeI46aBHn4/hAX6AH+C/DuwEAODdQs1OwLwbq9mF1QDUI9zdBeTycJuCgsSvK4G7wHYWELIDsiPZxWN2HW9XHCavANYvahLqJpn6tzPXaZaUsVTbBVr1uJnW5e83RdjqZti6BzXgJsn8aKcSOM6eK3D5RXLNnbK4ERJmaa9xbRkB1yjULPCoLMFivHKLAqE0XOn8cpICHJdMC9CR9FN2XFUq1CgsKgqKRZoJxn2pqGPqUGK1uMcp7iHs9YnOVZrTcQ2ZHvXLclFJrlWH18LAeqSJcZRNUF4ixUVgUhwqkim2dw69MAwQAtzLmxUeh0RIMZz1Q5uaBVPeh3oVAD+OXjnpZ3bdeV3Rj2FYjoO6z/yRyJn8WiOV+amY5mSSQHJdkR0a66m+OXMZsgr33vMztdmPcwJzVwo4BLmmANAGWtZPtHMQ4IEsc8iPBhbSmki8ODO4HVrBPbkgYG9hBMCBH/u4474k72GB5RpgSrSKmjDr6tGgtrxRS79kasCc3coM2ZGWj21xJxllgyU1efJ4m2sTFzGYVqQvzdXKrvdKQluZQDYGyf3/GDADSPPW9ScJ7isTnYmo644wjWXwvBq4/piq64HV82XInchFdvOY93on0S3HP0x3qtFUpYm9AAAAAElFTkSuQmCC","data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAABECAAAAABvt67YAAADeklEQVR42u1Y2XLcNhDsHoArVyVP+f/PdLkskUDnAQeB5SHQ0jqJsnzSgiJmeo6eBhjxziN85OHRC8M/9DwNPw0/Df9Gw+Qz1F/esJ6hvvLoWVzjhvXFEPsB1XQFM0cj5R8Gicm4DvSePbJ9dALdHti4Ogv6v7i4VqdZ06W1jHSo3/WA4uLIKnV2lvDDqdtXIgIEkaPeXMoxASiGmDeRNvsq6iHMRRCxqVFpgFalUyFnozkNIcea9826D1fv7Gcc0pakHA+yprjE/WTqJAymw2LqfrsXz9ULts6HeV4OkEVxt9Ckvqr7eUA1H8g3y6yuEeLyM96m7NbqL1PFic1yi8ZvcpbNi/dNKW4JWCTiD5uWnIgAS+EgpKBcQmE2Z3fY/UnLseVdzWZriF/p6o+XPzFlu0tgpjeRRsXU3+HV233ufA+3tbW+EYEQorfycZw1+YyB0x+iI0DENxmtxsotIQHzL6wdzx3mUskxEyF1T4igXP58fqMLzJvQCwYQiDFimQSysLlEAHa76xImw1uNsdMHr7PDrcRrAaJtOkTzd36b6tbEFHOLW2uSZYlDrT/P86wSkGVJ6UtmQ7myWn6+huZ7kpZ4bkcQebBiPj2PKsBllIJicDVfcWGGdPtrmdpNWP+JtRlKkgst1KriAWRJavk3b0FIoRTUZOGuC3OSxVw3Kz5rQqDzUzgPl4s/ElLPVRel9IeUh1ytWj+q2Wm06hfJVY5kZSJACzOdJmtxxlT4Kg10E5Soz0bninMN+Zgzq5Zp5YU5dZUUl0CjYmxGTw7BjgLZ2E3pN+9WsjJnVqmTrrog9rma4AjEVHwp27W40DPIHXmt0+Bm5goPy4dmkNOpQJ4CV45CVA1SKbF1GvqupLVbQgQAZ8xkTZAyszpSVpjWyw7SpWyyHYjcD7V2IBOAj005+Jur7UCybEf1wXZJBVrbg30CNaD2BKWQpv6JC6fKDYroglr1J9nNdUFCytJwO4HtiCbi7JskrYzEO5GIHiQ7AuHYUYKVwwDQsZGc3A4aHvQLLwj6Mv9asqezHhtxoiM2/mQpxev3DTS+R6dngaT/1SMT7WOXqyvWS6C1vXfgNf/9J148jHvNa4Y3x85WRT/oYD5ONg+55/rMy3r7UCr5ccOHp1l9mqmrOVZv74BrNipVZz6qZfnPvkPlf/XamA9ilP/fDf3fUb98YOPtuX4AAAAASUVORK5CYII="],"frames":{"12":0,"13":1,"14":1,"15":2,"16":3,"17":4,"18":5,"19":6,"20":7,"21":8,"22":9,"23":10,"24":11,"25":12,"26":12,"27":13}},"font":"ES Line","size":669.512,"words":[{"t":"The","xs":[-21.97,433.99,841.35],"dx":0},{"t":"most","xs":[1295.31,1913.01,2307.72,2586.62],"dx":-74}],"origin":[[1413,1508],[1403,1354],[1403,1354],[1390.0,1230.8],[1373.0,1135.8],[1373.0,1135.8],[1352.0,1061.8],[1326.0,1002.8],[1326.0,1002.8],[1294.0,954.8],[1256.0,915.8],[1256.0,915.8],[1209.0,883.8],[1154.0,856.8],[1154.0,856.8],[1088.0,835.8],[1008.0,818.8],[1008.0,818.8],[911.0,804.8],[792.0,794.8],[792.0,794.8],[643.0,787.8],[455.0,782.8],[455.0,782.8],[206.0,779.8],[-142.0,779.8],[-142.0,779.8],[-695.0,779.8]],"dy":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[600,600,600,600,600,600,600,600,600,600,600,600,600,600,600,600,600,600,370,247,247,165,110,110,73,49,49,33]],"white":{},"axis":{"deg":-20,"x1":-347.11,"y1":126.34,"x2":1695.4,"y2":-617.08},"ground_at":12,"colors":{"black":"#020202","white":"#F0ECF0"}} };
+    var PRESETS = {"replica-s3-rush":{"frames":28,"white2d":{"frames":{"12":0,"13":1,"14":1,"15":2,"16":3,"17":4,"18":5,"19":6,"20":7,"21":8,"22":9,"23":10,"24":11,"25":12,"26":12,"27":13}},"size":669.512,"origin":[[1413,1508],[1403,1354],[1403,1354],[1390.0,1230.8],[1373.0,1135.8],[1373.0,1135.8],[1352.0,1061.8],[1326.0,1002.8],[1326.0,1002.8],[1294.0,954.8],[1256.0,915.8],[1256.0,915.8],[1209.0,883.8],[1154.0,856.8],[1154.0,856.8],[1088.0,835.8],[1008.0,818.8],[1008.0,818.8],[911.0,804.8],[792.0,794.8],[792.0,794.8],[643.0,787.8],[455.0,782.8],[455.0,782.8],[206.0,779.8],[-142.0,779.8],[-142.0,779.8],[-695.0,779.8]],"dy":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[600,600,600,600,600,600,600,600,600,600,600,600,600,600,600,600,600,600,370,247,247,165,110,110,73,49,49,33]],"white":{},"axis":{"deg":-20,"x1":-347.11,"y1":126.34,"x2":1695.4,"y2":-617.08},"ground_at":12}};
     var uid = 0;
     function E(tag, at) { var e = document.createElementNS(NS, tag); for (var k in at) e.setAttribute(k, at[k]); return e; }
     function frameOf(p) { return p.frame && p.frame.w ? p.frame : { w: 1920, h: 1080 }; }
-    function col(v) { var M = window.__motionExpert, pal = (M && M.tokens && M.tokens.palette) || {}; return pal[v] || v; }
+    /* A palette name resolves to its tokens.css value (so a re-skin follows the
+       tokens), then to tokens.json; any other CSS colour passes through. */
+    function col(v) {
+      if (/^[a-z][a-z0-9-]*$/.test(v)) {
+        try { var c = getComputedStyle(document.documentElement).getPropertyValue("--color-" + v).trim(); if (c) return c; } catch (e) {}
+      }
+      var M = window.__motionExpert, pal = (M && M.tokens && M.tokens.palette) || {}; return pal[v] || v;
+    }
     function cl(u) { return u < 0 ? 0 : u > 1 ? 1 : u; }
-    function preset(p) { return p.preset ? PRESETS[p.preset] || null : null; }
+    function preset(p) { return window.__esRuntime.preset(PRESETS, p); }
     /* The gradient axis: -20 degrees by default, spanning the frame. */
     function axis(F, deg) {
       var t = deg * Math.PI / 180, dx = Math.cos(t), dy = Math.sin(t);
@@ -48,8 +866,8 @@
       return { x1: a * dx, y1: a * dy, x2: b * dx, y2: b * dy, pmin: a, pmax: b, dx: dx, dy: dy };
     }
     function words(p) {
-      var P = preset(p); if (P) return P.words.map(function (w) { return w.t; });
-      var t = p.text != null ? p.text : "The most";
+      var P = preset(p); if (P) return (P.words || []).map(function (w) { return w.t; });
+      var t = p.text != null ? p.text : "Short line";
       return Array.isArray(t) ? t : String(t).split(/\s+/).filter(Boolean);
     }
     function groundFrames(p) {
@@ -184,17 +1002,17 @@
         var wm = E("mask", { id: id + "-wm", maskUnits: "userSpaceOnUse", x: 0, y: 0, width: F.w, height: F.h });
         wm.appendChild(E("rect", { x: 0, y: 0, width: F.w, height: F.h, fill: "url(#" + id + "-wg)" }));
         /* preset: the measured whiteness fields, one grey image per distinct frame */
-        if (P && P.white2d) P.white2d.uris.forEach(function (u, i) {
+        if (P && P.white2d && P.white2d.uris) P.white2d.uris.forEach(function (u, i) {
           var wi = E("image", { "class": "gp-wimg", href: u, x: 0, y: 0, width: F.w, height: F.h, preserveAspectRatio: "none", opacity: 0 });
           wi.setAttribute("data-i", i); wm.appendChild(wi);
         });
         defs.appendChild(wm);
-        var C = Object.assign({ black: P ? P.colors.black : "ink", white: P ? P.colors.white : "type-light" }, p.colors || {});
-        var size = P ? P.size : (p.size || 0.62 * F.h), fam = P ? '"ES Line", serif' : (p.font || "var(--font-serif)");
+        var C = Object.assign({ black: "ink", white: "type-light" }, P && P.colors || {}, p.colors || {});
+        var size = P ? P.size : (p.size || 0.62 * F.h), fam = P && P.font ? '"' + P.font + '", serif' : (p.font || "var(--font-serif)");
         var line = function (fill, cls) {
           var lg2 = E("g", { "class": "gp-line " + cls });
           if (P) {
-            P.words.forEach(function (w, i) {
+            (P.words || []).forEach(function (w, i) {
               var wg = E("g", { "class": "gp-w", "data-w": i });
               var t = E("text", { "class": "gp-word", x: w.xs.map(function (x) { return x + w.dx; }).join(" "), y: 0, "font-size": size, fill: fill });
               t.style.fontFamily = fam; t.textContent = w.t; wg.appendChild(t); lg2.appendChild(wg);

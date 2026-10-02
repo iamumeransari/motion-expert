@@ -1,12 +1,12 @@
 # camera-rig
 
-The film's camera as a block. It takes one image slot, a still or an image sequence, places it in a box in frame pixels and moves the picture inside that box with one of the source's own camera moves: the push that leans in on the lying model, the punch-in on a cut, the long pull-back off a billboard, the steady pull the city shots ride on, the settle, the drift and the tilt. Every preset is a measurement, so a push looks like this film's push and not a generic zoom, and the moves run on the film's cadences: the push on a still steps on the sixteen-a-second picture, while the pulls, measured on real footage, run on ones.
+The film's camera as a block. It takes one image slot, a still or an image sequence, places it in a box in frame pixels and moves the picture inside that box with one of the source's own camera moves: the push that leans in on a figure at rest, the punch-in on a cut, the long pull-back off a billboard, the steady pull the city shots ride on, the settle, the drift and the tilt. Every preset is a measurement, so a push looks like this film's push and not a generic zoom, and the moves run on the film's cadences: the push on a still steps on the sixteen-a-second picture, while the pulls, measured on real footage, run on ones.
 
 Not signature on its own: the camera is what the signature moves sit on. crop-select uses it for its closing push and billboard uses it to move a picture and its board as one.
 
 ## Modes
 
-**Replica.** `preset: "replica-s7-A"` holds the measured per-frame homographies of film 828 to 843 (s7 shot A, the push landing on the lying model and the handheld hold after it), one row-major 3x3 per unique picture, mapping the clean plate (2220 by 1380, frame 828 coordinates padded by 150 px) to the frame. The plan supplies the plate as `slot.src` and the hair recolour as `swaps: [{ frame: 7, src }]`.
+**Replica.** `preset: "replica-s7-A"` holds the measured per-frame homographies of film 828 to 843 (s7 shot A, the push landing and the handheld hold after it), one row-major 3x3 per unique picture, mapping the clean plate (2220 by 1380, frame 828 coordinates padded by 150 px) to the frame. The preset is geometry only (plate size, homographies, clip rects); the plan supplies the plate as `slot.src` and the picture change at frame 7 as `swaps: [{ frame: 7, src }]`, and any `props.replica` it carries is merged over the preset by `window.__esRuntime.preset`.
 
 **General.** `preset` names a camera preset, or `cam` gives one move or a list. Scale interpolates in log space, which is how every preset was fitted, so a pull from 1 to 0.4 reads as an even move.
 
@@ -31,7 +31,7 @@ A move takes `at` (seconds after the block starts; a move with no `at` starts on
 
 ## Text parameters
 
-None. The camera carries no type.
+None. The camera carries no type. Its only colours are the placeholder's tokens (`--color-mist`, `--color-ghost`, `--color-ink-grey`, `--font-mono` for the label) and `ground`, a token name or CSS colour.
 
 ## Timing
 
@@ -39,14 +39,14 @@ Durations come from the presets and scale with `durationScale` or a move's `scal
 
 ## Shared code
 
-The move engine is `window.__esCamera`, kept in `work/blocks/camera-rig/es-camera.src.js` and copied verbatim between the `BEGIN es-camera` and `END es-camera` markers by `work/blocks/camera-rig/inject.py`; any block that moves a picture carries the same copy, and the first copy in a document wins. `__esCamera.sample(cam, t, props)` returns the camera state at a time, for anything that must follow the camera without sitting inside the moved node.
+The move engine is `window.__esRuntime.camera` (the old global `window.__esCamera` remains as an alias), the camera module of the shared runtime kept in `library/_runtime/50-camera.js` and spliced verbatim between the `BEGIN es-runtime` and `END es-runtime` markers of every block by `library/_runtime/inject.py`; the first copy in a document wins. `window.__esRuntime.camera.sample(cam, t, props)` returns the camera state at a time, for anything that must follow the camera without sitting inside the moved node.
 
 ## Source shots
 
-Film 822 to 843 (shots 34 and 35; `work/replica/s6` shot 4 and `work/replica/s7` shot A) for the push, the punch and the replica preset; film 847 to 992 (s7 shots B to I) for the pulls, from the per-frame board homographies tracked in s7; fingerprint moves 29, 48, 52, 66 and 67 for drift, push-hard, push-soft, tilt and pull-settle.
+Frames 822 to 843 of the film (shots 34 and 35; s6 shot 4 and s7 shot A) for the push, the punch and the replica preset; film 847 to 992 (s7 shots B to I) for the pulls, from the per-frame board homographies tracked in s7; fingerprint moves 29, 48, 52, 66 and 67 for drift, push-hard, push-soft, tilt and pull-settle.
 
 ## Proof
 
-`work/blocks/camera-rig/`. `plan-replica.json` rebuilds s7 shot A (film 828 to 846) from this block: one camera-rig carries the plate with `replica-s7-A` and the hair swap, a second holds the paper under the print, and the shot's traced cursor rides on top as the replica's own element (`library/s7a-cursor.html` beside the plan), because the pointer is in the shot and is not the camera. Scored against the section's cut list (cut at frame 1, the push landing), it passes: shot SSIM 0.9967 and 0.9955, relative flow 0.130, the same as the passing s7 section render. The clip's own fingerprint also calls the print's first step at frame 16 a cut, which leaves frames 1 to 15 as a shot with about 1 px of motion per frame; there the flow error is grain-bound at 0.160, and the passing s7 render scores 0.159 on the same window, so that window cannot separate a right move from a wrong one.
+`work/blocks/camera-rig/`. `plan-replica.json` rebuilds s7 shot A (film 828 to 846) from this block: one camera-rig carries the plate with `replica-s7-A` and the frame 7 swap, a second holds the paper under the print, and the shot's traced cursor rides on top as the replica's own element (`library/s7a-cursor.html` beside the plan), because the pointer is in the shot and is not the camera. Scored against the section's cut list (cut at frame 1, the push landing), it passes: shot SSIM 0.9967 and 0.9955, relative flow 0.130, the same as the passing s7 section render. The clip's own fingerprint also calls the print's first step at frame 16 a cut, which leaves frames 1 to 15 as a shot with about 1 px of motion per frame; there the flow error is grain-bound at 0.160, and the passing s7 render scores 0.159 on the same window, so that window cannot separate a right move from a wrong one.
 
 `plan-demo.json` runs push, drift (at 1.5x duration), pull-back and a placeholder punch plus steady pull at 1080 by 1350 on stand-in pictures.

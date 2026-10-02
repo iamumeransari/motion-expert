@@ -8,20 +8,20 @@ EditorialSelect Serif Regular is a static TrueType face (1000 units per em, cap 
 
 Each glyph is the source's own ink, normalised to the common cap height, shifted on a distance field to one weight (the film's main weight, which matches Exposure at about -20), smoothed by about one source pixel (two and a half for O and W, which came from one-bit masks), then traced. Where one line holds several instances of a letter they are aligned and averaged. The instance used per glyph:
 
-| glyph | source line (frame) | source cap height |
+| glyph | source instance (film frame or shot) | source cap height |
 |---|---|---|
-| E d i t | "Edit it" (s4 trace) | 432 px |
-| O | "Oops..." (825), point-symmetric repair where a highlight crossed it | 270 px |
-| M a s k | "Mask it" (s4 trace) | 205 px |
-| W | "Write on it" (590) | 191 px |
-| L c h n u | "Launch it" (655) | 186 px |
-| e m o r | "Ecommerce" at the 1.5x step (76) | 157 px |
-| A D F P g l y | genre words Art, Design, Film, Photography, Editorial (s1 traces) | 103 px |
-| T | "The most precise edit model" (s3 traced face) | 89 px |
-| I 4 5 . | "Introducing Ideogram 4.5" (160) | 85 px |
-| B | "Big" (740), thickened from the lighter Exposure 0 weight | 84 px |
-| w | "Model weights are coming soon" (1004) | 73 px |
-| b v | "will never be the same" (112) | 67 px |
+| E d i t | s4 shot 20 trace | 432 px |
+| O | frame 825, point-symmetric repair where a highlight crossed it | 270 px |
+| M a s k | s4 shot 17 trace | 205 px |
+| W | frame 590 | 191 px |
+| L c h n u | frame 655 | 186 px |
+| e m o r | frame 76, the 1.5x title step | 157 px |
+| A D F P g l y | s1 title card traces, frames 0 to 71 | 103 px |
+| T | s3 traced line, frames 244 to 339 | 89 px |
+| I 4 5 . | frame 160 | 85 px |
+| B | frame 740, thickened from the lighter Exposure 0 weight | 84 px |
+| w | frame 1004 | 73 px |
+| b v | frame 112 | 67 px |
 
 Advance widths come from a least-squares fit of every measured gap between neighbouring letters in eleven lines (rms residual 12.9 units after a per-line tracking term), with Source Serif 4's proportions as a weak prior. Fifteen kerning pairs whose measured gap departs from that fit by 8 units or more are in the `kern` feature: il ll el gh Tr ry at id rt ho ap hy al Fi lm.
 

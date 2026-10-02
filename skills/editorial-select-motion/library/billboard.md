@@ -6,7 +6,7 @@ Not signature in the sense of a graphic move the film invented, but it is the fi
 
 ## Two modes
 
-`preset: "replica-s7-B"` to `"replica-s7-I"` replays a source shot exactly. The block holds that shot's measured keys: the board's flat size, its per-frame board-to-frame homography (tracked by SIFT then ECC against the flat median), the per-frame ink colour sampled from the plate, the glow and the edge blur. The plan supplies only content: the shot's inpainted frames as the slot sequence, its per-frame cut-outs, and the board artwork (traced logotype paths and small type set with per-glyph x) from `work/blocks/billboard/tools/make_replica_plan.py`. The small type in those shots is set in Montserrat, Josefin Sans and Playfair Display Italic, which the style does not carry, so a replica build passes `--style-dir work/blocks/_style-s67`.
+`preset: "replica-s7-B"` to `"replica-s7-I"` replays a source shot exactly. The block holds only that shot's geometry: the board's flat size and its per-frame board-to-frame homography (tracked by SIFT then ECC against the flat median). Everything sampled from the source's pictures lives outside the skill in `work/replica/presets/billboard.json` and reaches the block as `props.replica` (set on the plan by `work/replica/presets/apply.py`, merged over the preset by `window.__esRuntime.preset`): the per-frame ink colour sampled from the plate, the glow and the edge blurs. The plan also supplies the shot's inpainted frames as the slot sequence, its per-frame cut-outs, and the board artwork (traced logotype paths and small type set with per-glyph x) from `work/blocks/billboard/tools/make_replica_plan.py`. The small type in those shots is set in faces the style does not carry, so a replica build passes the replica overlay, `--style-dir work/replica/presets/style`.
 
 With no preset the block is general. The plane is four corners `quad` (top left, top right, bottom right, bottom left) in frame px, or in the picture's own px with `quadSpace: "image"` and `slot.size`, in which case the corners follow the slot's crop and focal point. The homography is solved in `render()` from those corners, the board's flat height follows the quad's aspect, and the artwork is laid out from ES Serif glyph metrics, so a word of any length is centred on its ink and shrunk until it fits. Glow defaults to the film's 0.45 at 0.6 percent of the board width, and the edge blur to about 0.6 frame px whatever the board's size on screen, which is what the replica measured.
 
@@ -17,7 +17,7 @@ With no preset the block is general. The plane is four corners `quad` (top left,
 | `slot` | the photograph: `{ src, fit, focal: [x, y], zoom, size: [w, h], cutout }`, or `{ frames: [src, ...] }` for a photo sequence played one picture per film frame | without a src it draws the labelled placeholder |
 | `slot.cutout` | the same picture on transparency, the subject only, cropped exactly like the slot and drawn over the type | one still cut-out; a moving occluder uses `fgs` |
 | `fgs` | per-frame cut-outs `[src or null, ...]`, aligned with the frames | the replica's passing car (E) and crowd (F) |
-| `panel` | a printed ground on the plane: `{ color }` or an image slot `{ src, focal, light }` | `light` is a brightness multiplier to sit the print in the plate's light; `scrim` (0 to 1) prints a dark shade rising from the foot so light small type stays legible over a busy print |
+| `panel` | a printed ground on the plane: `{ color }` or an image slot `{ src, focal, light }` | `color` is a token name or CSS colour (default `paper`); `light` is a brightness multiplier to sit the print in the plate's light; `scrim` (0 to 1) prints a shade in `scrimColor` rising from the foot so light small type stays legible over a busy print |
 
 ## Text parameters
 
@@ -27,11 +27,13 @@ With no preset the block is general. The plane is four corners `quad` (top left,
 | `art.logo.d`, `art.logo.box` | none | a traced or drawn path set with its box, fitted to the board instead of a word |
 | `art.lines` | [] | blocks of small type: `{ at: "below" or "tl", "tr", "bl", "br", "above", text (string or lines), face: "mono", "grotesk", "humanist", "serif", size (share of board height, 0.045), leading, tracking, weight }`; SVG anchors the alignment, so nothing is measured for placement |
 | `art.rules` | [] | rectangles `[x, y, w, h]` as shares of the board |
-| `art.items` | none | the replica's own item list (path, text with per-glyph `xs`, rect), which bypasses the layout |
-| `ink` | `type-light` | token name or CSS colour (the replica takes it per frame from the plate) |
+| `art.items` | none | a ready item list (path, text with per-glyph `xs`, rect), as a replica plan gives, which bypasses the layout |
+| `ink` | `type-light` | token name or CSS colour (a replica takes it per frame from `props.replica.ink`) |
 | `glow` | `[0.006 W, 0.45]` | `[blur px in board space, opacity]`, `null` for none (use none for dark ink on a pale board) |
 | `soften` | about 0.6 frame px | edge blur in board space |
 | `boardW` | 1000 | the flat board's width in its own units |
+| `background` | `ink` | token name or CSS colour behind the picture, seen only where the picture does not cover |
+| `panel.scrimColor` | `ink` | token name or CSS colour of the printed shade under the type |
 
 ## Timing
 
@@ -41,7 +43,7 @@ Duration: 0.45 s (shot G) to 1.46 s (shot I) in the film; any length in general 
 
 ## Source shots
 
-s7 shots B to I, film frames 847 to 992 (35.292 to 41.375 s): B rooftop VELORA, C wider street, D Think it on brick, E bus shelter at night with a car crossing, F night poster in a crowd, G aerial Own it, H Own it under the rail bridge, I the long pull-back on the brownstone. Proof renders live in `work/blocks/billboard/` (out/B, out/E, out/BI for the replica, out/demo for the general mode).
+s7 shots B to I, film frames 847 to 992 (35.292 to 41.375 s): B frames 847 to 865, a low-angle rooftop board on a slow pull; C frames 866 to 881, the same street wider; D frames 882 to 897, a board on a brick wall as the camera pulls back; E frames 898 to 910, a night bus shelter with a car crossing in front (per-frame cut-outs); F frames 911 to 926, a night poster with a crowd passing in front (per-frame cut-outs); G frames 927 to 937, an aerial view with a distant board; H frames 938 to 957, a board close under a rail bridge; I frames 958 to 992, the long pull-back on a brownstone. Proof renders live in `work/blocks/billboard/` (out/B, out/E, out/BI for the replica, out/demo for the general mode).
 
 ## What does not generalise
 

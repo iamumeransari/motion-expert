@@ -2,13 +2,13 @@
 
 One serif line slides in from the right and settles word by word over a run of colour fields that cut on the film's 16 fps picture cadence, then the fields cut away to a paper card where every word takes its own gradient and a slow exponential push carries the frame in. It is the film's moment of spectacle resolving into calm: colour breaks loose for about three seconds and comes to rest in one sentence. Signature move.
 
-Source: replica section s3, shots 2 to 9 (source frames 244 to 339, 10.167 to 14.167 s). Rebuilt from this block alone it scores mean SSIM 0.980 or better on every shot and relative flow error 0.143 at worst, with all 7 cuts on the source frame (`work/blocks/chromatic-title/replica/cmp-1/report.md`).
+Source: replica section s3, shots 2 to 9 (source frames 244 to 339, 10.167 to 14.167 s). Rebuilt from this block alone it scores mean SSIM 0.979 or better on every shot and relative flow error 0.141 at worst, with all 7 cuts on the source frame (`work/blocks/chromatic-title/co-1/cmp/report.md`).
 
 ## Modes
 
-`preset: "replica-s3-line"` replays the measured per-frame keys from `work/replica/s3`: per-letter x positions of "The most precise edit model", the line's x, y and per-word drop on every frame, the card's push scale, the 13-stop gradient of every word and the field schedule (six fields, one two-frame dissolve at 0.4). It is set in **ES Line** (`var(--font-line)`), the face traced from the film's own line, because no open face matched it. It reproduces the source at 1920 x 1080 and ignores the general props below except `images`, `card`, `white` and `exitAt`.
+`preset: "replica-s3-line"` replays the measured per-frame motion of s3 shots 2 to 9 (frames 244 to 339, the line-over-fields beat and its card): the line's x, y and scale and every word's drop on every frame, the card frame and the field schedule (six fields, one two-frame dissolve at 0.4). The skill holds only that motion and geometry. The source-bound part, which is the words with their per-letter x positions, the 13-stop gradient of every word, the measured line and paper colours and the replica face, lives outside the skill and arrives as `props.replica` (apply.py sets it from the replica layer). It reproduces the source at 1920 x 1080 and ignores the general props below except `images`, `card`, `white` and `exitAt`.
 
-General mode (no preset) rebuilds the same motion from fitted curves, so any words, any number of fields, any duration scale and any aspect work. It is set in **EditorialSelect Serif** (`"ES Serif"`, the style's face) unless `font` says otherwise. ES Line only carries the 14 letters of the source line, so never use it for new words.
+General mode (no preset) rebuilds the same motion from fitted curves, so any words, any number of fields, any duration scale and any aspect work. It is set in `var(--font-serif)` (EditorialSelect Serif in this style's tokens) unless `font` says otherwise, so a re-skin that changes the token changes the face. The replica face only carries the letters of the source line, so never use it for new words.
 
 ## Slots
 
@@ -22,11 +22,11 @@ The block expands nothing at render time: a sequence must be listed frame by fra
 
 ## Text parameters
 
-- `words`: the line, a string with `\n` for a row break (portrait frames want two rows). Default "The most precise edit model".
-- `font`: CSS family list, default `"ES Serif", Georgia, serif`.
+- `words`: the line, a string with `\n` for a row break (portrait frames want two rows). Default "A short line of type", a placeholder.
+- `font`: CSS family list, default `var(--font-serif)`. Token variables are resolved for the canvas measure.
 - `size`: px at the frame's width. When absent the block measures the widest row from the face's glyph metrics (canvas `measureText`, re-run once on `document.fonts.ready`) and takes the largest size that keeps it inside `fill` (0.84 of the width, the source's measure), capped at the source size (125.7 px at 1920 x 1080) scaled by the larger of the width and height ratios, times `size_scale`, so a portrait frame with two rows sets larger type.
 - `leading` (row pitch in ems, 1.12), `y` (block centre as a share of the height, 0.504).
-- `white`: the line colour over the fields, default `var(--color-type-light)` (the preset uses the measured #F0ECF0).
+- `white`: the line colour over the fields, default `var(--color-type-light)` (the preset takes a measured colour from the replica layer).
 - `card.palette`: colours for the per-word gradients on the card, word k running from `palette[k]` to `palette[k+1]`. Default is tokens: steel-blue, violet, orchid, lavender, cycled. `card.gradients` gives explicit per-word stop lists `[[offset, colour], ...]` instead.
 
 ## Timing

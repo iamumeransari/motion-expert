@@ -2,13 +2,13 @@
 
 A giant ghost word fills the paper in pale grey, cropped by every edge, and a small black serif word sits on it at the centre. Photo tiles pop in around the word one picture at a time with no tween, the word steps up to twice its size in a single picture, and then violet chips land around a tile that has been pulled in behind the word. The tile holds for two frames and grows on an accelerating curve into the cut, showing more of its picture rather than stretching it, while its chips streak diagonally outward. The block ends mid-growth on purpose, because in the film the next shot (crop-select) catches the tile and keeps growing it. Signature: yes (`ghost-word` and `tile-pop` in moves.md, shots 31 and 32).
 
-Source: s6 shots 1 and 2, film frames 733 to 759 (30.542 to 31.667 s). The replica keys come from the passing s6 replica in `work/replica/s6`.
+Source: s6 shots 1 and 2, film frames 733 to 759 (30.542 to 31.667 s). The replica preset's motion keys come from the passing s6 replica (see references/sources.md).
 
 ## Slots
 
 | slot | what fills it | notes |
 |---|---|---|
-| `paper` | optional image slot | flat `--color-paper` when absent; the replica uses the masked temporal median of the source |
+| `paper` | optional image slot | flat `paperColor` (a token name or CSS colour, default `paper`) when absent; the replica uses the masked temporal median of the source |
 | `tiles[]` | image slots `{ src, fit, focal: [x, y], box, art, label }` | cover-cropped by code at the box; `box` is `[x, y, w, h]` as fractions of the frame and overrides the default layout; `art` is an optional transparent overlay (SVG or PNG) riding the tile, which is how the replica draws the traced magazine print |
 | `select` | image slot `{ src, focal }` | the picture pulled in behind the word; it is laid out at the final box size and the growing box is a window onto it |
 
@@ -16,7 +16,7 @@ With no `src` a slot draws a labelled hatched placeholder, which is the code-and
 
 ## Text parameters
 
-`word` (default "Big"), `ghost` (defaults to `word`; repeated across the row until it crosses both edges), `cap` (small word cap height in px at a 1080 short side, default 85), `stepRatio` (1.994), `tracking` (em), `font` (family, default "ES Serif"), `ink`, `ghostColor` (token names or CSS colours, defaults `ink` and `ghost`), `ghostCap` (0.867 of the short side), `ghostY` (baseline as a share of the height, 0.56), `wordY` (cap centre as a share of the height, 0.5), `wordDrop` (how far the word sinks with the growth, 0.094 of the grown cap). Every word is laid out from EditorialSelect Serif's glyph metrics (`__esShared.layout`) and centred on its ink, so any length works without reading the DOM.
+`word` (default "Word", a placeholder), `ghost` (defaults to `word`; repeated across the row until it crosses both edges), `cap` (small word cap height in px at a 1080 short side, default 85), `stepRatio` (1.994), `tracking` (em), `font` (a CSS family name or stack, default `var(--font-serif)`), `ghostFont` (the ghost row's family, defaults to `font`), `ink` and `ghostColor` (token names or CSS colours, defaults `ink` and `ghost`), `ghostCap` (0.867 of the short side), `ghostY` (baseline as a share of the height, 0.56), `wordY` (cap centre as a share of the height, 0.5), `wordDrop` (how far the word sinks with the growth, 0.094 of the grown cap). Every word is laid out from EditorialSelect Serif's glyph metrics (`__esRuntime.shared.layout`) and centred on its ink, so any length works without reading the DOM; another `font` is placed on those serif widths, so a face with very different proportions sits slightly off its measured centre. The chips take `chipColor` (default `violet`), so a re-skin sets every colour the block draws through `paperColor`, `ghostColor`, `ink` and `chipColor`.
 
 ## Timing
 
@@ -26,7 +26,7 @@ Selection chips are 24 px squares (`chip`, colour `chipColor`, default `violet`)
 
 ## Presets
 
-`preset: "replica-s6-1-2"` plays the measured per-frame keys of the source shot (ghost and word glyph by glyph in Source Serif 4 on its wght and opsz axes, the four tile boxes and pop frames, the selected tile's window and picture placement, the traced chip shapes per picture). It needs the face "ES Source Serif", which `work/blocks/_style-s67/tokens.css` adds, and slot fills from `work/blocks/ghost-word-grow/calibration-only-plates/` (replica plans only). Rebuild the preset with `work/blocks/ghost-word-grow/tools/make_preset.py`; the growth curve fit is `tools/fit.py`.
+`preset: "replica-s6-1-2"` plays the measured motion of s6 shots 1 and 2 (frames 733 to 759): the frame count and cadence phase, the four tile boxes and their pop frames, the selected tile's window and picture placement per picture, and the chip pool. The block holds only that motion and geometry. Everything bound to the source (the ghost and word text, the replica face with its wght and opsz settings and sampled colours, the glyph by glyph positions of the source word in both rows, and the traced chip outlines with their sampled fill) lives outside the skill in `work/replica/presets/ghost-word-grow.json` and arrives as `props.replica`, which `work/replica/presets/apply.py` writes into replica plans; the block reads both through `__esRuntime.preset(PRESETS, props)`. A motion preset played without its replica layer takes the missing text, glyph keys and chips from the general keys, so the measured motion runs with any word. Replica proofs build with `--style-dir work/replica/presets/style`, which adds the replica face, and fill the slots from the block's calibration-only plates in its work folder. `tools/make_preset.py` in that folder rebuilds the preset and `tools/split_preset.py` splits it; the growth curve fit is `tools/fit.py`.
 
 ## Layering
 

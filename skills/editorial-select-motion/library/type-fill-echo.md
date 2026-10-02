@@ -1,6 +1,6 @@
 # type-fill-echo
 
-A dark grey serif line on paper glides in from the right and settles dead centre, holds, creeps larger, punches up on a hard ease-out, and on the punch its letters turn into windows onto a picture that stays fixed to the frame. Two frames later echo rows of the same line, about 1.66 times the punched size and filled from the same picture, land above and below it, cropped by the frame. It is the film's "Launch it" beat: the line is the promise and the fill is the payoff, so give it the word that names the result.
+A dark grey serif line on paper glides in from the right and settles dead centre, holds, creeps larger, punches up on a hard ease-out, and on the punch its letters turn into windows onto a picture that stays fixed to the frame. Two frames later echo rows of the same line, about 1.66 times the punched size and filled from the same picture, land above and below it, cropped by the frame. In the film it is the beat where the line is the promise and the fill is the payoff, so give it the word that names the result.
 
 Signature: yes. Source: s5 shot 27, film frames 637 to 686 (26.542 to 28.625 s).
 
@@ -15,7 +15,7 @@ An empty `fill` renders the hatched placeholder, which is the code-and-slots vie
 
 ## Text parameters
 
-`text` (any length), `cap` (cap height as a share of frame height, 0.171), `baseline` (share of height, 0.594), `maxWidth` (largest ink width at the punch as a share of frame width, 0.9; longer words are set smaller), `ink` (colour token, `--color-ink-grey`). Set in ES Serif as SVG text; widths come from the font's own metrics through `__esKit.measure`, so the line is centred on its ink before paint.
+`text` (any length, default "Headline"), `cap` (cap height as a share of frame height, 0.171), `baseline` (share of height, 0.594), `maxWidth` (largest ink width at the punch as a share of frame width, 0.9; longer words are set smaller), `ink` (colour token, `--color-ink-grey`). Set in the `--font-serif` token (ES Serif) as SVG text; widths come from the font's own metrics through the runtime's `kit.measure`, so the line is centred on its ink before paint.
 
 ## Timing
 
@@ -29,7 +29,7 @@ Curves: glide cubic-bezier 0, 0.6, 0, 1 over 18 frames from 0.19 of the width to
 
 ## Presets
 
-`replica-s5-shot27`: the measured per-frame transform of the traced line (dark, fill, both echoes) over ES Serif "Launch it" set at pen 290, baseline 660, 316 px, which overlays the traced outline at IoU 0.94. Rebuilt from the block alone with `paper.png` and `fill-launch.png` as slot fills it scores mean SSIM 0.985 and relative flow 0.115 (bar 0.975 and 0.15), so no glyph override was needed.
+`replica-s5-shot27`: the measured per-frame transform of the traced line (dark, fill, both echoes) over the line set in ES Serif at pen 290, baseline 660, 316 px, which overlays the traced outline at IoU 0.94. The preset holds motion and geometry only; the source line's words come from the replica layer outside the skill as `props.replica` (references/sources.md), and without it the preset sets `text`. Rebuilt from the block alone with the source's paper and fill plates as slot fills it scores mean SSIM 0.985 and relative flow 0.115 (bar 0.975 and 0.15), so no glyph override was needed (proof in `work/blocks/type-fill-echo/co-1`).
 
 The white phase that follows on the magazine plate (s5 shots 28 and 29, frames 687 to 701: the punched line in white steps to 0.704 on 693 and is gone on 697) is not a preset here; it is a hard cut to a new plate with a one-frame scale step, which a plate block and a type step carry.
 

@@ -1,0 +1,861 @@
+{
+  "name": "editorial-select film arc",
+  "version": 1,
+  "about": "The whole source piece as a sequence of beats, with no source content: each beat's share of the runtime, its cut rhythm, the blocks that carry it, how it enters and leaves, its energy and the feeling it lands. A new piece follows this order with its own words and images, scales to another length by changing the number of items inside elastic beats (never by stretching a hold), or borrows one movement. Measured from the source (references/scenes.md, references/moves.md, fingerprint.json energy curve, 41 hard cuts including the six moves.md adds). Frames are 24 fps; picture changes run on the 16 fps cadence.",
+  "source": {
+    "runtime_s": 47.38,
+    "fps": 24,
+    "shots": 42,
+    "hard_cuts": 41,
+    "hard_cut_share": 0.85,
+    "energy_mean": 0.074,
+    "energy_peaks_share": [
+      0.464,
+      0.494,
+      0.701,
+      0.745,
+      0.815
+    ]
+  },
+  "energy_levels": {
+    "unit": "mean of the normalised optical-flow energy curve over the beat (source mean 0.074)",
+    "still": [
+      0.0,
+      0.03
+    ],
+    "calm": [
+      0.03,
+      0.06
+    ],
+    "lift": [
+      0.06,
+      0.12
+    ],
+    "swell": [
+      0.12,
+      0.18
+    ],
+    "peak": [
+      0.18,
+      1.0
+    ]
+  },
+  "grounds": {
+    "paper": "flat --color-paper or ruled grid paper; graphic beats; always the calm ones",
+    "photo": "a full-bleed or carded photograph; photographic beats; always the energetic ones"
+  },
+  "movements": [
+    {
+      "id": "catalogue",
+      "name": "The catalogue",
+      "share": 0.222,
+      "beats": [
+        "titles",
+        "scatter",
+        "lockup",
+        "cycle-mark",
+        "giant-pass"
+      ],
+      "borrow": "Works alone as an opener or a 10 to 15 s brand sting: a fast inventory, sorted into one line, named, then a swell. End on the giant pass or go straight to the end card."
+    },
+    {
+      "id": "claim",
+      "name": "The claim",
+      "share": 0.147,
+      "beats": [
+        "statement",
+        "breath"
+      ],
+      "borrow": "Works alone as a single statement beat (3 to 6 s) between other material: one calm line over changing pictures, then the line alone on paper."
+    },
+    {
+      "id": "demonstrations",
+      "name": "The demonstrations",
+      "share": 0.272,
+      "beats": [
+        "select-lift",
+        "behind-push",
+        "rise-wipe",
+        "type-image",
+        "proof"
+      ],
+      "borrow": "Works alone as a 10 to 15 s how-it-works piece: each beat shows one precise action on one picture, the edits getting smaller and faster. Repeat the block set for a second subject in a longer piece."
+    },
+    {
+      "id": "scale-signoff",
+      "name": "The scale-up and the sign-off",
+      "share": 0.359,
+      "beats": [
+        "escalate",
+        "print-street",
+        "billboard-run",
+        "endcard"
+      ],
+      "borrow": "Works alone as a 15 s reach piece: one picture is selected, grows in steps, is printed and seen everywhere, then the quiet sign-off."
+    }
+  ],
+  "beats": [
+    {
+      "id": "titles",
+      "n": 1,
+      "movement": "catalogue",
+      "name": "Word-per-cut titles",
+      "share": 0.069,
+      "source_s": 3.29,
+      "ground": "photo",
+      "blocks": [
+        "genre-word-card"
+      ],
+      "inside": [
+        "select-handles"
+      ],
+      "cut_rhythm": {
+        "unit": "card",
+        "items": 6,
+        "shot_frames": [
+          7,
+          15
+        ],
+        "median_frames": 12,
+        "note": "Each card holds still after a 6 frame handle glide and tracking snap, so about half of every card is a held frame. The last card steps up 1.29x in one frame with a nested selection."
+      },
+      "elastic": {
+        "unit": "card",
+        "per_item_s": [
+          0.33,
+          0.63
+        ],
+        "min_items": 3,
+        "max_items": 10
+      },
+      "in": "cold open on the first card, hard cut, no fade",
+      "out": "the last word steps up and photo tiles invade it, then a hard cut to paper",
+      "energy": {
+        "mean": 0.039,
+        "level": "calm"
+      },
+      "feeling": "range and confidence: a fast inventory of everything the subject covers, read one word at a time, each word claimed by the same selection",
+      "copy": "one word per card",
+      "sound": "a broadband hit on each cut, the bed at its densest"
+    },
+    {
+      "id": "scatter",
+      "n": 2,
+      "movement": "catalogue",
+      "name": "Scatter and collapse",
+      "share": 0.043,
+      "source_s": 2.04,
+      "ground": "paper",
+      "blocks": [
+        "tile-scatter"
+      ],
+      "cut_rhythm": {
+        "unit": "pop",
+        "items": 1,
+        "shot_frames": [
+          49,
+          49
+        ],
+        "median_frames": 49,
+        "note": "One shot. Tiles and words pop one or two per picture, words walk a cell at a time, then gather into one line while tiles drop out a few per picture."
+      },
+      "elastic": {
+        "unit": "tile",
+        "per_item_s": [
+          0.04,
+          0.13
+        ],
+        "min_items": 5,
+        "max_items": 24,
+        "duration_s": [
+          1.5,
+          4.0
+        ]
+      },
+      "in": "hard cut with tiles already present",
+      "out": "the gathered line becomes the next line letter by letter (lockup-scramble)",
+      "energy": {
+        "mean": 0.076,
+        "level": "lift"
+      },
+      "feeling": "abundance being sorted: a mess of material that resolves into one sentence",
+      "copy": "three to six lowercase words that read as one line when gathered",
+      "sound": "a high tick on each tile or word pop"
+    },
+    {
+      "id": "lockup",
+      "n": 3,
+      "movement": "catalogue",
+      "name": "The lockup",
+      "share": 0.032,
+      "source_s": 1.5,
+      "ground": "paper",
+      "blocks": [
+        "lockup-scramble"
+      ],
+      "cut_rhythm": {
+        "unit": "hold",
+        "items": 1,
+        "shot_frames": [
+          36,
+          36
+        ],
+        "median_frames": 36,
+        "note": "Letters drop and arrive in violet over about 9 frames, the line turns black, then a still hold of 26 frames."
+      },
+      "elastic": null,
+      "in": "continuous from the gathered line (glyph scramble)",
+      "out": "continues into the face cycle",
+      "energy": {
+        "mean": 0.024,
+        "level": "still"
+      },
+      "feeling": "arrival, quiet and certain, the first real breath",
+      "copy": "the name or the claim in two to four words",
+      "sound": "a soft chime on the arrival in black"
+    },
+    {
+      "id": "cycle-mark",
+      "n": 4,
+      "movement": "catalogue",
+      "name": "Type that cannot settle, then the mark",
+      "share": 0.046,
+      "source_s": 2.17,
+      "ground": "paper",
+      "blocks": [
+        "lockup-scramble",
+        "icon-tile"
+      ],
+      "cut_rhythm": {
+        "unit": "step",
+        "items": 2,
+        "shot_frames": [
+          52,
+          52
+        ],
+        "median_frames": 52,
+        "note": "The tail of the line changes face on every second picture while the line steps up past the frame, then a hard change to a single tile that builds its mark in steps and collects its handles one click at a time."
+      },
+      "elastic": null,
+      "in": "continuous from the lockup",
+      "out": "the camera pan that carries the tile off becomes the giant pass (shared pan)",
+      "energy": {
+        "mean": 0.015,
+        "level": "still"
+      },
+      "feeling": "play and precision together: the same name tried in every voice, then pinned down",
+      "copy": "the same words as the lockup",
+      "sound": "downward pitch glides against the tile's size steps, a click per handle"
+    },
+    {
+      "id": "giant-pass",
+      "n": 5,
+      "movement": "catalogue",
+      "name": "The giant pass",
+      "share": 0.032,
+      "source_s": 1.5,
+      "ground": "paper to photo",
+      "blocks": [
+        "giant-type-pass"
+      ],
+      "pairs": [
+        "icon-tile"
+      ],
+      "cut_rhythm": {
+        "unit": "pass",
+        "items": 1,
+        "shot_frames": [
+          36,
+          36
+        ],
+        "median_frames": 36,
+        "note": "A soft transition of about one second: the giant line rises and crosses under the accelerating pan while a picture blooms in behind and the letters turn white along a sweeping edge."
+      },
+      "elastic": null,
+      "in": "the icon-tile pan, no cut",
+      "out": "hard cut to the statement's first plate",
+      "energy": {
+        "mean": 0.221,
+        "level": "peak"
+      },
+      "feeling": "a swell, the moment the piece opens up",
+      "copy": "two or three words set giant",
+      "sound": "a rising swell into the cut"
+    },
+    {
+      "id": "statement",
+      "n": 6,
+      "movement": "claim",
+      "name": "Chromatic plates under a still line",
+      "share": 0.077,
+      "source_s": 3.67,
+      "ground": "photo to paper",
+      "blocks": [
+        "chromatic-title"
+      ],
+      "cut_rhythm": {
+        "unit": "plate",
+        "items": 9,
+        "shot_frames": [
+          4,
+          60
+        ],
+        "median_frames": 12,
+        "note": "Blurred colour-split plates change under a still line every 4 to 15 frames with occasional two or three frame crossfades, then a hard change to paper where each word takes a gradient of the plates' colours and holds 28 frames."
+      },
+      "elastic": {
+        "unit": "plate",
+        "per_item_s": [
+          0.17,
+          0.63
+        ],
+        "min_items": 3,
+        "max_items": 12,
+        "duration_s": [
+          2.5,
+          6.0
+        ]
+      },
+      "in": "hard cut from the giant pass",
+      "out": "hard cut to footage after the paper hold",
+      "energy": {
+        "mean": 0.04,
+        "level": "calm"
+      },
+      "feeling": "a statement made over a light show: the words stay calm while everything behind them shimmers, and the paper hold says it plainly",
+      "copy": "one short sentence, four to six words",
+      "sound": "a sub-drop on the first plate change, the bed in its driving section; the house voice, when used, enters here"
+    },
+    {
+      "id": "breath",
+      "n": 7,
+      "movement": "claim",
+      "name": "Footage breath",
+      "share": 0.07,
+      "source_s": 3.33,
+      "ground": "photo",
+      "blocks": [
+        "camera-rig"
+      ],
+      "cut_rhythm": {
+        "unit": "shot",
+        "items": 4,
+        "shot_frames": [
+          10,
+          25
+        ],
+        "median_frames": 22,
+        "note": "Photographs with slow camera drift on ones and no graphics at all."
+      },
+      "elastic": {
+        "unit": "shot",
+        "per_item_s": [
+          0.42,
+          1.04
+        ],
+        "min_items": 0,
+        "max_items": 6
+      },
+      "optional": true,
+      "in": "hard cut",
+      "out": "hard cut",
+      "energy": {
+        "mean": 0.037,
+        "level": "calm"
+      },
+      "feeling": "a reset to the real: after the type, the subject itself, unhurried",
+      "copy": "none",
+      "sound": "the bed drops to sustained pads"
+    },
+    {
+      "id": "select-lift",
+      "n": 8,
+      "movement": "demonstrations",
+      "name": "Select, lift and edit",
+      "share": 0.064,
+      "source_s": 3.04,
+      "ground": "photo",
+      "blocks": [
+        "marquee-select",
+        "type-behind-subject",
+        "cursor",
+        "camera-rig"
+      ],
+      "cut_rhythm": {
+        "unit": "shot",
+        "items": 3,
+        "shot_frames": [
+          15,
+          33
+        ],
+        "median_frames": 25,
+        "note": "A two-word imperative lands over a held picture, the pointer drags a selection over the subject, the subject lifts in front of the type, then clicks swap the background, a colour and the light while the subject stays fixed."
+      },
+      "elastic": {
+        "unit": "click",
+        "per_item_s": [
+          0.25,
+          0.6
+        ],
+        "min_items": 1,
+        "max_items": 4
+      },
+      "in": "hard cut",
+      "out": "hard cut",
+      "energy": {
+        "mean": 0.011,
+        "level": "still"
+      },
+      "feeling": "control: a calm hand doing something precise",
+      "copy": "a two or three word imperative",
+      "sound": "small clicks on each pointer click, pads underneath"
+    },
+    {
+      "id": "behind-push",
+      "n": 9,
+      "movement": "demonstrations",
+      "name": "Giant type behind the subject, then a push",
+      "share": 0.05,
+      "source_s": 2.38,
+      "ground": "photo",
+      "blocks": [
+        "type-behind-subject",
+        "camera-rig"
+      ],
+      "cut_rhythm": {
+        "unit": "shot",
+        "items": 5,
+        "shot_frames": [
+          6,
+          27
+        ],
+        "median_frames": 6,
+        "note": "The imperative set giant between plate and subject, gone with no exit, a push-hard of 1.47x, then three 6 frame background swaps behind a held cut-out."
+      },
+      "elastic": {
+        "unit": "swap",
+        "per_item_s": [
+          0.25,
+          0.25
+        ],
+        "min_items": 1,
+        "max_items": 5
+      },
+      "in": "hard cut",
+      "out": "hard cut on the next swap",
+      "energy": {
+        "mean": 0.132,
+        "level": "swell"
+      },
+      "feeling": "boldness: the type as large as the picture, and the picture willing to be torn out of its setting",
+      "copy": "a two word imperative set giant",
+      "sound": "percussion returns sparsely; a hit on each swap"
+    },
+    {
+      "id": "rise-wipe",
+      "n": 10,
+      "movement": "demonstrations",
+      "name": "Rise, shuffle and a label edit",
+      "share": 0.077,
+      "source_s": 3.63,
+      "ground": "photo",
+      "blocks": [
+        "giant-word-rise",
+        "card-wipe",
+        "type-behind-subject",
+        "cursor",
+        "camera-rig"
+      ],
+      "cut_rhythm": {
+        "unit": "shot",
+        "items": 2,
+        "shot_frames": [
+          12,
+          75
+        ],
+        "median_frames": 44,
+        "note": "A giant word rises from below over a swapped background, the picture prints into a card and the next one wipes in, a staggered three word line sits behind a rising object, then a pointer click changes one line of text on the object under a push."
+      },
+      "elastic": null,
+      "in": "hard cut",
+      "out": "hard cut to paper",
+      "energy": {
+        "mean": 0.103,
+        "level": "lift"
+      },
+      "feeling": "momentum with a wink: the edits get smaller and more exact as the pace picks up",
+      "copy": "one giant word, then a three word line",
+      "sound": "a sub-drop on the card shuffle, a click on the edit"
+    },
+    {
+      "id": "type-image",
+      "n": 11,
+      "movement": "demonstrations",
+      "name": "Type becomes image",
+      "share": 0.057,
+      "source_s": 2.71,
+      "ground": "paper to photo",
+      "blocks": [
+        "type-fill-echo"
+      ],
+      "cut_rhythm": {
+        "unit": "shot",
+        "items": 2,
+        "shot_frames": [
+          15,
+          50
+        ],
+        "median_frames": 33,
+        "note": "A dark line held 1.75 s while it creeps 3 percent, then filled with a picture and echoed above and below, then a cut to the line in white over a picture stepping down and away."
+      },
+      "elastic": null,
+      "in": "hard cut to paper",
+      "out": "the white line steps down twice and is gone",
+      "energy": {
+        "mean": 0.054,
+        "level": "calm"
+      },
+      "feeling": "anticipation and release: a long hold that pays off in a burst of repeats",
+      "copy": "a two or three word promise",
+      "sound": "a broadband noise swell starting with the fill, a sub-drop on the echoes; the bed returns at full density"
+    },
+    {
+      "id": "proof",
+      "n": 12,
+      "movement": "demonstrations",
+      "name": "Footage of the result",
+      "share": 0.027,
+      "source_s": 1.29,
+      "ground": "photo",
+      "blocks": [
+        "camera-rig"
+      ],
+      "cut_rhythm": {
+        "unit": "shot",
+        "items": 2,
+        "shot_frames": [
+          15,
+          16
+        ],
+        "median_frames": 16,
+        "note": "Two observational pictures of the result out in the world, drift on ones."
+      },
+      "elastic": {
+        "unit": "shot",
+        "per_item_s": [
+          0.5,
+          0.7
+        ],
+        "min_items": 0,
+        "max_items": 3
+      },
+      "optional": true,
+      "in": "hard cut",
+      "out": "hard cut to paper",
+      "energy": {
+        "mean": 0.053,
+        "level": "calm"
+      },
+      "feeling": "proof, the work out in the world",
+      "copy": "none",
+      "sound": "the bed carries it"
+    },
+    {
+      "id": "escalate",
+      "n": 13,
+      "movement": "scale-signoff",
+      "name": "Escalation by steps",
+      "share": 0.074,
+      "source_s": 3.5,
+      "ground": "paper",
+      "blocks": [
+        "ghost-word-grow",
+        "crop-select"
+      ],
+      "inside": [
+        "select-handles"
+      ],
+      "cut_rhythm": {
+        "unit": "shot",
+        "items": 3,
+        "shot_frames": [
+          13,
+          57
+        ],
+        "median_frames": 14,
+        "note": "A giant ghost word behind tiles that pop in, a small word that steps up and is selected, then one selected picture that grows in two steps to the full width with its handles, the word growing and tracking open with it (holds 14, 13 and 57 frames)."
+      },
+      "elastic": {
+        "unit": "grow step",
+        "per_item_s": [
+          0.6,
+          0.75
+        ],
+        "min_items": 1,
+        "max_items": 4
+      },
+      "in": "hard cut to paper",
+      "out": "hard cut to the picture full bleed",
+      "energy": {
+        "mean": 0.046,
+        "level": "calm"
+      },
+      "feeling": "escalation by steps, each step a decision",
+      "copy": "one short word, then the same word one step bigger",
+      "sound": "ticks on the tile pops, an impact under the biggest growth step"
+    },
+    {
+      "id": "print-street",
+      "n": 14,
+      "movement": "scale-signoff",
+      "name": "Interjection, print and the street",
+      "share": 0.057,
+      "source_s": 2.71,
+      "ground": "photo",
+      "blocks": [
+        "crop-select",
+        "camera-rig",
+        "billboard"
+      ],
+      "cut_rhythm": {
+        "unit": "shot",
+        "items": 4,
+        "shot_frames": [
+          11,
+          19
+        ],
+        "median_frames": 18,
+        "note": "A short interjection over the picture with the pointer, the picture shrinks to a print in three single steps, then the same picture on a board in the street."
+      },
+      "elastic": null,
+      "in": "hard cut",
+      "out": "hard cut to the next board",
+      "energy": {
+        "mean": 0.153,
+        "level": "swell"
+      },
+      "feeling": "a laugh followed by scale: a small mistake becomes a public image",
+      "copy": "one word or an interjection",
+      "sound": "the bed at full density"
+    },
+    {
+      "id": "billboard-run",
+      "n": 15,
+      "movement": "scale-signoff",
+      "name": "Billboard run",
+      "share": 0.098,
+      "source_s": 4.63,
+      "ground": "photo",
+      "blocks": [
+        "billboard",
+        "camera-rig"
+      ],
+      "cut_rhythm": {
+        "unit": "board",
+        "items": 6,
+        "shot_frames": [
+          13,
+          20
+        ],
+        "median_frames": 16,
+        "note": "Boards and posters in different streets and lights, a new picture every 13 to 20 frames, ending on one board with a pull-back that halves its size over 35 frames and holds 10."
+      },
+      "elastic": {
+        "unit": "board",
+        "per_item_s": [
+          0.54,
+          0.83
+        ],
+        "min_items": 2,
+        "max_items": 10
+      },
+      "in": "hard cut",
+      "out": "hard cut to the end card; the music stops dead on it",
+      "energy": {
+        "mean": 0.197,
+        "level": "peak"
+      },
+      "feeling": "reach and triumph: the image everywhere at once",
+      "copy": "the piece's key word or mark on every board",
+      "sound": "full density, an impact at the start of the long pull-back"
+    },
+    {
+      "id": "endcard",
+      "n": 16,
+      "movement": "scale-signoff",
+      "name": "End card",
+      "share": 0.127,
+      "source_s": 6.0,
+      "ground": "paper",
+      "blocks": [
+        "endcard-typeon"
+      ],
+      "inside": [
+        "select-handles"
+      ],
+      "cut_rhythm": {
+        "unit": "hold",
+        "items": 1,
+        "shot_frames": [
+          144,
+          144
+        ],
+        "median_frames": 144,
+        "note": "A one-line sentence types on inside handles, the handles collapse onto the mark, the name slides out beside it, a small line drops in, and the card holds about 3 s with no fade."
+      },
+      "elastic": {
+        "unit": "hold",
+        "duration_s": [
+          2.0,
+          6.0
+        ]
+      },
+      "in": "hard cut, music stops",
+      "out": "ends on the hold, no fade",
+      "energy": {
+        "mean": 0.02,
+        "level": "still"
+      },
+      "feeling": "the exhale: quiet, final, the selection resolving into a signature",
+      "copy": "one sentence of four to six words, a name or mark, one small line",
+      "sound": "silence, then a few dry plucks on the handle collapse and the name"
+    }
+  ],
+  "rules": [
+    "Keep the order of the beats. A shorter piece drops whole beats; it never reorders them.",
+    "Scale length by the number of items inside elastic beats (cards, tiles, plates, swaps, boards) at their measured per-item durations. Never stretch a hold past its block's duration range: a stretched hold reads as a stall.",
+    "Alternate grounds: paper beats are calm, photo beats carry the energy. When dropping beats, drop so that paper and photo still alternate and the three swells (giant pass, behind-push to rise-wipe, print-street to billboard run) still rise in that order, each higher than the last.",
+    "Always open cold on a hard cut with no fade, and always end on the end card's still hold with the music stopped. Hard cuts carry about 85 percent of transitions; soft transitions belong only to the giant pass, the plate run in the statement and the night boards.",
+    "Optional beats (breath, proof) are the first to go; the catalogue's lockup and cycle-mark merge into one beat below 30 s; the demonstrations keep at least one select action and one type-and-image action.",
+    "Blocks named in pairs hand off without a cut: icon-tile into giant-type-pass (shared pan), giant-word-rise into card-wipe, ghost-word-grow into crop-select, the statement's paper card out of chromatic-title.",
+    "Copy per card is what can be read in its hold: one word for a 0.5 s card, four to six words for a held statement, one sentence on the end card."
+  ],
+  "lengths": {
+    "47": {
+      "note": "the source length: every beat at its source item count"
+    },
+    "60": {
+      "scale": 1.27,
+      "beats": {
+        "titles": 8,
+        "scatter": 1,
+        "lockup": 1,
+        "cycle-mark": 1,
+        "giant-pass": 1,
+        "statement": 11,
+        "breath": 5,
+        "select-lift": 3,
+        "behind-push": 5,
+        "rise-wipe": 1,
+        "type-image": 1,
+        "proof": 3,
+        "escalate": 3,
+        "print-street": 1,
+        "billboard-run": 10,
+        "endcard": 1
+      },
+      "repeat": "the items above reach about 53 s, so a second demonstration subject repeats select-lift and type-image with new pictures after type-image; holds stay at their source values",
+      "durations_s": {
+        "titles": 4.3,
+        "scatter": 2.4,
+        "lockup": 1.5,
+        "cycle-mark": 2.2,
+        "giant-pass": 1.5,
+        "statement": 4.4,
+        "breath": 4.2,
+        "select-lift": 3.0,
+        "behind-push": 2.4,
+        "rise-wipe": 3.6,
+        "type-image": 2.7,
+        "select-lift-2": 3.0,
+        "type-image-2": 2.7,
+        "proof": 1.9,
+        "escalate": 3.5,
+        "print-street": 2.7,
+        "billboard-run": 8.0,
+        "endcard": 6.0
+      },
+      "approx_s": 60.0
+    },
+    "30": {
+      "scale": 0.63,
+      "beats": {
+        "titles": 5,
+        "scatter": 1,
+        "lockup": 1,
+        "giant-pass": 1,
+        "statement": 4,
+        "breath": 2,
+        "select-lift": 2,
+        "behind-push": 2,
+        "rise-wipe": 1,
+        "type-image": 1,
+        "escalate": 2,
+        "billboard-run": 4,
+        "endcard": 1
+      },
+      "dropped": [
+        "cycle-mark",
+        "proof",
+        "print-street"
+      ],
+      "durations_s": {
+        "titles": 2.7,
+        "scatter": 1.6,
+        "lockup": 1.3,
+        "giant-pass": 1.2,
+        "statement": 2.8,
+        "breath": 1.6,
+        "select-lift": 2.2,
+        "behind-push": 1.8,
+        "rise-wipe": 1.6,
+        "type-image": 2.1,
+        "escalate": 3.0,
+        "billboard-run": 3.6,
+        "endcard": 4.5
+      },
+      "approx_s": 30
+    },
+    "15": {
+      "scale": 0.32,
+      "variants": {
+        "catalogue": {
+          "beats": {
+            "titles": 6,
+            "scatter": 1,
+            "lockup": 1,
+            "giant-pass": 1,
+            "statement": 3,
+            "endcard": 1
+          },
+          "durations_s": {
+            "titles": 3.3,
+            "scatter": 1.6,
+            "lockup": 1.3,
+            "giant-pass": 1.2,
+            "statement": 2.6,
+            "endcard": 5.0
+          },
+          "approx_s": 15
+        },
+        "reach": {
+          "beats": {
+            "titles": 4,
+            "escalate": 2,
+            "print-street": 1,
+            "billboard-run": 3,
+            "endcard": 1
+          },
+          "durations_s": {
+            "titles": 2.2,
+            "escalate": 3.0,
+            "print-street": 2.2,
+            "billboard-run": 3.0,
+            "endcard": 4.6
+          },
+          "approx_s": 15
+        }
+      }
+    }
+  }
+}

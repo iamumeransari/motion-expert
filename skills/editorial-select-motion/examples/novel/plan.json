@@ -1,0 +1,568 @@
+{
+ "style": "editorial-select",
+ "mode": "piece",
+ "title": "Saturday Bench, 30 s (example)",
+ "format": {
+  "width": 1920,
+  "height": 1080,
+  "fps": 24
+ },
+ "duration": 30.0,
+ "notes": "Example piece on an unrelated subject (a neighbourhood bike repair co-op), built from templates/film-arc.json lengths.30: the 30 s beat list and durations, cycle-mark, proof and print-street dropped. Music only; every image slot is a labelled placeholder, so the board shows the code-and-slots view. To finish the piece, fill each label with a graded still (toolkit/imagery.py), generate the bed and effects (toolkit/sfx.py, toolkit/sound-plan.py), and snap card cuts to the bed's beats.",
+ "scenes": [
+  {
+   "id": "titles",
+   "title": "Word-per-cut titles",
+   "start": 0,
+   "duration": 2.7,
+   "feeling": "range and confidence: a fast inventory of everything the subject covers, read one word at a time, each word claimed by the same selection",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "genre-word-card",
+     "target": "cards",
+     "t": 0,
+     "props": {
+      "cards": [
+       {
+        "word": "Wheels",
+        "image": {
+         "label": "photo: a wheel on the truing stand"
+        }
+       },
+       {
+        "word": "Brakes",
+        "image": {
+         "label": "photo: hands on a brake lever"
+        }
+       },
+       {
+        "word": "Chains",
+        "image": {
+         "label": "photo: a chain over a cog, close"
+        }
+       },
+       {
+        "word": "Gears",
+        "image": {
+         "label": "photo: a rear derailleur, extreme close"
+        }
+       },
+       {
+        "word": "Bells",
+        "image": {
+         "label": "photo: a bell on worn handlebars"
+        }
+       }
+      ],
+      "durScale": 1.0
+     }
+    }
+   ],
+   "notes": "film-arc beat titles"
+  },
+  {
+   "id": "scatter",
+   "title": "Scatter and collapse",
+   "start": 2.7,
+   "duration": 1.6,
+   "feeling": "abundance being sorted: a mess of material that resolves into one sentence",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "tile-scatter",
+     "target": "scatter",
+     "t": 2.7,
+     "props": {
+      "words": [
+       "bring",
+       "the",
+       "bike",
+       "we",
+       "fix",
+       "it"
+      ],
+      "tiles": [
+       {
+        "label": "tile: spokes"
+       },
+       {
+        "label": "tile: tyre lever"
+       },
+       {
+        "label": "tile: grease"
+       },
+       {
+        "label": "tile: saddle"
+       },
+       {
+        "label": "tile: pump"
+       },
+       {
+        "label": "tile: spanner"
+       },
+       {
+        "label": "tile: inner tube"
+       }
+      ],
+      "seed": 7,
+      "duration": 1.6
+     }
+    }
+   ],
+   "background": "var(--color-paper-grid)",
+   "notes": "film-arc beat scatter"
+  },
+  {
+   "id": "lockup",
+   "title": "The lockup",
+   "start": 4.3,
+   "duration": 1.3,
+   "feeling": "arrival, quiet and certain, the first real breath",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "lockup-scramble",
+     "target": "lockup",
+     "t": 4.3,
+     "props": {
+      "from": "bring the bike we fix it",
+      "to": "Saturday Bench",
+      "lead": 1,
+      "seed": 3,
+      "exitAt": 1.3
+     }
+    }
+   ],
+   "background": "var(--color-paper)",
+   "notes": "film-arc beat lockup"
+  },
+  {
+   "id": "giant-pass",
+   "title": "The giant pass",
+   "start": 5.6,
+   "duration": 1.2,
+   "feeling": "a swell, the moment the piece opens up",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "giant-type-pass",
+     "target": "pass",
+     "t": 5.6,
+     "props": {
+      "text": "Every bolt",
+      "ground": {
+       "label": "photo: the workshop, blurred"
+      },
+      "duration": 1.2
+     }
+    }
+   ],
+   "background": "var(--color-paper)",
+   "notes": "film-arc beat giant-pass"
+  },
+  {
+   "id": "statement",
+   "title": "Chromatic plates under a still line",
+   "start": 6.8,
+   "duration": 2.8,
+   "feeling": "a statement made over a light show: the words stay calm while everything behind them shimmers, and the paper hold says it plainly",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "chromatic-title",
+     "target": "statement",
+     "t": 6.8,
+     "props": {
+      "words": "Fixed by hand, with you",
+      "fields": [
+       {
+        "label": "colour field 1",
+        "dur": 0.3
+       },
+       {
+        "label": "colour field 2",
+        "dur": 0.3
+       },
+       {
+        "label": "colour field 3",
+        "dur": 0.3
+       },
+       {
+        "label": "colour field 4",
+        "dur": 0.3
+       }
+      ],
+      "card": {
+       "hold": 1.1
+      }
+     }
+    }
+   ],
+   "notes": "film-arc beat statement"
+  },
+  {
+   "id": "breath",
+   "title": "Footage breath",
+   "start": 9.6,
+   "duration": 1.6,
+   "feeling": "a reset to the real: after the type, the subject itself, unhurried",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "camera-rig",
+     "target": "breath",
+     "t": 9.6,
+     "props": {
+      "slot": {
+       "label": "photo: the bench at opening, wide"
+      },
+      "cam": [
+       {
+        "preset": "drift",
+        "at": 0
+       }
+      ]
+     }
+    }
+   ],
+   "notes": "film-arc beat breath"
+  },
+  {
+   "id": "select-lift",
+   "title": "Select, lift and edit",
+   "start": 11.2,
+   "duration": 2.2,
+   "feeling": "control: a calm hand doing something precise",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "marquee-select",
+     "target": "select",
+     "t": 11.2,
+     "props": {
+      "plate": {
+       "label": "photo: a mechanic holding a wheel"
+      },
+      "cutout": {
+       "label": "cut-out: the mechanic"
+      },
+      "word": "True it",
+      "select": [
+       0.3,
+       0.2,
+       0.75,
+       0.9
+      ]
+     }
+    }
+   ],
+   "notes": "film-arc beat select-lift"
+  },
+  {
+   "id": "behind-push",
+   "title": "Giant type behind the subject, then a push",
+   "start": 13.4,
+   "duration": 1.8,
+   "feeling": "boldness: the type as large as the picture, and the picture willing to be torn out of its setting",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "type-behind-subject",
+     "target": "behind",
+     "t": 13.4,
+     "props": {
+      "plate": {
+       "label": "photo: a frame on the stand"
+      },
+      "cutout": {
+       "label": "cut-out: the frame"
+      },
+      "word": "Learn it",
+      "duration": 1.8
+     }
+    }
+   ],
+   "notes": "film-arc beat behind-push"
+  },
+  {
+   "id": "rise-wipe",
+   "title": "Rise, shuffle and a label edit",
+   "start": 15.2,
+   "duration": 1.6,
+   "feeling": "momentum with a wink: the edits get smaller and more exact as the pace picks up",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "giant-word-rise",
+     "target": "rise",
+     "t": 15.2,
+     "props": {
+      "text": "Spin",
+      "image": {
+       "label": "photo: a wheel spinning, close"
+      },
+      "speed": 1.2
+     }
+    },
+    {
+     "name": "card-wipe",
+     "target": "wipe",
+     "t": 16.1,
+     "props": {
+      "to": {
+       "label": "photo: the wheel back on the bike"
+      },
+      "from": {
+       "label": "photo: a wheel spinning, close"
+      }
+     }
+    }
+   ],
+   "notes": "film-arc beat rise-wipe"
+  },
+  {
+   "id": "type-image",
+   "title": "Type becomes image",
+   "start": 16.8,
+   "duration": 2.1,
+   "feeling": "anticipation and release: a long hold that pays off in a burst of repeats",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "type-fill-echo",
+     "target": "fill",
+     "t": 16.8,
+     "props": {
+      "text": "Ride it home",
+      "fill": {
+       "label": "photo: a street at golden hour"
+      }
+     }
+    }
+   ],
+   "background": "var(--color-paper)",
+   "notes": "film-arc beat type-image"
+  },
+  {
+   "id": "escalate",
+   "title": "Escalation by steps",
+   "start": 18.9,
+   "duration": 3.3,
+   "feeling": "escalation by steps, each step a decision",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "ghost-word-grow",
+     "target": "ghost",
+     "t": 18.9,
+     "props": {
+      "word": "Open",
+      "tiles": [
+       {
+        "label": "tile: bell"
+       },
+       {
+        "label": "tile: light"
+       },
+       {
+        "label": "tile: basket"
+       }
+      ],
+      "select": {
+       "label": "photo: the shop front"
+      }
+     }
+    },
+    {
+     "name": "crop-select",
+     "target": "grow",
+     "t": 19.8,
+     "props": {
+      "photo": {
+       "label": "photo: the shop front",
+       "w": 1600,
+       "h": 1000
+      },
+      "word": {
+       "text": "Open"
+      },
+      "word2": {
+       "text": "Saturdays!"
+      }
+     }
+    }
+   ],
+   "background": "var(--color-paper)",
+   "notes": "film-arc beat escalate"
+  },
+  {
+   "id": "billboard-run",
+   "title": "Billboard run",
+   "start": 22.2,
+   "duration": 0.8,
+   "feeling": "reach and triumph: the image everywhere at once",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "billboard",
+     "target": "b1",
+     "t": 22.2,
+     "props": {
+      "slot": {
+       "label": "photo: a poster on a brick wall"
+      },
+      "quad": [
+       [
+        420,
+        240
+       ],
+       [
+        1500,
+        270
+       ],
+       [
+        1490,
+        840
+       ],
+       [
+        430,
+        820
+       ]
+      ],
+      "word": "Saturday Bench",
+      "cam": {
+       "preset": "drift"
+      }
+     }
+    }
+   ],
+   "notes": "film-arc beat billboard-run; board 1 of 3, hard cut between boards"
+  },
+  {
+   "id": "billboard-run-2",
+   "title": "Billboard run",
+   "start": 23.0,
+   "duration": 0.8,
+   "feeling": "reach and triumph: the image everywhere at once",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "billboard",
+     "target": "b2",
+     "t": 23.0,
+     "props": {
+      "slot": {
+       "label": "photo: a bus shelter poster at night"
+      },
+      "quad": [
+       [
+        560,
+        200
+       ],
+       [
+        1360,
+        200
+       ],
+       [
+        1360,
+        900
+       ],
+       [
+        560,
+        900
+       ]
+      ],
+      "word": "Saturday Bench",
+      "cam": {
+       "preset": "push-soft"
+      }
+     }
+    }
+   ],
+   "notes": "film-arc beat billboard-run; board 2 of 3, hard cut between boards"
+  },
+  {
+   "id": "billboard-run-3",
+   "title": "Billboard run",
+   "start": 23.8,
+   "duration": 2.0,
+   "feeling": "reach and triumph: the image everywhere at once",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "billboard",
+     "target": "b3",
+     "t": 23.8,
+     "props": {
+      "slot": {
+       "label": "photo: a rooftop board"
+      },
+      "quad": [
+       [
+        300,
+        180
+       ],
+       [
+        1620,
+        220
+       ],
+       [
+        1600,
+        760
+       ],
+       [
+        320,
+        740
+       ]
+      ],
+      "word": "Saturday Bench",
+      "cam": {
+       "preset": "pull-back"
+      }
+     }
+    }
+   ],
+   "notes": "film-arc beat billboard-run; board 3 of 3, hard cut between boards"
+  },
+  {
+   "id": "endcard",
+   "title": "End card",
+   "start": 25.8,
+   "duration": 4.2,
+   "feeling": "the exhale: quiet, final, the selection resolving into a signature",
+   "vo_line": "",
+   "layout": "plate",
+   "moves": [
+    {
+     "name": "endcard-typeon",
+     "target": "end",
+     "t": 25.8,
+     "props": {
+      "sentence": "Open every Saturday morning",
+      "wordmark": {
+       "text": "Saturday Bench"
+      },
+      "tagline": "Bring the bike, we bring the tools"
+     }
+    }
+   ],
+   "background": "var(--color-paper)",
+   "notes": "film-arc beat endcard"
+  }
+ ]
+}

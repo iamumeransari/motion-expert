@@ -2,13 +2,13 @@
 
 A giant serif line rushes past the camera. The first word rises in from below the frame on an exponential ease-out while the accelerating camera pan carries the whole line left, and the next words rise in behind it one at a time. As a picture blooms in behind the type, the letters turn from black to white along a soft edge that sweeps left to right on a 20 degree axis, so the line leaves the frame white over the picture. It is the film's turn from paper to spectacle. Signature move.
 
-Source: replica s2 frames 216 to 218 and s3 frames 219 to 243 (9.000 to 10.167 s), strip `assets/frames/giant-word-pass-dense.jpg`, on the film's 16 fps picture cadence.
+Source: replica s2 frames 216 to 218 and s3 frames 219 to 243 (9.000 to 10.167 s), strip `~/motion-expert/sources/editorial-select/frames/giant-word-pass-dense.jpg`, on the film's 16 fps picture cadence.
 
 ## Modes
 
-`preset: "replica-s3-rush"` replays the measured per-frame keys for 28 frames from source frame 216: the line origin on every frame (frames 216 and 217 fitted against the film at IoU 0.98, the rest from the s3 rush tables), per-glyph x positions of "The most", the second word's rise, and the whiteness on every frame. The whiteness is stored as 120 x 68 grey fields measured from the film, filled outward from the glyphs so the field is smooth. It is set in ES Line (`var(--font-line)`), the face traced from the film's own line. Composed with `icon-tile` and the ground sequence over source frames 180 to 243 it scores mean SSIM 0.9888 and relative flow error 0.140; its own range, 216 to 243, scores 0.9816 and 0.142 (`work/blocks/tile-rush/cmp-r4/report.md` and `cmp-r4-216/report.md`). Both pass.
+`preset: "replica-s3-rush"` replays the measured per-frame motion for 28 frames from source frame 216 (s2 frames 216 to 218 and s3 shot 1, frames 219 to 243, the rush beat): the line origin on every frame (frames 216 and 217 fitted against the film at IoU 0.98, the rest from the s3 rush tables), the second word's rise, the whiteness axis and which whiteness field shows on each frame, and the frame the ground sequence starts on. The skill holds only that motion and geometry. The source-bound part, which is the words with their per-glyph x positions, the replica face, the measured ink and white colours and the whiteness fields themselves (120 x 68 grey images measured from the film, filled outward from the glyphs), lives outside the skill and arrives as `props.replica` (apply.py sets it from the replica layer). Composed with `icon-tile` and the ground sequence over source frames 180 to 243 it scores mean SSIM 0.9885 and relative flow error 0.135; its own range, 216 to 243, scores 0.9815 and 0.140 (`work/blocks/tile-rush/co-1/cmp/report.md` and `co-1/cmp-216/report.md`). Both pass.
 
-General mode (no preset) builds the same state from the fitted curves for any words, frame and duration scale, set in EditorialSelect Serif (`var(--font-serif)`) unless `font` says otherwise. ES Line holds only the source line's 14 letters, so never use it for new words. The curves, in frames at 24 fps multiplied by `scale`:
+General mode (no preset) builds the same state from the fitted curves for any words, frame and duration scale, set in `var(--font-serif)` unless `font` says otherwise, so a re-skin that changes the token changes the face. The replica face holds only the source line's letters, so never use it for new words. The curves, in frames at 24 fps multiplied by `scale`:
 
 - the first word rises 0.674 H on R (e^(-k t) - e^(-k T)) / (1 - e^(-k T)) with k 0.157 and T 24, which is the film's decay of about 0.79 per picture;
 - each later word enters 18 frames after the first (then every 6), from 0.343 H with k 0.27 and T 15, which is 0.667 per picture; until it enters it waits 0.556 H below, out of frame;
@@ -26,7 +26,7 @@ General mode (no preset) builds the same state from the fitted curves for any wo
 
 | Prop | Default | Notes |
 |---|---|---|
-| `text` | `"The most"` | string or word list, any length |
+| `text` | `"Short line"` | string or word list, any length; the default is a placeholder |
 | `font` | `var(--font-serif)` | any CSS family |
 | `size` | 0.62 H | font-size px (669.5 at 1080) |
 | `x`, `baseline` | 0.747, 0.722 | shares of W and H |
@@ -35,7 +35,7 @@ General mode (no preset) builds the same state from the fitted curves for any wo
 | `pan` | see above | `{ dx, dy, frames, K, at }` or `false`; pass the same to `icon-tile` |
 | `white` | true | `false` keeps the type black |
 | `white_from`, `white_to`, `white_soft`, `axis_deg` | 0.45, 1.15, 0.18, -20 | the edge |
-| `colors` | `{ black: "ink", white: "type-light" }` | palette names or CSS colours |
+| `colors` | `{ black: "ink", white: "type-light" }` | palette names (resolved from the tokens.css `--color-*` variables) or CSS colours; `black` is the type before the turn, `white` after it |
 | `scale` | 1 | duration scale |
 | `cadence`, `phase` | `"16fps"`, 0 | `"twos"` or `"ones"` |
 | `duration` | 28 frames x scale | s |
@@ -47,8 +47,8 @@ The root carries `data-layout-ignore`, because white type over a pale bloom is t
 
 ## Proofs
 
-- Replica: `work/blocks/tile-rush/plan-replica.json` (paper stills, this block, icon-tile), render `render-r4.mp4`.
-- Demo: `work/blocks/giant-type-pass/plan-demo.json`, render `render-d2.mp4`. It runs at 1080 x 1350 with "Every frame" in ES Serif at 640 px, a blurred stand-in portrait as the ground, and icon-tile carrying a stand-in mark on the same pan.
+- Replica: `work/blocks/tile-rush/plan-replica.json` (paper stills, this block, icon-tile), render `work/blocks/tile-rush/co-1/render.mp4`.
+- Demo: `work/blocks/giant-type-pass/plan-demo.json`, render `work/blocks/giant-type-pass/co-1-demo/render.mp4`. It runs at 1080 x 1350 with "Every frame" in the serif token at 640 px, a blurred stand-in portrait as the ground, and icon-tile carrying a stand-in mark on the same pan.
 
 ## What did not generalise
 

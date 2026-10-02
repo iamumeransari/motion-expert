@@ -1,5 +1,5 @@
 {
- "cuts_from": "work/ideogram/imagery/cuts.json",
+ "cuts_from": "sources/editorial-select (cuts listed in references/sources.md)",
  "groups": {
   "city": [
    31,
@@ -7930,7 +7930,7 @@
   "duration": 47.3813,
   "fps": 24.0,
   "height": 1080,
-  "path": "/Users/umeransari/motion-expert/inbox/ideogram-4-5.mp4",
+  "path": "/Users/umeransari/motion-expert/sources/editorial-select/source.mp4",
   "sha256": "621816df5367aed995c63803e7733c8053c92a7828b6794b18d5dffa6dfa4184",
   "width": 1920
  },

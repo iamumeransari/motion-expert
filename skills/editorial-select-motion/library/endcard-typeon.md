@@ -2,15 +2,15 @@
 
 The end card. A sentence types on word by word inside violet pixel-bar handles that open out past the line with each word and then pull in to four corner chips. The line cuts out, the handles come back as diagonal pixel-step brackets around a chip where the mark will be, the mark grows inside them while the brackets shrink to corner chips, blink faint and go. The lockup (mark plus wordmark) cuts in already sliding left on an exponential ease, and the tagline drops in under it on a single frame. Signature: yes, it is how the film closes.
 
-Source: replica s8, film frames 993 to 1135 (41.375 to 47.381 s), strip `assets/frames/end-card-dense.jpg`. Measurement and preset tables: `work/blocks/endcard-typeon/tools` (`extract.py`, `fit_diag2.py`, `fit_curves.py`, `make_preset.py`, `inject.py`).
+Source: replica s8, film frames 993 to 1135 (41.375 to 47.381 s), shot 42, the end card; the source itself is listed in `references/sources.md`. Measurement and preset tables: `work/blocks/endcard-typeon/tools` (`extract.py`, `fit_diag2.py`, `fit_curves.py`, `make_preset.py`, `inject.py`).
 
 ## How it is built
 
-One driver tween runs a frame index from one frame before `t0` to the end, and a `modifiers` function paints the state for that frame, so seeking either way is exact and nothing depends on callbacks. A state is a list of violet rectangles (bars, bracket steps, chips), a word count and position for the line, a box for the mark slot, a box for the wordmark slot and a position for the tagline. Text is SVG text in EditorialSelect Serif placed by its ink edge and baseline, with the ink edge read from canvas glyph metrics at paint time, and the metrics are taken again once `document.fonts` reports loaded, so a different sentence of any length lands in the same place. Everything steps on the film's 16 fps cadence (film frames 3k+2 repeat 3k+1) unless `cadence` says otherwise.
+One driver tween runs a frame index from one frame before `t0` to the end, and a `modifiers` function paints the state for that frame, so seeking either way is exact and nothing depends on callbacks. A state is a list of violet rectangles (bars, bracket steps, chips), a word count and position for the line, a box for the mark slot, a box for the wordmark slot and a position for the tagline. Text is SVG text in the serif token (`--font-serif`, EditorialSelect Serif in this style) placed by its ink edge and baseline, with the ink edge read from canvas glyph metrics at paint time, and the metrics are taken again once `document.fonts` reports loaded, so a different sentence of any length lands in the same place. Everything steps on the film's 16 fps cadence (film frames 3k+2 repeat 3k+1) unless `cadence` says otherwise.
 
 ## Modes
 
-`preset: "replica-s8-endcard"` reads the measured keys embedded in the element: per frame word count and ink left (frames 0 to 27), the top-row bar segments (rows 25 px tall at y 417 and 636), the bracket steps on frames 28 to 30 as measured pixel-step rectangles, the brackets on 31 to 35 as fitted staircases of squares, the chips on 34 to 42 (faint at half alpha on 39 and 42), the mark box on 30 to 41, the lockup's mark x on 42 to 142 and the tagline from frame 70. It reproduces s8 at mean SSIM 0.992 and relative flow error 0.037 (compare.py replica mode, `work/blocks/endcard-typeon/cmp-2`). The preset scales uniformly into another frame size and centres, but its geometry belongs to the s8 sentence and lockup, so new words need the general mode.
+`preset: "replica-s8-endcard"` reads the measured keys embedded in the element, which hold only timings, positions and rects: per frame word count and ink left (frames 0 to 27), the top-row bar segments (rows 25 px tall at y 417 and 636), the bracket steps on frames 28 to 30 as measured pixel-step rectangles, the brackets on 31 to 35 as fitted staircases of squares, the chips on 34 to 42 (faint at half alpha on 39 and 42), the mark box on 30 to 41, the lockup's mark x on 42 to 142 and the tagline from frame 70. The replica's words (its sentence and the tagline's text) are not in the skill: a replica plan carries them as `props.replica`, filled from `work/replica/presets/endcard-typeon.json` by `work/replica/presets/apply.py`, and the block merges them over the preset. It reproduces s8 at mean SSIM 0.992 and relative flow error 0.037 (compare.py replica mode, `work/blocks/endcard-typeon/cmp-2`). The preset scales uniformly into another frame size and centres, but its geometry belongs to the s8 sentence and lockup, so new words need the general mode.
 
 General mode rebuilds the same states from curves fitted on s8, in units of the body size `s` (chip `c` = 0.236 s, mark width `M` = 1.645 s):
 
@@ -27,11 +27,11 @@ General mode rebuilds the same states from curves fitted on s8, in units of the 
 
 - `mark`: `{ svg }` inline markup taking `currentColor` (ink), or `{ src, fit, focal: [x, y] }`; `aspect` (width over height, default the s8 mark's 1.084).
 - `wordmark`: `{ src, fit, focal, aspect, h, cap: [top, bottom] }` for artwork (h in body sizes, default 1.79; cap is the fraction of its height the cap band spans, default 0.071 to 0.729, which is how it centres on the mark), or `{ text, size, tracking }` set in the serif (size in body sizes, default 1.71). Leave it out for a mark-only lockup.
-- `paper`: `{ src, fit, focal }`, or omit for `--color-paper`, or `false` for no ground.
+- `paper`: `{ src, fit, focal }`, or `{ color }` (token name or CSS), or omit for `--color-paper`, or `false` for no ground.
 
 ## Text parameters
 
-`sentence` (any words), `tagline` (string or `false`), `size` (body px; default sizes the line to 0.766 of the frame width within 0.5 to 1.6 of the film's size scaled to the frame, then fits it inside the margins), `tracking` (em, default -0.0076), `font` (canvas family string, default `"ES Serif"`), `cx`, `cy` (fractions of the frame). The tagline is 0.63 s tracked 0.0225 em, 1.40 s below the wordmark's baseline. The lockup shrinks as a unit if it would pass the 64 px margins.
+`sentence` (any words; with none the general mode sets the placeholder "A short line"), `tagline` (string or `false`), `size` (body px; default sizes the line to 0.766 of the frame width within 0.5 to 1.6 of the film's size scaled to the frame, then fits it inside the margins), `tracking` (em, default -0.0076), `font` (a CSS font-family list used both for the SVG text and for the canvas metrics, default the `--font-serif` token), `cx`, `cy` (fractions of the frame). The tagline is 0.63 s tracked 0.0225 em, 1.40 s below the wordmark's baseline. The lockup shrinks as a unit if it would pass the 64 px margins.
 
 ## Timing
 
@@ -39,7 +39,7 @@ All in seconds from `t0`: `wordTimes` (one per word, snap them to beats) or `wor
 
 ## Colours
 
-Bars and brackets `--color-violet`, ink `--color-ink-soft`, ground `--color-paper`.
+Bars and brackets `--color-violet`, ink `--color-ink-soft`, ground `--color-paper`, each overridable for a re-skin: `chip` (bars, brackets and chips), `ink` (line, tagline, text wordmark and a `currentColor` mark) and `paper.color`, each a token name or any CSS colour. Nothing in the block draws a literal colour or face.
 
 ## Did not generalise
 

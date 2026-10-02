@@ -4,7 +4,7 @@ The film is built on one photographer's campaign: editorial beauty photography s
 
 ## Look
 
-Editorial campaign photography for a print magazine, shot on medium-format film in a daylight studio, skin and surfaces rendered soft and luminous with their real texture, no retouched plastic sheen, quiet confident styling, a slightly hazy, airy finish as if shot through clean glass with a touch of diffusion, colour graded like a printed magazine page.
+Campaign photography for a print magazine, editorial in tone, shot on medium-format film in a daylight studio, skin and surfaces rendered soft and luminous with their real texture, no retouched plastic sheen, quiet confident styling, a slightly hazy, airy finish as if shot through clean glass with a touch of diffusion, colour graded like a printed magazine page.
 
 ## Look city
 
@@ -50,7 +50,7 @@ Until image generation is switched back on, tests and pieces use existing frames
 
 ## Never
 
-The words a prompt may never contain are kept in `imagery.json` under its never list and cited in `references/sources.md`, because they name the source; `toolkit/imagery.py` refuses any prompt that contains one.
+Anything that names the source stays out of every prompt; `references/sources.md` lists it under Never in prompts and pieces. `toolkit/imagery.py` refuses any prompt containing a word bulleted in this section, so add a bullet here for any word a piece must also never generate (a client's competitor, say), but never the source's own words, which would put them back in the skill.
 
 ## Plates
 

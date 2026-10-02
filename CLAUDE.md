@@ -10,8 +10,8 @@ Storyboards go on the review canvas through the `storyboard-canvas` skill, one H
 per scene, and nothing renders until Umer approves the board.
 
 `.env` holds `ELEVENLABS_API_KEY`, `HOUSE_VOICE_ID` and `ELEVEN_MODEL=eleven_v4`.
-Raw scratch goes in `work/`, which is gitignored; each style skill commits its full
-source video under `assets/source/`.
+Raw scratch goes in `work/`, which is gitignored. Source videos and frame strips live in
+`sources/<style>/`, outside the skills, so a skill carries no source content.
 
 This is a personal repo, so commit and push to `main` without asking.
 `skills/*` is symlinked into `~/.claude/skills`, so this repo is the source of truth.

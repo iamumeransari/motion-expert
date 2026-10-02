@@ -6,7 +6,6 @@
 @font-face { font-family: "ES Bitmap"; src: url("assets/fonts/VT323-Regular.woff2") format("woff2"); font-display: block; }
 @font-face { font-family: "ES Grotesk"; src: url("assets/fonts/CabinetGrotesk-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: block; }
 
-@font-face { font-family: "ES Line"; src: url("assets/fonts/S3Replica.ttf") format("truetype"); font-weight: 400; font-display: block; }
 /* editorial-select motion tokens, mirrored from tokens.json. Faces load from
    assets/fonts through the @font-face rules below (the toolkit embeds them as
    base64 when it inlines this file). */
@@ -37,7 +36,7 @@
      from Source Serif 4, so it needs no stroke and no axis settings. Cap
      height is exactly 690 of 1000 units, so a cap height of C px is a
      font-size of C / 0.69. Two lines in the film are lighter, near Exposure 0
-     ("Big" and "Try it now at ideogram.ai"): about 9 units thinner per edge
+     (a short word card and the end card's small line): about 9 units thinner per edge
      than this font, which CSS cannot thin, so new work sets everything at
      the main weight. */
   --font-serif: "ES Serif", Georgia, serif;
@@ -49,17 +48,13 @@
   --font-humanist: "ES Humanist", Helvetica, Arial, sans-serif;
   --font-bitmap: "ES Bitmap", monospace;
   --font-grotesk: "ES Grotesk", Helvetica, Arial, sans-serif;
-  /* ES Line: the s3 face, 14 letters traced from "The most precise edit model"
-     (work/replica/s3/tools/build_font.py). Used by the replica presets of
-     chromatic-title and giant-type-pass; new work uses --font-serif. */
-  --font-line: "ES Line", var(--font-serif);
 
   /* font-size per role = measured cap height / 0.69 */
   --type-ghost: 928px;
   --type-rise: 478px;
   --type-behind: 348px;
   --type-launch: 268px;
-  --type-oops: 159px;
+  --type-shout: 159px;
   --type-title: 148px;
   --type-line: 116px;
   --type-word: 116px;

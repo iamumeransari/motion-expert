@@ -6,10 +6,10 @@
      around a tile pulled in behind the word and the tile grows on an
      accelerating curve into the cut, its chips streaking diagonally outward.
      Source: s6 shots 1 and 2 (film frames 733 to 759, 30.542 to 31.667 s),
-     strip assets/frames/ghost-tile-pop-dense.jpg; replica keys measured in
-     work/replica/s6 (passing at SSIM 0.981 and 0.978).
+     see references/sources.md; the replica preset's motion keys were measured
+     from the passing s6 replica (SSIM 0.981 and 0.978).
      Measured at 1920 x 1080: ghost cap 937 px (0.87 of the short side) at 5
-     percent black over #EEEEEE; small word cap 85 px stepping to 170 px
+     percent black over the paper; small word cap 85 px stepping to 170 px
      (x1.99) on block frame 11; tiles pop on frames 3, 6, 9 and 14 (the 16 fps
      cadence: frame l repeats l - 1 when l mod 3 is 1); the selected tile
      lands on frame 18 at 0.81 x 0.85 of the grown cap, centred, with 24 px
@@ -30,130 +30,821 @@
   .el-ghost-word-grow .gw-handles { position: absolute; left: 0; top: 0; overflow: visible; }
 </style>
 <script>
-  /* BEGIN es-shared */
-  /* es-shared. The helpers every editorial-select block uses: frame scale,
-     the film's picture cadence, zero-duration steps, a seeded PRNG, ES Serif
-     glyph metrics for arithmetic text layout, and the image slot. Copied
-     verbatim into every block file between the BEGIN and END markers by
-     work/blocks/shared/inject.py; the first copy in a document wins, so
-     change es-shared.src.js and re-inject rather than editing a copy. */
-  window.__esShared = window.__esShared || (function () {
-    var METRICS = { serif: {"cap":0.69,"x":0.499,"asc":0.802,"desc":-0.284,"adv":{" ":0.238,"!":0.312,"\"":0.402,"#":0.557,"$":0.54,"%":0.952,"&":0.759,"'":0.2,"(":0.374,")":0.374,"*":0.468,"+":0.56,",":0.315,"-":0.336,".":0.236,"/":0.36,"0":0.545,"1":0.545,"2":0.545,"3":0.545,"4":0.535,"5":0.515,"6":0.545,"7":0.545,"8":0.545,"9":0.545,":":0.315,";":0.315,"<":0.56,"=":0.56,">":0.56,"?":0.44,"@":0.884,"A":0.732,"B":0.635,"C":0.675,"D":0.774,"E":0.661,"F":0.678,"G":0.734,"H":0.834,"I":0.334,"J":0.399,"K":0.725,"L":0.617,"M":0.911,"N":0.783,"O":0.756,"P":0.592,"Q":0.755,"R":0.707,"S":0.557,"T":0.676,"U":0.776,"V":0.721,"W":1.12,"X":0.692,"Y":0.678,"Z":0.596,"[":0.349,"\\":0.36,"]":0.349,"^":0.561,"_":0.542,"`":0.418,"a":0.502,"b":0.596,"c":0.495,"d":0.597,"e":0.504,"f":0.339,"g":0.558,"h":0.57,"i":0.261,"j":0.273,"k":0.549,"l":0.263,"m":0.886,"n":0.587,"o":0.564,"p":0.602,"q":0.561,"r":0.401,"s":0.434,"t":0.345,"u":0.582,"v":0.522,"w":0.791,"x":0.531,"y":0.582,"z":0.451,"{":0.368,"|":0.307,"}":0.368,"~":0.56},"kern":{"Fi":0.021,"Tr":-0.016,"al":0.026,"ap":-0.009,"at":-0.008,"el":0.013,"gh":-0.012,"ho":0.009,"hy":-0.029,"id":0.015,"il":-0.028,"ll":-0.011,"lm":0.021,"rt":0.011,"ry":0.021},"ink":{"!":[0.081,-0.014,0.231,0.705],"\"":[0.04,0.437,0.361,0.762],"#":[0.025,0.0,0.533,0.671],"$":[0.053,-0.118,0.501,0.776],"%":[0.04,-0.028,0.912,0.701],"&":[0.026,-0.014,0.717,0.706],"'":[0.04,0.437,0.16,0.762],"(":[0.083,-0.195,0.34,0.77],")":[0.034,-0.195,0.291,0.77],"*":[0.019,0.363,0.45,0.771],"+":[0.032,0.077,0.53,0.595],",":[0.045,-0.186,0.234,0.137],"-":[0.042,0.224,0.294,0.301],".":[0.044,-0.015,0.191,0.135],"/":[0.004,-0.166,0.356,0.734],"0":[0.04,-0.014,0.506,0.68],"1":[0.082,-0.001,0.477,0.673],"2":[0.047,-0.001,0.502,0.68],"3":[0.046,-0.014,0.504,0.68],"4":[0.024,-0.009,0.542,0.696],"5":[0.024,-0.011,0.473,0.738],"6":[0.039,-0.014,0.504,0.68],"7":[0.052,0.0,0.504,0.666],"8":[0.044,-0.014,0.501,0.68],"9":[0.032,-0.016,0.501,0.68],":":[0.079,-0.013,0.237,0.496],";":[0.045,-0.185,0.237,0.496],"<":[0.058,0.081,0.503,0.596],"=":[0.032,0.201,0.53,0.477],">":[0.059,0.083,0.504,0.598],"?":[0.068,-0.014,0.376,0.707],"@":[0.039,-0.162,0.847,0.682],"A":[0.009,0.0,0.728,0.701],"B":[0.041,-0.009,0.593,0.698],"C":[0.047,-0.017,0.636,0.707],"D":[0.041,0.0,0.716,0.683],"E":[0.042,-0.003,0.618,0.689],"F":[0.042,0.001,0.59,0.691],"G":[0.047,-0.017,0.715,0.707],"H":[0.041,0.0,0.794,0.69],"I":[0.041,0.0,0.315,0.686],"J":[-0.028,-0.14,0.368,0.69],"K":[0.041,0.0,0.717,0.69],"L":[0.042,-0.002,0.591,0.684],"M":[0.036,-0.009,0.899,0.686],"N":[0.038,-0.007,0.747,0.69],"O":[0.047,-0.004,0.708,0.704],"P":[0.041,0.002,0.567,0.691],"Q":[0.047,-0.223,0.709,0.707],"R":[0.041,-0.011,0.694,0.69],"S":[0.041,-0.017,0.515,0.707],"T":[0.021,-0.003,0.664,0.682],"U":[0.036,-0.016,0.746,0.69],"V":[0.014,-0.006,0.714,0.69],"W":[0.014,-0.007,1.11,0.707],"X":[0.01,0.0,0.683,0.69],"Y":[0.021,0.0,0.67,0.69],"Z":[0.023,0.0,0.574,0.69],"[":[0.108,-0.165,0.317,0.739],"\\":[0.004,-0.166,0.356,0.734],"]":[0.032,-0.165,0.242,0.739],"^":[0.081,0.204,0.481,0.506],"_":[0.042,-0.072,0.5,0.005],"`":[0.078,0.579,0.275,0.791],"a":[0.028,-0.014,0.504,0.511],"b":[0.026,-0.012,0.565,0.751],"c":[0.029,-0.012,0.475,0.512],"d":[0.03,-0.012,0.597,0.762],"e":[0.027,-0.012,0.474,0.508],"f":[0.017,0.0,0.432,0.764],"g":[0.017,-0.254,0.544,0.511],"h":[0.005,0.001,0.571,0.758],"i":[0.01,0.001,0.268,0.715],"j":[-0.098,-0.25,0.217,0.748],"k":[0.0,0.001,0.544,0.762],"l":[-0.014,0.002,0.239,0.76],"m":[0.013,0.0,0.882,0.507],"n":[0.017,0.001,0.585,0.511],"o":[0.026,-0.013,0.534,0.506],"p":[0.01,-0.241,0.568,0.515],"q":[0.026,-0.24,0.562,0.514],"r":[0.01,0.0,0.405,0.507],"s":[0.038,-0.013,0.402,0.511],"t":[0.011,-0.012,0.339,0.596],"u":[-0.002,-0.011,0.573,0.511],"v":[-0.007,-0.012,0.55,0.496],"w":[-0.016,-0.008,0.796,0.498],"x":[-0.001,-0.001,0.529,0.5],"y":[0.011,-0.253,0.576,0.501],"z":[0.013,-0.001,0.437,0.5],"{":[0.047,-0.165,0.335,0.739],"|":[0.117,-0.25,0.19,0.773],"}":[0.034,-0.165,0.322,0.739],"~":[0.05,0.27,0.512,0.442]}} };
-
-    /* Scale from the 1920x1080 source to this frame. The short side carries
-       it, so a portrait or square frame keeps the source's type size. */
-    function k(props) { var f = (props && props.frame) || { w: 1920, h: 1080 }; return Math.min(f.w, f.h) / 1080; }
-    function fw(props) { return ((props && props.frame) || { w: 1920 }).w; }
-    function fh(props) { return ((props && props.frame) || { h: 1080 }).h; }
-
-    /* The film updates its picture 16 times a second inside 24 fps (frame f
-       with f mod 3 = 2 repeats f - 1), and parts of it run on twos. quant(t)
-       moves a time to the start of the picture it falls in, so any tween or
-       step placed through it lands on a picture the film could show.
-       cadence: "16" (default), "twos", "ones". */
-    function quant(t, cadence, fps) {
-      fps = fps || 24; var f = Math.round(t * fps * 1000) / 1000, fl = Math.floor(f + 1e-6);
-      if (cadence === "ones") return fl / fps;
-      if (cadence === "twos") return (fl - (fl % 2)) / fps;
-      return (fl % 3 === 2 ? fl - 1 : fl) / fps;
-    }
-    /* Sample a tween as held pictures: returns the list of times at which the
-       picture changes between t0 and t1 on the cadence. */
-    function pictures(t0, t1, cadence, fps) {
-      fps = fps || 24; var out = [], f0 = Math.ceil(t0 * fps - 1e-6), f1 = Math.floor(t1 * fps + 1e-6), last = null;
-      for (var f = f0; f <= f1; f++) { var q = quant(f / fps, cadence, fps); if (q !== last && q >= t0 - 1e-6) { out.push(q); last = q; } }
-      if (!out.length || out[out.length - 1] < t1 - 1e-6) out.push(t1);
-      return out;
-    }
-
-    /* A zero-duration step, the film's way of changing a picture. Steps after
-       the first on a node carry immediateRender false (CONTRACT.md). */
-    function step(tl, node, from, to, t, first) {
-      var v = {}; for (var p in to) v[p] = to[p];
-      v.duration = 0.0001; v.ease = "none"; if (!first) v.immediateRender = false;
-      tl.fromTo(node, from, v, Math.max(0, t));
-    }
-
-    function rng(seed) {
-      var s = (seed >>> 0) || 1;
-      return function () { s = (s + 0x6D2B79F5) >>> 0; var t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-    }
-
-    /* Lay out a string in ES Serif from its glyph metrics: returns pen x per
-       character (from the run's left edge, px), the advance width and the ink
-       box, at a font size in px and tracking in em. Pure arithmetic, so it is
-       right before the webfont arrives and render() never reads layout. */
-    function layout(text, size, tracking, face) {
-      var m = METRICS[face || "serif"], pens = [], x = 0, tr = (tracking || 0) * size;
-      var inkL = Infinity, inkR = -Infinity;
-      for (var i = 0; i < text.length; i++) {
-        var ch = text[i], a = m.adv[ch] != null ? m.adv[ch] : 0.5;
-        pens.push(x);
-        var b = m.ink[ch];
-        if (b) { inkL = Math.min(inkL, x + b[0] * size); inkR = Math.max(inkR, x + b[2] * size); }
-        x += a * size;
-        if (i + 1 < text.length) { x += tr; var kp = m.kern[ch + text[i + 1]]; if (kp) x += kp * size; }
+  /* BEGIN es-runtime */
+  /* es-runtime 2.0.0. The editorial-select runtime, one copy per block and
+     identical in all of them; the first copy in a document wins. Source and
+     docs: library/_runtime/ (inject.py splices it, never edit a copy). */
+  if (!window.__esRuntime) window.__esRuntime = (function () {
+    var R = { version: "2.0.0" };
+    /* core: what every module shares. The fitted curves as control points (the
+       union of tokens.css and the camera's fits from the source footage), one
+       cubic-bezier solver, and EditorialSelect Serif's glyph metrics in the two
+       shapes the text helpers read (em fractions for shared.layout, font units for
+       kit.measure), both derived from the one table es-serif-metrics.json. */
+    var core = R.core = (function () {
+      var FPS = 24, EPS = 0.0001;
+      var CURVE = { snap: [0.33, 1, 0.68, 1], drift: [0.15, 0.11, 0.614, 0.796], "drift-linear": [0.385, 0.326, 0.732, 0.781],
+        push: [0.336, -0.065, 0, 0.821], "push-hard": [0.772, 0.446, 0.15, 0.453], pull: [0.924, 0.668, 0.604, 0.958],
+        glide: [0.034, 0.665, 0.702, 1.023], reveal: [0.081, -0.525, 0, 0.951], rise: [0.15, 0.85, 0.3, 1],
+        pass: [0.45, 0.05, 0.55, 0.95], settle: [0.42, 0.543, 1, 1.076], zoom: [0.213, 0.313, 0.759, 0.883], linear: [0, 0, 1, 1],
+        "film-push": [0.587, -0.033, 0.263, 1.135], "film-pull": [0.473, 0.464, 0.332, 0.974], "film-tilt": [1.0, 0.937, 0.874, 0.965] };
+      function bez4(x1, y1, x2, y2) {
+        var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+        return function (p) {
+          if (p <= 0) return 0; if (p >= 1) return 1;
+          var lo = 0, hi = 1, t = p, x, i;
+          for (i = 0; i < 40; i++) { x = ((ax * t + bx) * t + cx) * t; if (Math.abs(x - p) < 1e-7) break; if (x < p) lo = t; else hi = t; t = (lo + hi) / 2; }
+          return ((ay * t + by) * t + cy) * t;
+        };
       }
-      if (inkL === Infinity) { inkL = 0; inkR = x; }
-      return { pens: pens, width: x, inkL: inkL, inkR: inkR, ink: inkR - inkL, cap: m.cap * size, xh: m.x * size, size: size };
-    }
-    /* The font size whose cap height is cap px. */
-    function sizeForCap(cap, face) { return cap / METRICS[face || "serif"].cap; }
-    /* Where the baseline sits below the top of a line-height:1 box, as a
-       share of the font size, so a glyph node can be placed by its baseline. */
-    function baseFrac(face) { var m = METRICS[face || "serif"]; return (1 - (m.asc - m.desc)) / 2 + m.asc; }
-
-    /* An image slot: a box that crops its picture by code. spec is
-         { src, fit: "cover" | "contain", focal: [x, y] (0..1), zoom (1),
-           cutout: src of the subject on transparency, label }
-       or a string src. Without a src it draws a labelled placeholder, which is
-       the code-and-slots view of the block. Returns the slot node; the picture
-       is its first child (class es-pic) so a block can move it inside the box. */
-    function slot(spec, w, h, name) {
-      if (typeof spec === "string") spec = { src: spec };
-      spec = spec || {};
-      var box = document.createElement("div");
-      box.className = "es-slot"; box.setAttribute("data-slot", name || "image");
-      box.style.cssText = "position:absolute;overflow:hidden;width:" + w + "px;height:" + h + "px;";
-      var fx = spec.focal ? spec.focal[0] : 0.5, fy = spec.focal ? spec.focal[1] : 0.5;
-      if (spec.src) {
-        var pic = document.createElement("div");
-        pic.className = "es-pic";
-        var z = spec.zoom || 1;
-        pic.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;background-image:url(\"" + spec.src + "\");background-repeat:no-repeat;background-size:" +
-          (spec.fit === "contain" ? "contain" : (z === 1 ? "cover" : (z * 100) + "% auto")) + ";background-position:" + (fx * 100) + "% " + (fy * 100) + "%;transform-origin:" + (fx * 100) + "% " + (fy * 100) + "%;";
-        box.appendChild(pic);
-      } else {
-        box.style.background = "repeating-linear-gradient(45deg, var(--color-mist) 0 2px, var(--color-ghost) 2px 14px)";
-        box.style.outline = "2px solid var(--color-ink-grey)"; box.style.outlineOffset = "-2px";
-        var lab = document.createElement("div");
-        lab.className = "es-slot-label"; lab.textContent = spec.label || name || "image";
-        lab.style.cssText = "position:absolute;left:8px;top:6px;font:500 " + Math.max(10, Math.min(18, h / 8)) + "px/1 var(--font-mono);color:var(--color-ink-grey);white-space:nowrap;";
-        box.appendChild(lab);
+      var M = {"upm":1000,"cap":690,"x":499,"asc":802,"desc":-284,"adv":{" ":238,"!":312,"\"":402,"#":557,"$":540,"%":952,"&":759,"'":200,"(":374,")":374,"*":468,"+":560,",":315,"-":336,".":236,"/":360,"0":545,"1":545,"2":545,"3":545,"4":535,"5":515,"6":545,"7":545,"8":545,"9":545,":":315,";":315,"<":560,"=":560,">":560,"?":440,"@":884,"A":732,"B":635,"C":675,"D":774,"E":661,"F":678,"G":734,"H":834,"I":334,"J":399,"K":725,"L":617,"M":911,"N":783,"O":756,"P":592,"Q":755,"R":707,"S":557,"T":676,"U":776,"V":721,"W":1120,"X":692,"Y":678,"Z":596,"[":349,"\\":360,"]":349,"^":561,"_":542,"`":418,"a":502,"b":596,"c":495,"d":597,"e":504,"f":339,"g":558,"h":570,"i":261,"j":273,"k":549,"l":263,"m":886,"n":587,"o":564,"p":602,"q":561,"r":401,"s":434,"t":345,"u":582,"v":522,"w":791,"x":531,"y":582,"z":451,"{":368,"|":307,"}":368,"~":560," ":238,"–":542,"—":856,"‘":231,"’":231,"“":453,"”":453,"…":869},"kern":{"Fi":21,"Tr":-16,"al":26,"ap":-9,"at":-8,"el":13,"gh":-12,"ho":9,"hy":-29,"id":15,"il":-28,"ll":-11,"lm":21,"rt":11,"ry":21},"ink":{"!":[81,-14,231,705],"\"":[40,437,361,762],"#":[25,0,533,671],"$":[53,-118,501,776],"%":[40,-28,912,701],"&":[26,-14,717,706],"'":[40,437,160,762],"(":[83,-195,340,770],")":[34,-195,291,770],"*":[19,363,450,771],"+":[32,77,530,595],",":[45,-186,234,137],"-":[42,224,294,301],".":[44,-15,191,135],"/":[4,-166,356,734],"0":[40,-14,506,680],"1":[82,-1,477,673],"2":[47,-1,502,680],"3":[46,-14,504,680],"4":[24,-9,542,696],"5":[24,-11,473,738],"6":[39,-14,504,680],"7":[52,0,504,666],"8":[44,-14,501,680],"9":[32,-16,501,680],":":[79,-13,237,496],";":[45,-185,237,496],"<":[58,81,503,596],"=":[32,201,530,477],">":[59,83,504,598],"?":[68,-14,376,707],"@":[39,-162,847,682],"A":[9,0,728,701],"B":[41,-9,593,698],"C":[47,-17,636,707],"D":[41,0,716,683],"E":[42,-3,618,689],"F":[42,1,590,691],"G":[47,-17,715,707],"H":[41,0,794,690],"I":[41,0,315,686],"J":[-28,-140,368,690],"K":[41,0,717,690],"L":[42,-2,591,684],"M":[36,-9,899,686],"N":[38,-7,747,690],"O":[47,-4,708,704],"P":[41,2,567,691],"Q":[47,-223,709,707],"R":[41,-11,694,690],"S":[41,-17,515,707],"T":[21,-3,664,682],"U":[36,-16,746,690],"V":[14,-6,714,690],"W":[14,-7,1110,707],"X":[10,0,683,690],"Y":[21,0,670,690],"Z":[23,0,574,690],"[":[108,-165,317,739],"\\":[4,-166,356,734],"]":[32,-165,242,739],"^":[81,204,481,506],"_":[42,-72,500,5],"`":[78,579,275,791],"a":[28,-14,504,511],"b":[26,-12,565,751],"c":[29,-12,475,512],"d":[30,-12,597,762],"e":[27,-12,474,508],"f":[17,0,432,764],"g":[17,-254,544,511],"h":[5,1,571,758],"i":[10,1,268,715],"j":[-98,-250,217,748],"k":[0,1,544,762],"l":[-14,2,239,760],"m":[13,0,882,507],"n":[17,1,585,511],"o":[26,-13,534,506],"p":[10,-241,568,515],"q":[26,-240,562,514],"r":[10,0,405,507],"s":[38,-13,402,511],"t":[11,-12,339,596],"u":[-2,-11,573,511],"v":[-7,-12,550,496],"w":[-16,-8,796,498],"x":[-1,-1,529,500],"y":[11,-253,576,501],"z":[13,-1,437,500],"{":[47,-165,335,739],"|":[117,-250,190,773],"}":[34,-165,322,739],"~":[50,270,512,442],"–":[42,224,500,301],"—":[42,224,814,301],"‘":[38,473,206,764],"’":[26,473,193,764],"“":[38,473,428,764],"”":[26,473,415,764],"…":[79,-14,790,142]}};
+      function emMetrics() {
+        var u = M.upm, o = { cap: M.cap / u, x: M.x / u, asc: M.asc / u, desc: M.desc / u, adv: {}, kern: {}, ink: {} }, c;
+        for (c in M.adv) o.adv[c] = M.adv[c] / u;
+        for (c in M.kern) o.kern[c] = M.kern[c] / u;
+        for (c in M.ink) o.ink[c] = [M.ink[c][0] / u, M.ink[c][1] / u, M.ink[c][2] / u, M.ink[c][3] / u];
+        return o;
       }
-      return box;
-    }
-    /* The cut-out layer for type-behind-subject: the same crop as slot(spec)
-       but showing spec.cutout, to sit above the type. Null when there is none. */
-    function cutout(spec, w, h, name) {
-      if (!spec || typeof spec === "string" || !spec.cutout) return null;
-      var c = {}; for (var p in spec) c[p] = spec[p]; c.src = spec.cutout;
-      var n = slot(c, w, h, (name || "image") + "-cutout"); n.classList.add("es-cutout"); return n;
-    }
+      function unitMetrics() {
+        var o = { adv: {}, ink: {}, kern: {} }, c;
+        for (c in M.adv) o.adv[c] = M.adv[c];
+        for (c in M.ink) o.ink[c] = [M.ink[c][0], M.ink[c][2]];
+        for (c in M.kern) o.kern[c] = M.kern[c];
+        return o;
+      }
+      return { FPS: FPS, EPS: EPS, CURVE: CURVE, bez4: bez4, METRICS: M, emMetrics: emMetrics, unitMetrics: unitMetrics };
+    })();
 
-    /* A token colour by name ("violet" -> var(--color-violet)); any other
-       CSS colour passes through. */
-    function color(c, dflt) { c = c || dflt; return /^[a-z-]+$/.test(c) && c !== "white" && c !== "black" && c !== "transparent" ? "var(--color-" + c + ")" : c; }
+    /* shared: frame scale, the picture cadence as quantised times, zero-duration
+       steps placed at their time, a seeded PRNG, glyph-metric text layout in em
+       fractions, and the background-image slot. Was es-shared v1 (camera, select,
+       crop, billboard, ghost, lockup, tile-scatter, genre-word-card). */
+    R.shared = (function () {
+      var METRICS = { serif: core.emMetrics() };
 
-    return { METRICS: METRICS, k: k, fw: fw, fh: fh, quant: quant, pictures: pictures, step: step, rng: rng,
-             layout: layout, sizeForCap: sizeForCap, baseFrac: baseFrac, slot: slot, cutout: cutout, color: color, FR: 1 / 24 };
+      /* Scale from the 1920x1080 source to this frame. The short side carries
+         it, so a portrait or square frame keeps the source's type size. */
+      function k(props) { var f = (props && props.frame) || { w: 1920, h: 1080 }; return Math.min(f.w, f.h) / 1080; }
+      function fw(props) { return ((props && props.frame) || { w: 1920 }).w; }
+      function fh(props) { return ((props && props.frame) || { h: 1080 }).h; }
+
+      /* The film updates its picture 16 times a second inside 24 fps (frame f
+         with f mod 3 = 2 repeats f - 1), and parts of it run on twos. quant(t)
+         moves a time to the start of the picture it falls in, so any tween or
+         step placed through it lands on a picture the film could show.
+         cadence: "16" (default), "twos", "ones". */
+      function quant(t, cadence, fps) {
+        fps = fps || 24; var f = Math.round(t * fps * 1000) / 1000, fl = Math.floor(f + 1e-6);
+        if (cadence === "ones") return fl / fps;
+        if (cadence === "twos") return (fl - (fl % 2)) / fps;
+        return (fl % 3 === 2 ? fl - 1 : fl) / fps;
+      }
+      /* Sample a tween as held pictures: returns the list of times at which the
+         picture changes between t0 and t1 on the cadence. */
+      function pictures(t0, t1, cadence, fps) {
+        fps = fps || 24; var out = [], f0 = Math.ceil(t0 * fps - 1e-6), f1 = Math.floor(t1 * fps + 1e-6), last = null;
+        for (var f = f0; f <= f1; f++) { var q = quant(f / fps, cadence, fps); if (q !== last && q >= t0 - 1e-6) { out.push(q); last = q; } }
+        if (!out.length || out[out.length - 1] < t1 - 1e-6) out.push(t1);
+        return out;
+      }
+
+      /* A zero-duration step, the film's way of changing a picture. Steps after
+         the first on a node carry immediateRender false (CONTRACT.md). */
+      function step(tl, node, from, to, t, first) {
+        var v = {}; for (var p in to) v[p] = to[p];
+        v.duration = 0.0001; v.ease = "none"; if (!first) v.immediateRender = false;
+        tl.fromTo(node, from, v, Math.max(0, t));
+      }
+
+      function rng(seed) {
+        var s = (seed >>> 0) || 1;
+        return function () { s = (s + 0x6D2B79F5) >>> 0; var t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      }
+
+      /* Lay out a string in ES Serif from its glyph metrics: returns pen x per
+         character (from the run's left edge, px), the advance width and the ink
+         box, at a font size in px and tracking in em. Pure arithmetic, so it is
+         right before the webfont arrives and render() never reads layout. */
+      function layout(text, size, tracking, face) {
+        var m = METRICS[face || "serif"], pens = [], x = 0, tr = (tracking || 0) * size;
+        var inkL = Infinity, inkR = -Infinity;
+        for (var i = 0; i < text.length; i++) {
+          var ch = text[i], a = m.adv[ch] != null ? m.adv[ch] : 0.5;
+          pens.push(x);
+          var b = m.ink[ch];
+          if (b) { inkL = Math.min(inkL, x + b[0] * size); inkR = Math.max(inkR, x + b[2] * size); }
+          x += a * size;
+          if (i + 1 < text.length) { x += tr; var kp = m.kern[ch + text[i + 1]]; if (kp) x += kp * size; }
+        }
+        if (inkL === Infinity) { inkL = 0; inkR = x; }
+        return { pens: pens, width: x, inkL: inkL, inkR: inkR, ink: inkR - inkL, cap: m.cap * size, xh: m.x * size, size: size };
+      }
+      /* The font size whose cap height is cap px. */
+      function sizeForCap(cap, face) { return cap / METRICS[face || "serif"].cap; }
+      /* Where the baseline sits below the top of a line-height:1 box, as a
+         share of the font size, so a glyph node can be placed by its baseline. */
+      function baseFrac(face) { var m = METRICS[face || "serif"]; return (1 - (m.asc - m.desc)) / 2 + m.asc; }
+
+      /* An image slot: a box that crops its picture by code. spec is
+           { src, fit: "cover" | "contain", focal: [x, y] (0..1), zoom (1),
+             cutout: src of the subject on transparency, label }
+         or a string src. Without a src it draws a labelled placeholder, which is
+         the code-and-slots view of the block. Returns the slot node; the picture
+         is its first child (class es-pic) so a block can move it inside the box. */
+      function slot(spec, w, h, name) {
+        if (typeof spec === "string") spec = { src: spec };
+        spec = spec || {};
+        var box = document.createElement("div");
+        box.className = "es-slot"; box.setAttribute("data-slot", name || "image");
+        box.style.cssText = "position:absolute;overflow:hidden;width:" + w + "px;height:" + h + "px;";
+        var fx = spec.focal ? spec.focal[0] : 0.5, fy = spec.focal ? spec.focal[1] : 0.5;
+        if (spec.src) {
+          var pic = document.createElement("div");
+          pic.className = "es-pic";
+          var z = spec.zoom || 1;
+          pic.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;background-image:url(\"" + spec.src + "\");background-repeat:no-repeat;background-size:" +
+            (spec.fit === "contain" ? "contain" : (z === 1 ? "cover" : (z * 100) + "% auto")) + ";background-position:" + (fx * 100) + "% " + (fy * 100) + "%;transform-origin:" + (fx * 100) + "% " + (fy * 100) + "%;";
+          box.appendChild(pic);
+        } else {
+          box.style.background = "repeating-linear-gradient(45deg, var(--color-mist) 0 2px, var(--color-ghost) 2px 14px)";
+          box.style.outline = "2px solid var(--color-ink-grey)"; box.style.outlineOffset = "-2px";
+          var lab = document.createElement("div");
+          lab.className = "es-slot-label"; lab.textContent = spec.label || name || "image";
+          lab.style.cssText = "position:absolute;left:8px;top:6px;font:500 " + Math.max(10, Math.min(18, h / 8)) + "px/1 var(--font-mono);color:var(--color-ink-grey);white-space:nowrap;";
+          box.appendChild(lab);
+        }
+        return box;
+      }
+      /* The cut-out layer for type-behind-subject: the same crop as slot(spec)
+         but showing spec.cutout, to sit above the type. Null when there is none. */
+      function cutout(spec, w, h, name) {
+        if (!spec || typeof spec === "string" || !spec.cutout) return null;
+        var c = {}; for (var p in spec) c[p] = spec[p]; c.src = spec.cutout;
+        var n = slot(c, w, h, (name || "image") + "-cutout"); n.classList.add("es-cutout"); return n;
+      }
+
+      /* A token colour by name ("violet" -> var(--color-violet)); any other
+         CSS colour passes through. */
+      function color(c, dflt) { c = c || dflt; return /^[a-z-]+$/.test(c) && c !== "white" && c !== "black" && c !== "transparent" ? "var(--color-" + c + ")" : c; }
+
+      return { METRICS: METRICS, k: k, fw: fw, fh: fh, quant: quant, pictures: pictures, step: step, rng: rng,
+               layout: layout, sizeForCap: sizeForCap, baseFrac: baseFrac, slot: slot, cutout: cutout, color: color, FR: 1 / 24 };
+    })();
+
+    /* kit: fitted curves, the picture cadence as an ease (shown, stepped, snap),
+       glyph-metric measure in font units, the img slot and frame sequences,
+       measured per-frame keys (keyed, shift) and steps placed LEAD before their
+       time, and the marquee selection drawing. Was es-kit v1 (cursor, marquee,
+       type-behind, card-wipe, giant-word-rise, type-fill-echo). */
+    R.kit = (function () {
+      var EPS = 0.0001, LEAD = 0.002, FPS = 24;
+      /* ES Serif metrics (units per 1000 em): advance, ink x range, kern pairs. */
+      var FM = core.unitMetrics();
+      var bez = core.bez4;
+      /* The style's fitted curves (tokens.css), as control points. */
+      var CURVE = core.CURVE;
+      function curve(c) { var e = typeof c === "string" ? (CURVE[c] || CURVE.snap) : (c || CURVE.snap); return bez(e[0], e[1], e[2], e[3]); }
+      /* The film updates its picture 16 times a second inside 24 fps: frame f with
+         f mod 3 == 2 repeats f - 1. "twos" holds every second frame, "none" runs
+         on ones. phase shifts which frame repeats. Returns the time whose state
+         the frame at time t shows. */
+      function shown(t, cad, phase) {
+        if (!cad || cad === "none") return t;
+        var f = Math.floor(t * FPS + 1e-3), p = phase || 0, g = f;
+        if (cad === "16" || cad === 16) { if (((f - p) % 3 + 3) % 3 === 2) g = f - 1; }
+        else if (cad === "twos" || cad === 12) { if (((f - p) % 2 + 2) % 2 === 1) g = f - 1; }
+        return g / FPS;
+      }
+      /* A seek-safe ease that follows a fitted curve but only changes on the
+         cadence's picture updates, aligned to absolute timeline frames. */
+      function stepped(c, t0, dur, cad, phase) {
+        var f = curve(c);
+        if (!cad || cad === "none" || !(dur > 0)) return f;
+        return function (p) {
+          if (p >= 1) return 1;
+          var t = shown(t0 + p * dur + 1e-6, cad, phase), q = (t - t0) / dur;
+          return f(q < 0 ? 0 : q > 1 ? 1 : q);
+        };
+      }
+      /* Snap a time to the nearest frame on which the cadence shows a new picture. */
+      function snap(t, cad, phase) {
+        var f = Math.round(t * FPS);
+        if (cad === "16" || cad === 16) { while (((f - (phase || 0)) % 3 + 3) % 3 === 2) f++; }
+        else if (cad === "twos" || cad === 12) { if (((f - (phase || 0)) % 2 + 2) % 2 === 1) f++; }
+        return f / FPS;
+      }
+      /* Pure text measure from the font's own metrics: no layout read, so any word
+         at any size is known before paint. Returns advance, ink left and right
+         (px from the pen start) and cap height. */
+      function measure(text, size, track) {
+        var s = size / 1000, x = 0, inkL = null, inkR = 0, tr = (track || 0) * 1000, ch, i, a, k;
+        for (i = 0; i < text.length; i++) {
+          ch = text.charAt(i); a = FM.adv[ch]; if (a == null) a = FM.adv["n"];
+          k = i > 0 ? (FM.kern[text.charAt(i - 1) + ch] || 0) : 0; x += k;
+          var ink = FM.ink[ch];
+          if (ink) { if (inkL == null) inkL = x + ink[0]; inkR = x + ink[1]; }
+          x += a + (i < text.length - 1 ? tr : 0);
+        }
+        return { adv: x * s, inkL: (inkL || 0) * s, inkR: inkR * s, inkW: (inkR - (inkL || 0)) * s, cap: 0.69 * size };
+      }
+      /* Font size whose ink spans w px, or whose cap height is c px. */
+      function sizeForInk(text, w, track) { var m = measure(text, 1000, track); return 1000 * w / Math.max(1, m.inkW); }
+      function sizeForCap(c) { return c / 0.69; }
+      function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+      /* A token colour, falling back to a literal. */
+      function col(v, fb) { if (!v) return fb; return v.charAt(0) === "-" ? "var(" + v + ", " + (fb || "#000") + ")" : v; }
+      var uid = 0;
+      function id(p) { uid += 1; return (p || "es") + uid; }
+      /* An image slot: { src | frames: [src], fit: cover|contain|fill, focal: [x, y] in 0..1,
+         box: [x, y, w, h] in frame px (default the frame) }. Returns a div holding one
+         img per picture, positioned by object-fit and object-position. */
+      function slot(sp, W, H, cls) {
+        sp = sp || {};
+        var b = sp.box || [0, 0, W, H], el = document.createElement("div");
+        el.className = (cls || "") + " es-slot";
+        el.style.cssText = "position:absolute;left:" + b[0] + "px;top:" + b[1] + "px;width:" + b[2] + "px;height:" + b[3] + "px;overflow:hidden;";
+        var list = sp.frames || (sp.src ? [sp.src] : []), fo = sp.focal || [0.5, 0.5];
+        if (!list.length) { el.style.background = sp.color || "repeating-linear-gradient(45deg,#cfcfcf 0 22px,#d9d9d9 22px 44px)"; el.setAttribute("data-slot-empty", sp.name || "image"); }
+        for (var i = 0; i < list.length; i++) {
+          var im = document.createElement("img");
+          im.src = typeof list[i] === "string" ? list[i] : list[i].src; im.alt = "";
+          im.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;display:block;max-width:none;object-fit:" + (sp.fit || "cover") +
+            ";object-position:" + (fo[0] * 100) + "% " + (fo[1] * 100) + "%;" + (list.length > 1 ? "opacity:0;" : "");
+          el.appendChild(im);
+        }
+        return el;
+      }
+      /* Play a frame-sequence slot from t0, one picture per frame at fps; hold the last. */
+      function playSlot(tl, el, t0, fps, hold) {
+        var ims = el.querySelectorAll("img"), n = ims.length, fr = 1 / (fps || FPS), i;
+        if (n < 2) return t0;
+        for (i = 0; i < n; i++) {
+          step(tl, ims[i], { opacity: 0 }, { opacity: 1 }, t0 + i * fr);
+          if (i < n - 1 || hold === false) step(tl, ims[i], { opacity: 1 }, { opacity: 0 }, t0 + (i + 1) * fr);
+        }
+        return t0 + n * fr;
+      }
+      /* Hold-per-key state changes (measured per-frame keys): each key's values
+         hold until the next. map(key) returns the tween vars for that key. */
+      function keyed(tl, node, keys, t0, map, first) {
+        var prev = null;
+        for (var i = 0; i < keys.length; i++) {
+          var to = map(keys[i]), from = prev || to, v = {};
+          for (var k in to) v[k] = to[k];
+          v.duration = EPS; v.ease = "none"; v.immediateRender = !!(first && i === 0);
+          var at = t0 + keys[i].t - LEAD;
+          if (at < 0) { from = to; at = 0; v.immediateRender = true; }
+          tl.fromTo(node, from, v, at);
+          prev = to;
+        }
+        return prev;
+      }
+      /* A one-frame change (show, hide, swap) on the cadence. */
+      function step(tl, node, from, to, at) {
+        var v = {}; for (var k in to) v[k] = to[k];
+        v.duration = EPS; v.ease = "none"; v.immediateRender = false;
+        if (at - LEAD < 0) { tl.fromTo(node, to, v, 0); return; }
+        tl.fromTo(node, from, v, at - LEAD);
+      }
+      /* Beats: props.beats (seconds from t0) or n even beats over span. */
+      function beats(props, n, span) {
+        if (props.beats && props.beats.length) return props.beats.slice();
+        var out = []; for (var i = 0; i < n; i++) out.push(span * (i + 1) / (n + 1)); return out;
+      }
+      /* A marquee selection state as SVG markup: { x0, y0, x1, y1, op } is the
+         translucent fill, chips [[ax, ay, bx, by, o]] are square handles chip px
+         wide, each streaked as the hull of its square at a (where the last
+         picture left it) and at b (where it is now). */
+      function hull2(ax, ay, bx, by, h) {
+        var P = [[ax - h, ay - h], [ax + h, ay - h], [ax + h, ay + h], [ax - h, ay + h], [bx - h, by - h], [bx + h, by - h], [bx + h, by + h], [bx - h, by + h]];
+        P.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+        function cr(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+        var lo = [], up = [], i;
+        for (i = 0; i < P.length; i++) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], P[i]) <= 0) lo.pop(); lo.push(P[i]); }
+        for (i = P.length - 1; i >= 0; i--) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], P[i]) <= 0) up.pop(); up.push(P[i]); }
+        return lo.slice(0, -1).concat(up.slice(0, -1)).map(function (q) { return q[0].toFixed(1) + "," + q[1].toFixed(1); }).join(" ");
+      }
+      function sel(st, chip, color) {
+        var c = color || "#fff", h = (chip || 24) / 2, s = "";
+        if (st.op) s += '<rect x="' + Math.min(st.x0, st.x1) + '" y="' + Math.min(st.y0, st.y1) + '" width="' + Math.abs(st.x1 - st.x0) + '" height="' + Math.abs(st.y1 - st.y0) + '" style="fill:' + c + '" fill-opacity="' + st.op + '"/>';
+        var C = st.chips || [];
+        for (var i = 0; i < C.length; i++) s += '<polygon points="' + hull2(C[i][0], C[i][1], C[i][2], C[i][3], h) + '" style="fill:' + c + '" fill-opacity="' + (C[i][4] == null ? 1 : C[i][4]) + '"/>';
+        return s;
+      }
+      /* Start a measured key list part way in: times shift by -skip, and every key
+         at or before the new zero collapses into one starting key (the last wins). */
+      function shift(keys, skip) {
+        if (!skip) return keys;
+        var out = [], pre = null;
+        for (var i = 0; i < keys.length; i++) {
+          var k = {}, q; for (q in keys[i]) k[q] = keys[i][q]; k.t = keys[i].t - skip;
+          if (k.t <= 1e-6) { pre = k; pre.t = 0; } else { if (pre) { out.push(pre); pre = null; } out.push(k); }
+        }
+        if (pre) out.push(pre);
+        return out;
+      }
+      return { EPS: EPS, LEAD: LEAD, FPS: FPS, FM: FM, bez: bez, curve: curve, CURVE: CURVE, shown: shown, stepped: stepped, snap: snap,
+        measure: measure, sizeForInk: sizeForInk, sizeForCap: sizeForCap, esc: esc, col: col, id: id, slot: slot, playSlot: playSlot,
+        keyed: keyed, step: step, beats: beats, sel: sel, shift: shift };
+    })();
+
+    /* select: the selection engine behind select-handles, used by every
+       block that draws a selection (select-handles, genre-word-card and any
+       block that wraps a target in handles). Needs R.shared and the toolkit's
+       window.__motionExpert.
+
+       Two ways to drive it.
+       keys (general): a list of targets over time; each key's chips sit on the
+         corners of its box and arrive from the previous box by a mode:
+           pop      appear at once (optionally landing large and settling)
+           glide    travel from the previous box on the snap ease, starting
+                    lead seconds before t, drawn as a segmented streak
+           jump     appear at once on the new box while the previous chips
+                    linger (the grow-with-target nest)
+           collapse travel inward to the box centre and vanish
+         Every glide is sampled on the film's picture cadence, so it steps the
+         way the source steps.
+       frames (preset): measured rectangles per source frame,
+         { "<f>": [[x0, y0, x1, y1, top, bottom], ...] }, f counted from t0,
+         each frame stepped at t0 + (f - 0.5) / 24 as the replica does. */
+    R.select = (function () {
+      var SH = R.shared;
+      function corners(b) { return [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]; }
+      function colorOf(key, spec, i) {
+        var c = key.colors || key.color || spec.colors || spec.color || "type-light";
+        c = Array.isArray(c) ? c[i % c.length] : c;
+        return /gradient\(/.test(c) ? c : SH.color(c);
+      }
+      /* The streak: while a chip travels it is drawn as two pieces, each the
+         sweep of the chip between two earlier sample times (in frames), with a
+         gap between them, like a multi-sample shutter. Measured on frames 10
+         and 12: a leading piece at the chip's position and a trailing smear
+         reaching back about a frame. streak: false draws a plain square. */
+      function piecesOf(spec) {
+        if (spec.streak === false) return [[0, 0]];
+        return (spec.streak && spec.streak.pieces) || [[0, 0.5], [0.75, 1.5]];
+      }
+      function chipPx(key, spec, props) { return (key.chip || spec.chip || 24 * SH.k(props)); }
+
+      /* General: one node per key x corner x streak copy. */
+      function buildKeys(layer, spec, props) {
+        var keys = spec.keys || [], pieces = piecesOf(spec);
+        for (var k = 0; k < keys.length; k++) {
+          var mode = k === 0 ? (keys[k].mode === "glide" ? "pop" : (keys[k].mode || "pop")) : (keys[k].mode || "glide");
+          var copies = (mode === "glide" || mode === "collapse") ? pieces.length : 1;
+          var w = chipPx(keys[k], spec, props);
+          for (var i = 0; i < 4; i++) for (var j = 0; j < copies; j++) {
+            var c = document.createElement("div");
+            c.className = "es-chip";
+            c.setAttribute("data-key", k); c.setAttribute("data-corner", i); c.setAttribute("data-copy", j);
+            var bg = colorOf(keys[k], spec, i);
+            c.style.cssText = "position:absolute;left:0;top:0;opacity:0;width:" + w + "px;height:" + w + "px;background:" + bg + ";";
+            layer.appendChild(c);
+          }
+        }
+      }
+      function animateKeys(tl, layer, t0, spec, props) {
+        var M = window.__motionExpert, keys = spec.keys || [], pieces = piecesOf(spec), FR = SH.FR;
+        var cad = spec.cadence || "16", ease = M.ease(spec.ease || "snap"), end = t0;
+        var exitAt = props.exitAt != null ? t0 + props.exitAt : (spec.exitAt != null ? t0 + spec.exitAt : null);
+        for (var k = 0; k < keys.length; k++) {
+          var key = keys[k];
+          var mode = k === 0 ? (key.mode === "glide" ? "pop" : (key.mode || "pop")) : (key.mode || "glide");
+          var w = chipPx(key, spec, props), half = w / 2;
+          var at = t0 + key.t;
+          var dur = key.dur != null ? key.dur : 6 * FR;
+          var lead = key.lead != null ? key.lead : FR;
+          var nxt = keys[k + 1];
+          var hide = nxt ? t0 + nxt.t - ((nxt.mode || "glide") === "glide" || nxt.mode === "collapse" ? (nxt.lead != null ? nxt.lead : FR) : 0) : exitAt;
+          if (nxt && nxt.mode === "jump") hide = t0 + nxt.t + (nxt.linger != null ? nxt.linger : 3 * FR);
+          var box = mode === "collapse" ? [(key.box[0] + key.box[2]) / 2, (key.box[1] + key.box[3]) / 2, (key.box[0] + key.box[2]) / 2, (key.box[1] + key.box[3]) / 2] : key.box;
+          var tc = corners(box), pc = k > 0 ? corners(keys[k - 1].box) : tc;
+          var chips = layer.querySelectorAll('.es-chip[data-key="' + k + '"]');
+          var from = key.chip_from ? key.chip_from / w : 1;
+          for (var n = 0; n < chips.length; n++) {
+            var ch = chips[n], i = Number(ch.getAttribute("data-corner")), j = Number(ch.getAttribute("data-copy"));
+            if (mode === "glide" || mode === "collapse") {
+              var start = at - lead, pc0 = pc[i], tc0 = tc[i], pz = pieces[j];
+              var tail = pieces[pieces.length - 1][1] * FR;
+              var pos = function (u) { var e = ease(Math.max(0, Math.min(1, (u - start) / dur))); return [pc0[0] + (tc0[0] - pc0[0]) * e, pc0[1] + (tc0[1] - pc0[1]) * e]; };
+              var pics = SH.pictures(start, start + dur + tail, cad);
+              var prev = { opacity: 0, x: pc0[0] - half, y: pc0[1] - half, width: w, height: w, rotation: 0 };
+              if (j === 0) { var on = { opacity: 1, x: prev.x, y: prev.y, width: w, height: w, rotation: 0 }; SH.step(tl, ch, prev, on, start, false); prev = on; }
+              for (var q = 0; q < pics.length; q++) {
+                /* each piece is the chip swept between two sample times: a
+                   rectangle as long as the sweep plus a chip, one chip wide,
+                   turned along the path, so a diagonal glide reads as a streak */
+                var a = pos(pics[q] - pz[0] * FR), b = pos(pics[q] - pz[1] * FR);
+                var dx = a[0] - b[0], dy = a[1] - b[1], len = Math.sqrt(dx * dx + dy * dy);
+                var ux = len ? dx / len : 1, uy = len ? dy / len : 0, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, L = len + w;
+                if (j > 0 && len >= 1) { mx -= ux; my -= uy; L -= 2; }
+                var rot = len >= 1 ? Math.round(Math.atan2(uy, ux) * 180 / Math.PI * 100) / 100 : 0;
+                if (Math.abs(Math.abs(rot) - 180) < 0.01) rot = 0;
+                var cur = { opacity: (j === 0 || len >= 1) ? 1 : 0, x: mx - L / 2, y: my - w / 2, width: L, height: w, rotation: rot };
+                if (q === pics.length - 1 && j > 0) cur.opacity = 0;
+                var same = cur.opacity === prev.opacity && Math.abs(cur.x - prev.x) < 0.01 && Math.abs(cur.y - prev.y) < 0.01 && Math.abs(cur.width - prev.width) < 0.01 && Math.abs(cur.height - prev.height) < 0.01 && cur.rotation === prev.rotation;
+                if (same) continue;
+                SH.step(tl, ch, prev, cur, pics[q], false); prev = cur;
+              }
+              var gone = mode === "collapse" ? start + dur + (key.hold != null ? key.hold : 2 * FR) : hide;
+              if (j === 0 && gone != null) SH.step(tl, ch, { opacity: 1 }, { opacity: 0 }, gone, false);
+              end = Math.max(end, start + dur);
+            } else {
+              var tx = tc[i][0] - half, ty = tc[i][1] - half;
+              SH.step(tl, ch, { opacity: 0, x: tx, y: ty, scale: from }, { opacity: 1, x: tx, y: ty, scale: from }, at, false);
+              if (from !== 1) {
+                var sp = SH.pictures(at, at + (key.settle != null ? key.settle : 3 * FR), cad), ps = from;
+                for (var r = 1; r < sp.length; r++) {
+                  var s = from + (1 - from) * ease((sp[r] - at) / (sp[sp.length - 1] - at));
+                  SH.step(tl, ch, { scale: ps }, { scale: s }, sp[r], false); ps = s;
+                }
+              }
+              if (hide != null) SH.step(tl, ch, { opacity: 1 }, { opacity: 0 }, hide, false);
+              end = Math.max(end, at + FR);
+            }
+          }
+        }
+        return end;
+      }
+
+      /* Preset: measured rectangles per frame, pooled nodes. */
+      function rectState(r) {
+        if (!r) return { opacity: 0 };
+        return { opacity: 1, left: r[0], top: r[1], width: r[2] - r[0], height: r[3] - r[1],
+                 backgroundImage: "linear-gradient(" + r[4] + "," + (r[5] || r[4]) + ")" };
+      }
+      function buildFrames(layer, spec) {
+        var fr = spec.frames || {}, n = 0;
+        for (var f in fr) n = Math.max(n, fr[f].length);
+        var first = fr["0"] || [];
+        for (var i = 0; i < n; i++) {
+          var d = document.createElement("div"); d.className = "es-chip es-chip-r";
+          var st = rectState(first[i]);
+          d.style.cssText = "position:absolute;left:" + (st.left || 0) + "px;top:" + (st.top || 0) + "px;width:" + (st.width || 24) + "px;height:" + (st.height || 24) + "px;opacity:" + st.opacity + ";" + (st.backgroundImage ? "background-image:" + st.backgroundImage + ";" : "");
+          layer.appendChild(d);
+        }
+      }
+      function animateFrames(tl, layer, t0, spec, sc) {
+        var fr = spec.frames || {}, nodes = layer.querySelectorAll(".es-chip-r"), last = 0, FR = SH.FR;
+        sc = sc || 1;
+        for (var f in fr) last = Math.max(last, Number(f));
+        var endF = spec.f1 != null ? spec.f1 : last + 1;
+        for (var i = 0; i < nodes.length; i++) {
+          var prev = rectState((fr["0"] || [])[i]);
+          for (var f2 = 1; f2 <= endF; f2++) {
+            var cur = rectState((fr[String(f2)] || [])[i]);
+            if (JSON.stringify(cur) === JSON.stringify(prev)) continue;
+            var a = {}, b = {};
+            if (cur.opacity) { for (var p in cur) { b[p] = cur[p]; a[p] = prev.opacity ? prev[p] : cur[p]; } a.opacity = prev.opacity; }
+            else { a.opacity = prev.opacity; b.opacity = 0; }
+            SH.step(tl, nodes[i], a, b, t0 + (f2 - 0.5) * FR, false);
+            prev = cur;
+          }
+        }
+        return t0 + endF * FR;
+      }
+
+      /* Box helpers so any block can wrap a target: chip centres sit pad px
+         outside a target rectangle [x, y, w, h]. pad is a number or [px, py]. */
+      function around(rect, pad) {
+        var px = Array.isArray(pad) ? pad[0] : (pad || 0), py = Array.isArray(pad) ? pad[1] : (pad || 0);
+        return [rect[0] - px, rect[1] - py, rect[0] + rect[2] + px, rect[1] + rect[3] + py];
+      }
+
+      return {
+        build: function (layer, spec, props) { if (spec.frames) buildFrames(layer, spec); else buildKeys(layer, spec, props); },
+        animate: function (tl, layer, t0, spec, props) { return spec.frames ? animateFrames(tl, layer, t0, spec) : animateKeys(tl, layer, t0, spec, props); },
+        around: around
+      };
+    })();
+
+    /* camera: the film's camera moves as presets for any image slot or
+       container (camera-rig, billboard, crop-select and any block that moves a
+       picture). Was es-camera v1.
+
+       A move is a scale about an origin plus a travel and a roll, run on one of
+       the film's cadences. Scale interpolates in log space, which is how every
+       preset below was fitted, so a pull from 1 to 0.4 reads as an even camera
+       move rather than a slowing one. Every preset is measured from the source:
+         push         film 822 to 834 (shots 34 and 35, the lying model), the push
+                      with its cut punch removed: x1.100 over 12 frames, fitted
+                      bezier 0.587 -0.033 0.263 1.135 (rms 0.026), 16 fps cadence
+         punch        the punch-in on the cut at film 828: x1.097 in one frame
+         push-soft    fingerprint move 52 (film 600 on): x1.34 over 13 frames, push curve
+         push-hard    fingerprint move 48 (film 522 on): x1.47 over 13 frames, push-hard curve
+         pull-back    s7 shot I (film 958 to 992), tracked board plane: x0.407 over
+                      35 frames, log-scale bezier 0.473 0.464 0.332 0.974 (rms 0.003),
+                      centre travel -33, +26 px, on ones (real footage)
+         pull-steady  s7 shots B to H, the median steady pull: -1.99 percent per
+                      frame (range -0.92 to -2.39), linear, on ones
+         pull-settle  fingerprint move 67 (shot 38): x0.82 over 13 frames, settle curve
+         drift        fingerprint move 29 (shot 14 studio drift): 0.035 W by 0.025 H
+                      over 20 frames, drift curve, on ones
+         tilt         fingerprint move 66 (shot 37): -0.06 H over 13 frames,
+                      bezier 1.0 0.937 0.874 0.965, on ones
+         hold         no motion
+       cam = { preset, at (s after t0), dur (s) or frames, scale (duration
+               multiplier), from, to (scale), dx, dy (px at 1920, or "0.05W",
+               "-0.03H"), r (deg), origin [fx, fy] (0..1 of the node box),
+               ease (token name or bezier), cadence "16" | "twos" | "ones",
+               phase (which frame of three repeats, default 2),
+               keys: [[frame, s, x, y, r], ...] exact per-frame states, or
+               mats: [[frame, m0..m8], ...] exact per-frame homographies (row
+               major, frame px), both stepped on their frames }
+       or an array of such moves, each starting from where the last one ended. */
+    R.camera = (function () {
+      var FPS = 24, EPS = 0.0001;
+      var CURVE = core.CURVE;
+      var PRESETS = {
+        push: { to: 1.100, frames: 12, ease: "film-push", cadence: "16" },
+        punch: { to: 1.097, frames: 0, cadence: "16" },
+        "push-soft": { to: 1.34, frames: 13, ease: "push", cadence: "16" },
+        "push-hard": { to: 1.47, frames: 13, ease: "push-hard", cadence: "16" },
+        "pull-back": { to: 0.407, frames: 35, ease: "film-pull", cadence: "ones", dx: -33, dy: 26 },
+        "pull-steady": { rate: -0.0199, frames: 16, ease: "linear", cadence: "ones" },
+        "pull-settle": { to: 0.82, frames: 13, ease: "settle", cadence: "ones" },
+        drift: { dx: "0.035W", dy: "0.025H", frames: 20, ease: "drift", cadence: "ones" },
+        tilt: { dy: "-0.06H", frames: 13, ease: "film-tilt", cadence: "ones" },
+        hold: { frames: 0 }
+      };
+      function bez(e) { return core.bez4(e[0], e[1], e[2], e[3]); }
+      function curve(c) { return bez(typeof c === "string" ? (CURVE[c] || CURVE.linear) : (c || CURVE.linear)); }
+      function fsz(props) { var f = (props && props.frame) || {}; return { w: f.w || 1920, h: f.h || 1080 }; }
+      function len(v, props, axis) {
+        if (v == null) return 0;
+        var F = fsz(props);
+        if (typeof v === "string") { var m = /^(-?\d*\.?\d+)([HW])$/.exec(v.trim()); if (m) return Number(m[1]) * (m[2] === "H" ? F.h : F.w); return Number(v) || 0; }
+        return v * F.w / 1920;
+      }
+      /* The time of the picture a frame shows: on the 16 fps cadence frame f with
+         (f - phase + 2) mod 3 == 2 repeats f - 1 (phase 2 is the film's own). */
+      function shown(t, cad, phase) {
+        if (!cad || cad === "ones") return t;
+        var f = Math.floor(t * FPS + 1e-4), g = f, p = phase == null ? 2 : phase;
+        if (cad === "16" || cad === 16) { if ((((f - p) % 3) + 3) % 3 === 0) g = f - 1; }
+        else if (cad === "twos" || cad === 12) { if ((((f - (p % 2)) % 2) + 2) % 2 === 1) g = f - 1; }
+        return g / FPS;
+      }
+      /* Resolve one move into numbers: start time, duration, the scale ratio,
+         travel and roll, the curve, cadence and origin. */
+      function resolve(c, props) {
+        var P = PRESETS[c.preset || "hold"] || PRESETS.hold, k = c.scale || 1;
+        var frames = c.frames != null ? c.frames : (c.dur != null ? c.dur * FPS : P.frames * k);
+        var dur = Math.max(0, frames / FPS);
+        var ratio;
+        if (c.to != null && c.from != null) ratio = c.to / c.from;
+        else if (c.to != null) ratio = c.to;
+        else if (P.rate != null) ratio = Math.exp(P.rate * frames);
+        else ratio = P.to != null ? P.to : 1;
+        return { at: c.at || 0, dur: dur, from: c.from != null ? c.from : 1, ratio: ratio,
+          dx: len(c.dx != null ? c.dx : P.dx, props), dy: len(c.dy != null ? c.dy : P.dy, props),
+          r: c.r != null ? c.r : (P.r || 0), ease: curve(c.ease || P.ease || "linear"),
+          cadence: c.cadence || P.cadence || "16", phase: c.phase, origin: c.origin || [0.5, 0.5] };
+      }
+      function list(cam) { return !cam ? [] : (Array.isArray(cam) ? cam : [cam]); }
+      /* The state at t seconds after t0, pure, for anything that must follow the
+         camera (an overlay, a label) without being inside the moved node. */
+      function sample(cam, t, props) {
+        var st = { s: 1, x: 0, y: 0, r: 0 }, L = list(cam);
+        for (var i = 0; i < L.length; i++) {
+          var c = L[i];
+          if (c.keys) { var kk = null; for (var j = 0; j < c.keys.length; j++) if (c.keys[j][0] / FPS <= t + 1e-6) kk = c.keys[j]; if (kk) st = { s: kk[1], x: kk[2], y: kk[3], r: kk[4] || 0 }; continue; }
+          var m = resolve(c, props); if (i === 0 && c.from != null) st.s = m.from;
+          var q = m.dur > 0 ? (shown(t, m.cadence, m.phase) - m.at) / m.dur : (t >= m.at ? 1 : 0);
+          var e = m.ease(q < 0 ? 0 : q > 1 ? 1 : q);
+          if (t < m.at) break;
+          st = { s: st.s * Math.pow(m.ratio, e), x: st.x + m.dx * e, y: st.y + m.dy * e, r: st.r + m.r * e };
+          if (q < 1) break;
+        }
+        return st;
+      }
+      /* A GSAP ease that holds pictures on the cadence and maps progress so a
+         linear tween from a to b lands on the curve (log space for scale). */
+      function stepper(m, t0, map) {
+        return function (p) {
+          if (p >= 1) return 1; if (p <= 0) return 0;
+          var t = t0 + m.at + p * m.dur, q = (shown(t + 1e-6, m.cadence, m.phase) - t0 - m.at) / m.dur;
+          return map(m.ease(q < 0 ? 0 : q > 1 ? 1 : q));
+        };
+      }
+      /* Tween node (a picture or a container) through the move(s). Returns the
+         time the camera settles. box = { w, h } of the node, for the origin. */
+      function apply(tl, node, t0, cam, props) {
+        var L = list(cam), st = { s: 1, x: 0, y: 0, r: 0 }, end = t0, first = true;
+        if (!L.length) return t0;
+        if (L[0].origin) node.style.transformOrigin = (L[0].origin[0] * 100) + "% " + (L[0].origin[1] * 100) + "%";
+        for (var i = 0; i < L.length; i++) {
+          var c = L[i];
+          if (c.mats) { applyMats(tl, node, t0, c.mats); end = Math.max(end, t0 + c.mats[c.mats.length - 1][0] / FPS); first = false; continue; }
+          if (c.keys) {
+            for (var j = 0; j < c.keys.length; j++) {
+              var kk = c.keys[j], f = kk[0], to = { s: kk[1], x: kk[2], y: kk[3], r: kk[4] || 0 };
+              var t = f <= 0 ? t0 : t0 + (f - 0.25) / FPS;
+              var v = { scale: to.s, x: to.x, y: to.y, rotation: to.r, duration: EPS, ease: "none" };
+              if (!first) v.immediateRender = false;
+              tl.fromTo(node, { scale: st.s, x: st.x, y: st.y, rotation: st.r }, v, t);
+              st = to; first = false; end = Math.max(end, t);
+            }
+            continue;
+          }
+          var m = resolve(c, props);
+          if (i === 0 && c.from != null) st.s = m.from;
+          var nx = { s: st.s * m.ratio, x: st.x + m.dx, y: st.y + m.dy, r: st.r + m.r };
+          var a = st.s, b = nx.s, lr = Math.log(m.ratio);
+          var scaleMap = function (a, b, lr) { return function (e) { return Math.abs(b - a) < 1e-9 ? e : (a * Math.exp(lr * e) - a) / (b - a); }; }(a, b, lr);
+          var lin = function (e) { return e; };
+          var t1 = t0 + m.at;
+          if (m.dur <= 0) {
+            var v0 = { scale: nx.s, x: nx.x, y: nx.y, rotation: nx.r, duration: EPS, ease: "none" };
+            if (!first) v0.immediateRender = false;
+            tl.fromTo(node, { scale: st.s, x: st.x, y: st.y, rotation: st.r }, v0, t1);
+          } else {
+            var vs = { scale: nx.s, duration: m.dur, ease: stepper(m, t0, scaleMap) };
+            var vt = { x: nx.x, y: nx.y, rotation: nx.r, duration: m.dur, ease: stepper(m, t0, lin) };
+            if (!first) { vs.immediateRender = false; vt.immediateRender = false; }
+            tl.fromTo(node, { scale: st.s }, vs, t1);
+            tl.fromTo(node, { x: st.x, y: st.y, rotation: st.r }, vt, t1);
+          }
+          st = nx; first = false; end = Math.max(end, t1 + m.dur);
+        }
+        return end;
+      }
+      /* Exact per-frame homographies (row-major 3x3 in frame px), written as CSS
+         variables under a matrix3d so GSAP never decomposes them. */
+      function matVars(m) {
+        return { "--c0": m[0], "--c1": m[3], "--c3": m[6] * 1e6, "--c4": m[1], "--c5": m[4], "--c7": m[7] * 1e6, "--c12": m[2], "--c13": m[5], "--c15": m[8] };
+      }
+      function matStyle(node, m) {
+        node.style.transformOrigin = "0 0";
+        node.style.transform = "matrix3d(var(--c0), var(--c1), 0, calc(var(--c3) / 1000000), var(--c4), var(--c5), 0, calc(var(--c7) / 1000000), 0, 0, 1, 0, var(--c12), var(--c13), 0, var(--c15))";
+        var v = matVars(m); for (var k in v) node.style.setProperty(k, v[k]);
+      }
+      function applyMats(tl, node, t0, mats) {
+        matStyle(node, mats[0][1]);
+        for (var j = 1; j < mats.length; j++) {
+          var f = mats[j][0], v = matVars(mats[j][1]); v.duration = EPS; v.ease = "none";
+          if (j > 1) v.immediateRender = false;
+          tl.fromTo(node, matVars(mats[j - 1][1]), v, t0 + (f - 0.25) / FPS);
+        }
+      }
+      return { PRESETS: PRESETS, CURVE: CURVE, curve: curve, sample: sample, apply: apply, shown: shown, resolve: resolve, matStyle: matStyle, FPS: FPS };
+    })();
+
+    /* cursor: the film's pointer for any block that draws one (cursor,
+       marquee-select, type-behind-subject). Was es-cursor v1. Geometry is the s4 fit (cursor-shape.json):
+       a kite with its tip at the origin and its bisector along +x, corners
+       rounded (r1 at tip and wings, r2 at the notch), a white keyline sw wide
+       outside a translucent grey body that darkens what is under it. */
+    R.cursor = (function () {
+      var SHAPE = { L: 178.908, half: 22.722, k: 0.70863, r1: 14.093, r2: 11.633, sw: 3.482 };
+      var FILL = "rgba(60,62,58,0.31)", STROKE = "rgb(235,235,235)";
+      function rounded(P, R, n) {
+        var out = [], N = P.length, i, k;
+        for (i = 0; i < N; i++) {
+          var p0 = P[(i + N - 1) % N], p1 = P[i], p2 = P[(i + 1) % N], r = R[i];
+          var ux = p0[0] - p1[0], uy = p0[1] - p1[1], ul = Math.hypot(ux, uy); ux /= ul; uy /= ul;
+          var vx = p2[0] - p1[0], vy = p2[1] - p1[1], vl = Math.hypot(vx, vy); vx /= vl; vy /= vl;
+          var ang = Math.acos(Math.max(-1, Math.min(1, ux * vx + uy * vy))), t = r / Math.tan(ang / 2);
+          var ax = p1[0] + ux * t, ay = p1[1] + uy * t, bx = p1[0] + vx * t, by = p1[1] + vy * t;
+          var sx = ux + vx, sy = uy + vy, sl = Math.hypot(sx, sy); sx /= sl; sy /= sl;
+          var cx = p1[0] + sx * r / Math.sin(ang / 2), cy = p1[1] + sy * r / Math.sin(ang / 2);
+          var a0 = Math.atan2(ay - cy, ax - cx), a1 = Math.atan2(by - cy, bx - cx), d = a1 - a0;
+          while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+          for (k = 0; k <= n; k++) { var th = a0 + d * k / n; out.push([cx + r * Math.cos(th), cy + r * Math.sin(th)]); }
+        }
+        return out;
+      }
+      function offset(P, d) {
+        var N = P.length, area = 0, i, L = [], out = [];
+        for (i = 0; i < N; i++) { var q = P[(i + N - 1) % N]; area += 0.5 * (q[0] * P[i][1] - P[i][0] * q[1]); }
+        var sg = area > 0 ? 1 : -1;
+        for (i = 0; i < N; i++) {
+          var a = P[i], b = P[(i + 1) % N], tx = b[0] - a[0], ty = b[1] - a[1], tl = Math.hypot(tx, ty); tx /= tl; ty /= tl;
+          L.push([a[0] + ty * sg * d, a[1] - tx * sg * d, tx, ty]);
+        }
+        for (i = 0; i < N; i++) {
+          var l1 = L[(i + N - 1) % N], l2 = L[i], det = l1[2] * (-l2[3]) - (-l2[2]) * l1[3];
+          var rx = l2[0] - l1[0], ry = l2[1] - l1[1], s = (rx * (-l2[3]) - (-l2[2]) * ry) / det;
+          out.push([l1[0] + l1[2] * s, l1[1] + l1[3] * s]);
+        }
+        return out;
+      }
+      function polyArea(P) { var a = 0, N = P.length; for (var i = 0; i < N; i++) { var q = P[(i + N - 1) % N]; a += 0.5 * (q[0] * P[i][1] - P[i][0] * q[1]); } return Math.abs(a); }
+      function paths(sh) {
+        sh = sh || SHAPE;
+        var h = sh.half * Math.PI / 180, L = sh.L;
+        var P = [[0, 0], [L * Math.cos(h), -L * Math.sin(h)], [sh.k * L, 0], [L * Math.cos(h), L * Math.sin(h)]];
+        var inner = rounded(P, [sh.r1, sh.r1, sh.r2, sh.r1], 12);
+        var op = offset(P, sh.sw); if (polyArea(op) < polyArea(P)) op = offset(P, -sh.sw);
+        var outer = rounded(op, [sh.r1 + sh.sw, sh.r1 + sh.sw, Math.max(0.5, sh.r2 - sh.sw), sh.r1 + sh.sw], 12);
+        return { inner: inner, outer: outer };
+      }
+      function d(P) { var s = "M"; for (var i = 0; i < P.length; i++) s += (i ? " L" : "") + P[i][0].toFixed(2) + " " + P[i][1].toFixed(2); return s + "Z"; }
+      /* The pointer node: a zero-size div whose origin is the tip. */
+      function node(opts) {
+        opts = opts || {};
+        var p = paths(opts.shape), el = document.createElement("div");
+        el.className = "es-cursor";
+        el.style.cssText = "position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;transform-origin:0 0;pointer-events:none;";
+        el.innerHTML = '<svg width="1" height="1" style="position:absolute;left:0;top:0;overflow:visible;display:block">' +
+          '<path fill="' + (opts.stroke || STROKE) + '" fill-rule="evenodd" d="' + d(p.outer) + " " + d(p.inner.slice().reverse()) + '"/>' +
+          '<path fill="' + (opts.fill || FILL) + '" d="' + d(p.inner) + '"/></svg>';
+        return el;
+      }
+      /* Measured per-frame keys [{ t, x, y, th, s, o }]: tip position, rotation in
+         degrees, scale (a click squash is s 0.85 on one picture), opacity. */
+      function keys(tl, el, K, t0, size) {
+        var z = size || 1, kit = R.kit;
+        kit.keyed(tl, el, K, t0, function (k) {
+          return { x: k.x, y: k.y, rotation: k.th == null ? 36 : k.th, scale: (k.s == null ? 1 : k.s) * z, opacity: k.o == null ? 1 : k.o, transformOrigin: "0px 0px" };
+        }, true);
+      }
+      /* General mode: stops [{ x, y, at, click, th, hop }] in px, at = arrival in
+         seconds from t0. Each hop leaves the last stop hop seconds before arrival
+         (default 4 frames plus 6 per frame height travelled, as the film's hops
+         run 4 to 10 frames) on the snap curve, stepped on the cadence. Rotation
+         rests at 36 degrees and leans up to +24 travelling left and -20 right; a
+         click squashes to 0.85 for clickFrames (2) frames on arrival. Returns the
+         last time anything changes. */
+      function travel(tl, el, stops, t0, o) {
+        o = o || {};
+        var kit = R.kit, cad = o.cadence || "16", z = o.size || 1, H = o.H || 1080, rest = o.rest == null ? 36 : o.rest;
+        var prev = null, end = t0;
+        for (var i = 0; i < stops.length; i++) {
+          var s = stops[i], at = t0 + (s.at || 0), th = s.th == null ? rest : s.th;
+          if (!prev) {
+            kit.keyed(tl, el, [{ t: 0 }], at, function () { return { x: s.x, y: s.y, rotation: th, scale: z, opacity: 1, transformOrigin: "0px 0px" }; }, true);
+          } else {
+            var dx = s.x - prev.x, dist = Math.hypot(dx, s.y - prev.y);
+            var hop = s.hop || (4 + 6 * dist / H) / 24, dep = Math.max(prev.at, at - hop), dur = Math.max(1 / 24, at - dep);
+            if (s.th == null) th = rest + Math.max(-20, Math.min(24, -40 * dx / H));
+            tl.fromTo(el, { x: prev.x, y: prev.y, rotation: prev.th }, { x: s.x, y: s.y, rotation: th, duration: dur, ease: kit.stepped(s.curve || o.curve || "snap", dep, dur, cad), immediateRender: false }, dep);
+            end = Math.max(end, dep + dur);
+          }
+          if (s.click) {
+            var c = kit.snap(at, cad), hold = (s.clickFrames || 2) / 24;
+            kit.step(tl, el, { scale: z }, { scale: 0.85 * z }, c);
+            kit.step(tl, el, { scale: 0.85 * z }, { scale: z }, c + hold);
+            end = Math.max(end, c + hold);
+          }
+          prev = { x: s.x, y: s.y, th: th, at: at };
+        }
+        if (o.exitAt != null) kit.step(tl, el, { opacity: 1 }, { opacity: 0 }, t0 + o.exitAt);
+        return end;
+      }
+      return { SHAPE: SHAPE, FILL: FILL, STROKE: STROKE, paths: paths, node: node, keys: keys, travel: travel };
+    })();
+
+    /* preset: the replica layer. A block's PRESETS hold only motion and geometry
+       (times, positions, scales, curves, slot rects); everything that belongs to
+       the source (its words, traced glyphs, plate paths, sampled colours, per-shot
+       calibration) lives outside the skill in work/replica/presets/<block>.json and
+       arrives as props.replica. preset(PRESETS, props) returns the named preset
+       with props.replica merged over it, props.replica alone when the block has no
+       motion preset of that name, or null in general mode. Objects merge key by
+       key; an array of objects merges element by element; anything else in the
+       overlay replaces. */
+    R.preset = (function () {
+      function plain(v) { return v && typeof v === "object" && !Array.isArray(v); }
+      function merge(a, b) {
+        if (b === undefined) return a;
+        if (Array.isArray(a) && Array.isArray(b) && b.length && b.every(function (x) { return plain(x) || x == null; })) {
+          var out = a.slice(), n = Math.max(a.length, b.length);
+          for (var i = 0; i < n; i++) out[i] = b[i] == null ? a[i] : merge(a[i], b[i]);
+          return out;
+        }
+        if (plain(a) && plain(b)) {
+          var o = {}, k;
+          for (k in a) o[k] = a[k];
+          for (k in b) o[k] = merge(a[k], b[k]);
+          return o;
+        }
+        return b;
+      }
+      function preset(PRESETS, props) {
+        var name = props && props.preset, base = name && PRESETS ? PRESETS[name] : null, over = props && props.replica;
+        if (!name && !over) return null;
+        if (!base && !over) return null;
+        return base ? merge(base, over) : merge({}, over);
+      }
+      preset.merge = merge;
+      return preset;
+    })();
+    return R;
   })();
-  /* END es-shared */
+  window.__esShared = window.__esShared || window.__esRuntime.shared;
+  window.__esKit = window.__esKit || window.__esRuntime.kit;
+  window.__esSelect = window.__esSelect || window.__esRuntime.select;
+  window.__esCamera = window.__esCamera || window.__esRuntime.camera;
+  window.__esCursor = window.__esCursor || window.__esRuntime.cursor;
+  /* END es-runtime */
 
   window.__elements = window.__elements || {};
   window.__elements["ghost-word-grow"] = (function () {
+    /* Motion and geometry only: frame count, cadence phase, tile boxes and pop
+       frames, the selected tile's window and picture keys, the chip pool. */
     var PRESETS = {
-      "replica-s6-1-2": /* BEGIN preset replica-s6-1-2 */ {"frames":27,"phase":1,"ghost":{"text":"Big","font":{"family":"ES Source Serif","wght":500,"opsz":60,"color":"rgba(0,0,0,0.0508)"},"g":[[-41.0,-330.28,1398.0,1.06,0.98],[775.25,-337.41,1398.0,1.04,0.99],[1162.38,-373.06,1398.0,1.11,1.02]]},"word":{"text":"Big","font":{"family":"ES Source Serif","wght":450,"opsz":36,"color":"#0b0a0a"},"states":[[0,[[865.34,460.41,126.97,1.02,0.99],[941.68,460.19,126.97,1.03,0.99],[977.36,458.68,126.97,1.08,1.01]]],[3,[[865.34,460.41,126.97,1.02,0.99],[941.68,460.19,126.97,1.03,0.99],[976.86,458.68,126.97,1.09,1.01]]],[11,[[772.99,380.91,253.18,1.01,1.0],[923.9,381.77,253.18,1.04,0.99],[995.52,376.17,253.18,1.1,1.02]]],[17,[[773.24,380.8,253.31,1.01,1.0],[924.9,381.23,253.31,1.04,0.99],[995.02,376.49,253.31,1.1,1.02]]],[18,[[772.99,380.75,252.06,1.02,1.0],[923.9,381.61,252.06,1.04,1.0],[995.27,376.9,252.06,1.1,1.02]]],[21,[[772.74,380.7,253.43,1.02,1.0],[923.9,381.56,253.43,1.04,0.99],[995.02,376.39,253.43,1.1,1.02]]],[24,[[772.99,382.16,253.56,1.01,1.0],[923.9,383.45,253.56,1.04,0.99],[995.27,378.71,253.56,1.1,1.01]]],[26,[[772.99,398.06,250.81,1.02,1.0],[923.9,398.06,250.81,1.05,1.0],[995.27,392.94,250.81,1.11,1.02]]]]},"tiles":[{"box":[156,610,671,383],"pop":3},{"box":[1272,572,457,505],"pop":6},{"box":[263,97,412,451],"pop":9},{"box":[1076,67,671,378],"pop":14}],"select":{"size":[2692,1144],"states":[[0,[0,0,0,0,0.6942,-367.42,164.79,0]],[18,[891,462,138,144,0.6942,-367.42,164.79,1]],[20,[891,462,138,144,0.6944,-367.79,164.69,1]],[21,[887,458,146,153,0.692,-363.0,165.66,1]],[23,[881,450,158,170,0.6947,-366.52,164.31,1]],[24,[869,433,183,206,0.6953,-365.35,163.85,1]],[26,[788,332,353,415,0.7267,-409.19,147.0,1]]]},"handles":{"fill":"#a17ae7","pool":9,"states":[[0,["","","","","","","","",""]],[18,["M1036.38 614.12 L1035.88 624.12 L1036.12 638.12 L1039.12 639.12 L1040.12 637.88 L1055.12 637.88 L1056.12 638.38 L1059.12 638.38 L1059.88 637.12 L1059.38 614.38 L1057.62 613.88 Z","M860.38 614.12 L859.88 615.88 L859.62 626.12 L859.88 637.62 L861.88 638.38 L866.38 637.88 L879.12 637.88 L880.12 638.88 L883.12 638.62 L883.62 637.62 L883.38 614.12 Z","M860.38 440.38 L859.88 451.62 L861.12 452.12 L861.38 453.12 L865.62 453.62 L874.12 453.12 L874.38 452.12 L875.38 452.12 L875.38 449.38 L874.62 449.12 L874.12 448.12 L872.12 447.88 L871.12 445.38 L869.88 445.12 L869.38 444.12 L866.38 443.38 L866.12 442.38 L864.38 441.88 L863.12 439.88 Z","M1036.12 430.12 L1035.88 447.38 L1036.38 451.62 L1039.38 452.12 L1039.88 453.38 L1059.38 453.62 L1059.88 453.12 L1059.88 431.88 L1059.38 430.12 L1055.62 429.62 L1040.38 429.62 Z","","","","",""]],[20,["M1036.38 614.12 L1035.88 624.12 L1036.12 638.62 L1038.12 639.12 L1059.38 639.12 L1060.12 637.12 L1059.88 616.12 L1059.38 614.38 L1057.62 613.88 Z","M860.38 614.12 L859.62 616.12 L859.88 638.88 L883.12 638.88 L883.62 638.12 L883.38 614.12 Z","M860.38 440.38 L860.12 449.12 L859.62 450.38 L860.38 453.12 L869.62 453.62 L874.12 453.12 L874.38 452.12 L875.38 452.12 L875.38 449.38 L874.62 449.12 L874.12 448.12 L871.88 447.62 L871.12 445.62 L870.12 445.62 L869.12 444.12 L865.38 443.38 L865.12 442.38 L863.88 441.88 L863.12 439.88 Z","M1036.12 430.12 L1035.88 447.38 L1036.38 451.62 L1039.38 452.12 L1039.88 453.38 L1059.38 453.62 L1060.38 453.12 L1060.38 450.12 L1059.88 449.38 L1059.88 447.88 L1060.38 447.38 L1060.38 432.12 L1059.88 430.12 L1055.62 429.38 L1040.38 429.38 Z","","","","",""]],[21,["M1037.62 614.12 L1037.38 615.12 L1036.12 615.88 L1036.12 638.38 L1037.88 639.38 L1039.12 639.38 L1040.38 641.88 L1055.88 641.88 L1057.62 641.38 L1058.12 640.12 L1059.38 640.12 L1059.88 641.38 L1061.38 641.38 L1061.38 640.38 L1063.38 639.38 L1063.62 620.38 L1063.38 618.38 L1061.88 617.38 L1061.88 616.12 L1061.12 614.88 L1059.62 613.88 Z","M860.12 614.12 L860.12 615.12 L859.38 615.88 L857.62 616.12 L857.38 637.38 L856.38 637.62 L856.12 643.12 L879.38 642.62 L879.62 640.12 L880.12 639.62 L883.12 639.62 L883.62 639.12 L883.38 614.12 Z","M858.12 439.88 L857.88 447.38 L859.62 448.12 L859.62 449.62 L859.12 450.38 L858.38 450.38 L858.38 451.12 L859.38 451.38 L860.12 453.12 L869.62 453.62 L874.12 453.12 L874.38 452.12 L875.38 452.12 L875.38 449.38 L874.62 449.12 L874.12 448.12 L872.12 447.88 L871.38 445.62 L869.88 445.12 L869.38 444.12 L866.38 443.38 L865.38 441.88 L862.38 441.88 L861.62 441.12 L861.62 440.12 Z","M1040.12 425.88 L1039.88 427.12 L1039.12 427.88 L1037.62 428.12 L1037.38 429.12 L1035.88 430.12 L1035.88 451.38 L1037.38 451.88 L1038.38 453.38 L1060.88 453.38 L1061.88 451.62 L1061.88 450.12 L1063.38 449.38 L1063.88 428.38 L1063.38 426.12 L1060.12 425.62 Z","M864.38 426.12 L864.38 427.12 L873.12 427.62 L874.12 428.38 L874.12 429.12 L875.38 429.38 L879.38 429.12 L879.38 426.38 L877.38 425.62 L872.38 426.12 L868.12 425.38 Z","","","",""]],[23,["M1039.88 616.38 L1039.62 617.88 L1038.38 618.12 L1037.88 635.38 L1038.12 639.38 L1039.38 639.38 L1039.88 640.12 L1040.12 644.12 L1041.62 644.38 L1042.12 645.38 L1055.62 646.12 L1056.38 647.38 L1063.12 647.38 L1064.12 646.12 L1069.38 646.12 L1070.62 645.38 L1070.88 640.12 L1069.88 635.88 L1069.88 626.12 L1069.12 624.62 L1065.38 621.12 L1065.38 620.38 L1063.88 619.62 L1063.38 617.88 L1062.38 617.62 L1061.62 616.12 L1042.12 615.88 Z","M859.62 616.12 L859.12 617.38 L856.12 618.38 L855.62 621.62 L853.88 622.12 L853.88 623.12 L851.88 624.12 L851.38 627.62 L850.38 627.62 L850.12 651.38 L873.38 651.38 L873.88 648.12 L875.62 647.62 L876.12 646.12 L877.38 645.88 L877.62 644.38 L880.12 643.12 L880.12 642.12 L881.12 641.38 L881.62 639.38 L881.62 624.38 L879.88 623.38 L879.88 618.38 L879.38 616.38 Z","M851.88 439.88 L852.12 443.88 L853.38 444.38 L853.38 445.38 L854.88 447.12 L857.12 447.38 L857.62 449.38 L859.62 450.12 L859.88 451.12 L873.62 451.12 L873.88 449.88 L875.12 449.38 L874.62 449.38 L873.62 447.88 L871.62 447.38 L871.38 445.38 L869.88 445.12 L869.38 444.12 L866.38 443.38 L866.12 442.38 L863.88 441.62 L863.12 440.12 L861.38 440.12 L858.88 439.12 L858.12 438.12 L853.88 438.12 L853.12 439.62 Z","M1048.12 417.62 L1046.38 418.38 L1046.38 419.12 L1045.38 420.12 L1044.12 420.38 L1043.88 421.62 L1042.38 422.38 L1041.38 425.88 L1040.38 425.88 L1039.38 427.62 L1037.88 428.12 L1037.88 449.38 L1040.12 451.38 L1061.38 451.62 L1063.38 450.12 L1063.62 448.38 L1065.62 447.38 L1065.88 444.38 L1069.12 443.12 L1069.38 442.12 L1071.38 440.38 L1070.12 439.38 L1070.38 421.62 L1069.88 418.38 L1067.38 417.62 Z","M879.62 427.62 L879.38 424.12 L878.12 424.12 L877.38 423.38 L877.38 422.38 L875.62 421.38 L875.62 420.12 L873.62 419.38 L873.38 416.62 L872.88 416.12 L871.38 416.88 L865.62 416.88 L863.38 417.62 L856.38 417.62 L855.38 416.88 L852.12 416.88 L851.62 417.62 L851.62 421.38 L850.12 422.12 L849.38 425.12 L855.12 425.38 L856.12 426.12 L863.38 426.38 L864.12 427.38 L873.38 427.88 L874.38 429.62 L879.12 429.38 Z","","","",""]],[24,["M1085.12 667.62 L1085.12 665.38 L1084.12 665.12 L1083.38 659.88 L1074.38 660.12 L1073.62 661.12 L1072.38 661.12 L1071.38 661.88 L1057.62 662.38 L1057.62 663.38 L1059.38 664.38 L1060.12 667.38 L1063.62 668.12 L1064.12 669.12 L1083.12 669.38 L1084.12 669.12 Z","M877.38 623.62 L875.88 623.62 L875.38 622.12 L856.38 621.88 L854.38 622.38 L853.62 623.88 L852.12 624.12 L851.62 627.38 L850.12 627.88 L849.38 629.62 L848.12 629.88 L847.62 633.12 L845.38 634.12 L845.38 634.88 L844.12 635.62 L843.88 639.38 L840.38 640.38 L839.88 643.38 L837.88 644.38 L837.38 646.12 L837.62 669.12 L838.12 669.62 L859.62 669.62 L861.38 669.12 L861.62 664.12 L865.12 663.12 L865.88 660.38 L867.38 659.88 L867.88 658.12 L869.12 657.38 L869.38 656.12 L871.62 654.38 L871.88 652.12 L873.62 651.38 L874.12 648.38 L876.62 647.38 L877.38 645.88 Z","M1042.12 624.38 L1042.38 647.38 L1057.62 648.12 L1058.38 649.38 L1069.12 649.38 L1069.88 648.12 L1077.12 648.12 L1083.38 647.62 L1083.88 647.12 L1083.88 644.38 L1083.12 642.38 L1079.12 639.12 L1079.12 638.12 L1078.12 638.12 L1077.38 637.38 L1077.38 636.38 L1076.38 636.38 L1075.62 635.62 L1075.62 634.12 L1074.62 632.38 L1071.62 631.38 L1071.38 627.62 L1070.12 627.62 L1069.62 626.12 L1067.88 625.12 L1067.12 622.38 L1065.88 621.88 L1045.62 621.62 L1044.12 621.88 L1043.62 623.62 Z","M852.12 440.12 L852.12 443.12 L853.88 444.12 L854.38 446.62 L863.38 446.12 L863.88 446.62 L867.38 446.62 L867.88 447.38 L869.88 447.38 L869.38 446.12 L866.12 445.38 L865.88 444.38 L864.38 443.62 L863.12 441.88 L858.62 441.38 L857.88 440.12 Z","M1083.62 400.12 L1061.88 400.38 L1061.38 401.38 L1059.62 401.88 L1058.12 403.88 L1057.88 407.38 L1056.12 407.88 L1055.12 409.88 L1053.38 410.12 L1050.12 413.62 L1050.12 415.12 L1047.62 416.38 L1047.62 417.62 L1046.12 418.38 L1045.88 419.62 L1044.12 420.12 L1043.38 425.62 L1042.38 425.88 L1042.38 433.62 L1043.38 433.88 L1043.62 443.38 L1044.38 445.62 L1065.62 445.88 L1067.62 445.38 L1067.88 442.12 L1070.12 441.38 L1073.38 438.12 L1073.62 436.12 L1075.62 435.38 L1075.88 433.62 L1077.12 433.38 L1077.12 432.38 L1077.88 431.62 L1079.62 431.38 L1079.88 428.12 L1081.62 427.62 L1082.12 426.38 L1083.38 425.88 L1084.12 421.88 L1085.12 421.62 L1085.38 402.12 L1083.88 401.62 Z","M837.62 400.38 L837.88 425.38 L838.88 427.12 L842.38 427.88 L853.62 427.62 L854.38 428.12 L863.38 428.38 L864.12 429.38 L871.38 429.62 L872.12 431.62 L877.38 431.12 L877.38 421.62 L875.38 419.38 L874.12 418.88 L873.62 416.62 L871.62 415.38 L871.38 413.88 L870.12 413.62 L869.38 412.12 L867.62 411.62 L867.38 410.12 L865.88 409.38 L865.88 408.12 L863.62 407.38 L863.62 404.12 L861.62 401.88 L860.12 401.62 L859.12 400.12 L849.88 400.38 L838.38 399.88 Z","","",""]],[26,["M1151.62 756.12 L1151.38 757.62 L1150.12 758.38 L1150.12 779.38 L1171.38 779.62 L1173.12 779.12 L1173.38 758.38 L1171.88 757.62 L1171.62 756.12 L1165.88 755.62 L1154.12 755.62 Z","M756.38 756.38 L756.12 767.88 L756.38 769.12 L757.62 770.12 L757.62 773.38 L756.38 774.38 L756.38 777.12 L757.62 777.88 L758.12 779.38 L777.38 779.38 L778.12 777.88 L779.38 777.62 L780.12 773.12 L779.88 757.62 L779.38 755.88 L759.88 755.62 Z","M1068.38 676.38 L1068.38 677.12 L1069.88 677.88 L1069.88 679.12 L1071.88 679.88 L1072.12 681.88 L1073.12 682.12 L1074.12 683.88 L1075.62 684.12 L1076.12 687.38 L1079.62 688.12 L1080.12 691.38 L1081.62 691.62 L1082.38 692.38 L1082.38 693.38 L1083.62 693.88 L1083.62 695.38 L1085.38 696.38 L1085.88 699.12 L1087.38 699.38 L1088.38 700.38 L1088.38 701.12 L1089.62 701.62 L1089.88 703.38 L1091.38 703.62 L1092.12 704.38 L1092.12 705.38 L1093.12 705.38 L1093.88 706.12 L1093.88 709.12 L1097.62 709.62 L1098.12 711.12 L1099.62 711.62 L1099.88 715.62 L1103.62 716.38 L1103.88 718.38 L1104.88 719.12 L1103.88 720.12 L1103.88 722.12 L1105.38 723.62 L1113.38 723.38 L1114.38 724.38 L1114.12 733.62 L1115.12 733.88 L1116.12 735.62 L1119.38 735.62 L1120.38 734.12 L1137.12 734.12 L1137.38 712.12 L1128.12 711.12 L1127.62 700.12 L1124.12 699.38 L1123.88 698.12 L1121.38 697.12 L1121.12 696.38 L1121.88 695.38 L1121.88 694.12 L1120.38 693.62 L1119.88 692.12 L1117.88 691.38 L1117.38 686.12 L1116.38 686.12 L1115.38 685.12 L1115.38 684.38 L1113.38 683.38 L1113.38 682.38 L1111.88 681.62 L1111.38 679.88 L1109.88 679.62 L1109.62 677.88 L1108.12 677.12 L1107.12 674.12 L1106.12 674.12 L1105.62 672.38 L1103.62 671.38 L1103.12 668.12 L1099.38 667.38 L1095.12 668.12 L1094.38 669.12 L1091.88 670.12 L1091.38 671.38 L1085.38 672.12 L1084.62 673.12 L1082.88 673.88 L1076.12 674.12 L1075.62 675.12 Z","M1052.12 636.12 L1052.12 637.62 L1053.62 638.38 L1053.62 639.12 L1052.38 639.38 L1051.88 640.12 L1051.88 654.12 L1052.38 659.12 L1053.12 659.12 L1054.12 660.12 L1054.38 661.38 L1055.88 661.88 L1056.12 663.38 L1075.38 663.12 L1075.38 662.62 L1076.38 662.12 L1087.12 661.62 L1088.12 660.12 L1089.12 660.38 L1090.12 659.38 L1091.38 659.38 L1091.88 656.12 L1091.12 652.38 L1088.38 651.38 L1087.62 648.12 L1085.62 647.38 L1085.38 645.62 L1084.38 645.38 L1083.62 643.88 L1081.62 643.38 L1081.12 640.38 L1079.62 639.62 L1079.38 636.12 L1076.12 635.62 L1075.38 634.12 L1054.12 634.38 L1053.38 635.88 Z","M867.88 634.12 L846.12 633.88 L845.62 634.12 L845.62 635.12 L844.38 635.38 L843.38 636.38 L843.38 637.38 L842.38 637.62 L842.12 639.38 L839.88 640.12 L839.88 643.12 L839.12 643.88 L837.62 644.12 L837.62 645.38 L836.12 646.12 L836.12 647.38 L835.12 648.38 L834.38 648.38 L833.88 651.62 L832.12 652.38 L831.62 657.38 L831.12 657.88 L827.88 658.12 L827.62 659.88 L826.12 660.38 L825.62 663.38 L824.12 663.88 L823.38 667.38 L822.12 667.62 L821.38 669.12 L820.38 669.38 L820.12 671.38 L819.38 673.12 L818.38 673.38 L817.88 675.62 L816.12 676.38 L815.88 679.38 L815.12 680.12 L813.88 680.12 L813.38 681.38 L812.12 681.62 L811.62 685.38 L810.12 685.88 L809.38 687.38 L808.38 687.38 L807.62 688.12 L807.12 691.38 L804.38 692.38 L804.38 693.12 L803.38 694.12 L802.12 694.38 L801.38 701.12 L800.38 701.38 L799.62 699.88 L797.62 700.12 L797.62 701.38 L796.12 702.12 L796.12 703.38 L797.62 704.38 L797.62 709.38 L796.12 710.12 L796.12 711.12 L795.38 711.88 L789.62 712.12 L789.38 725.38 L789.62 733.62 L790.12 735.62 L791.88 735.38 L792.38 733.88 L799.12 733.88 L799.62 735.38 L801.12 735.62 L802.38 733.88 L811.62 733.88 L813.62 733.12 L813.12 729.88 L812.12 729.62 L811.88 724.38 L815.38 723.38 L816.12 721.88 L819.12 722.12 L821.12 721.12 L821.12 720.38 L820.38 720.38 L819.38 719.38 L819.88 717.38 L823.38 717.62 L825.38 717.12 L826.12 710.38 L831.38 709.12 L831.88 704.38 L832.38 703.88 L835.38 703.62 L835.62 700.12 L837.62 699.38 L837.88 697.62 L839.12 697.38 L839.12 696.38 L840.38 695.12 L841.12 695.12 L841.88 692.38 L843.38 691.88 L843.88 689.62 L845.12 689.38 L845.38 688.12 L846.38 687.12 L847.12 687.12 L847.62 684.12 L849.38 683.62 L849.88 681.88 L851.38 681.38 L851.38 680.12 L852.38 679.12 L853.12 679.12 L853.88 677.38 L855.12 677.12 L855.88 675.12 L855.88 672.38 L859.12 671.38 L859.62 668.12 L860.38 667.38 L861.38 667.38 L861.88 665.88 L863.62 665.38 L863.62 664.12 L864.38 663.38 L865.38 663.38 L865.88 660.12 L867.38 659.88 L867.88 658.12 L869.38 657.38 L869.12 648.12 L868.12 647.88 L867.88 638.12 L869.12 637.62 L869.38 636.38 L867.88 635.38 Z","M1137.38 340.12 L1135.12 339.62 L1114.12 339.88 L1113.62 349.12 L1111.38 349.88 L1106.12 349.88 L1105.62 355.38 L1103.38 356.12 L1100.12 356.12 L1099.38 359.62 L1098.12 360.12 L1098.12 361.12 L1097.12 362.12 L1095.88 361.62 L1095.62 360.12 L1094.12 360.12 L1094.12 365.38 L1093.62 367.38 L1090.12 368.12 L1089.88 371.38 L1089.12 372.12 L1086.12 372.38 L1086.12 373.38 L1084.38 374.38 L1083.88 377.12 L1082.38 377.62 L1081.38 379.62 L1079.62 380.12 L1079.62 381.12 L1078.38 381.38 L1077.38 382.38 L1077.38 384.12 L1076.38 384.38 L1075.38 387.12 L1072.12 388.38 L1071.88 391.38 L1069.62 392.12 L1069.38 393.12 L1068.38 393.38 L1068.12 395.12 L1067.12 396.12 L1064.12 396.38 L1063.88 399.38 L1061.62 400.38 L1061.62 401.38 L1060.12 402.12 L1060.12 403.38 L1059.12 404.38 L1058.38 404.38 L1058.38 405.12 L1057.12 406.38 L1056.38 406.38 L1055.62 408.12 L1054.38 408.38 L1053.88 411.38 L1053.12 412.12 L1052.12 412.12 L1052.12 433.12 L1053.88 434.12 L1053.88 435.12 L1060.12 435.38 L1061.88 435.12 L1062.12 434.12 L1067.38 434.12 L1067.62 435.12 L1075.38 435.38 L1076.38 432.12 L1079.62 431.38 L1079.62 429.88 L1081.38 429.12 L1081.88 426.12 L1083.62 425.38 L1083.88 422.38 L1084.38 421.88 L1087.62 421.38 L1087.62 420.38 L1089.88 419.12 L1090.12 416.38 L1091.38 415.88 L1091.62 414.38 L1092.38 413.62 L1093.88 413.38 L1094.38 411.88 L1095.38 411.88 L1095.88 409.88 L1097.38 409.12 L1097.88 406.38 L1099.88 405.38 L1101.12 405.38 L1101.38 404.38 L1102.38 403.38 L1103.12 403.38 L1103.62 400.12 L1105.12 399.38 L1105.12 398.38 L1105.88 397.62 L1107.62 397.12 L1108.12 394.38 L1109.62 393.62 L1109.88 391.88 L1111.38 391.38 L1111.88 389.88 L1115.12 389.12 L1115.62 386.12 L1116.38 385.38 L1117.38 385.38 L1117.38 384.12 L1118.38 383.12 L1119.12 383.12 L1119.88 380.12 L1121.38 379.88 L1121.88 378.12 L1123.38 377.38 L1123.62 374.12 L1124.12 373.62 L1127.62 373.38 L1128.12 369.62 L1129.12 369.38 L1129.62 367.38 L1129.62 364.38 L1130.12 363.88 L1135.88 363.38 L1136.12 352.38 L1137.62 351.38 L1137.88 342.12 Z","M790.12 340.12 L789.62 341.62 L789.62 359.88 L790.12 361.88 L791.12 361.88 L792.38 363.62 L795.38 363.62 L796.12 364.38 L796.38 367.38 L797.38 367.62 L797.62 371.38 L798.38 372.38 L798.38 373.38 L799.38 373.38 L800.12 374.12 L800.12 375.12 L801.12 375.12 L802.12 375.88 L802.38 377.88 L803.38 378.12 L803.38 379.38 L804.38 380.38 L804.38 381.12 L807.62 382.12 L808.12 387.38 L811.62 388.12 L812.12 391.38 L813.12 391.38 L813.88 392.12 L814.12 395.12 L815.38 395.38 L816.12 396.38 L816.38 399.12 L819.88 400.12 L820.12 403.38 L821.38 403.62 L821.88 405.12 L823.88 406.12 L823.88 407.38 L825.62 408.38 L826.12 411.38 L827.12 411.38 L827.88 412.12 L827.88 413.38 L829.38 413.88 L829.88 415.38 L831.12 415.38 L832.12 416.12 L832.12 417.62 L833.38 418.12 L834.12 421.12 L835.62 421.88 L836.38 425.62 L837.38 425.62 L838.12 427.38 L841.38 428.12 L841.62 429.38 L843.38 430.12 L844.38 433.12 L847.38 433.88 L847.88 435.12 L867.62 435.38 L867.88 433.88 L869.12 433.12 L869.62 429.38 L869.38 412.12 L867.62 411.38 L867.38 409.62 L866.38 409.38 L865.88 408.12 L863.62 407.38 L863.38 404.12 L861.88 403.88 L861.12 403.12 L861.12 402.12 L859.88 401.62 L859.12 398.38 L857.88 397.88 L857.62 396.38 L856.38 396.12 L855.62 395.38 L855.62 394.12 L853.88 393.62 L853.62 392.38 L851.88 391.62 L851.62 389.88 L849.88 389.12 L849.12 386.38 L847.62 385.62 L847.62 384.12 L845.88 383.62 L845.62 382.38 L843.88 381.62 L843.62 379.88 L842.12 379.38 L841.88 378.12 L840.12 377.12 L839.12 374.38 L837.88 373.88 L837.38 372.12 L835.62 371.62 L835.38 369.88 L834.12 369.38 L834.12 368.38 L831.62 367.38 L831.38 364.12 L827.88 363.12 L827.38 358.38 L823.62 357.38 L823.38 355.88 L822.12 355.38 L821.88 352.12 L820.12 351.62 L819.62 350.12 L814.38 349.88 L813.88 349.38 L813.38 347.62 L812.12 347.12 L811.88 340.38 L811.38 339.88 Z","M758.12 298.38 L757.62 303.38 L756.38 304.38 L756.38 317.38 L757.12 318.38 L757.38 321.38 L757.88 321.88 L762.38 321.38 L773.12 321.38 L777.38 321.88 L779.62 321.38 L779.88 300.12 L779.38 298.38 Z","M1173.12 298.12 L1171.12 297.62 L1169.38 298.12 L1152.12 297.88 L1151.12 299.38 L1149.62 300.12 L1149.88 319.38 L1151.38 319.88 L1152.12 321.62 L1171.62 321.38 L1172.12 319.88 L1173.62 319.62 L1173.38 302.12 L1173.88 300.38 Z"]]]}} /* END preset */
+      "replica-s6-1-2": /* BEGIN preset replica-s6-1-2 */ {"frames":27,"phase":1,"tiles":[{"box":[156,610,671,383],"pop":3},{"box":[1272,572,457,505],"pop":6},{"box":[263,97,412,451],"pop":9},{"box":[1076,67,671,378],"pop":14}],"select":{"size":[2692,1144],"states":[[0,[0,0,0,0,0.6942,-367.42,164.79,0]],[18,[891,462,138,144,0.6942,-367.42,164.79,1]],[20,[891,462,138,144,0.6944,-367.79,164.69,1]],[21,[887,458,146,153,0.692,-363.0,165.66,1]],[23,[881,450,158,170,0.6947,-366.52,164.31,1]],[24,[869,433,183,206,0.6953,-365.35,163.85,1]],[26,[788,332,353,415,0.7267,-409.19,147.0,1]]]},"handles":{"pool":9}} /* END preset */
     };
     var BASE = 0.759;  /* ES Serif baseline below the line box top at line-height 1, in em (hhea 802 / -284) */
     var GROW = [1, 0.019, 0.676, 0.248];
@@ -195,13 +886,13 @@
     /* General mode: the same per-picture keys the replica preset holds,
        generated from the props, the fitted growth curve and the cadence. */
     function general(props) {
-      var S = window.__esShared, F = frameOf(props), W = F.w, H = F.h, k = Math.min(W, H) / 1080;
+      var S = window.__esRuntime.shared, F = frameOf(props), W = F.w, H = F.h, k = Math.min(W, H) / 1080;
       var scale = props.scale || 1, phase = props.phase == null ? 1 : props.phase;
       var at = function (f) { return pic(f * scale, phase); };
-      var word = props.word || "Big", ghost = props.ghost || word, track = props.tracking || 0;
+      var word = props.word || "Word", ghost = props.ghost || word, track = props.tracking || 0;
       var cap0 = (props.cap || 85) * k, ratio = props.stepRatio || 1.994, cap1 = cap0 * ratio;
       var fs0 = S.sizeForCap(cap0), fs1 = S.sizeForCap(cap1);
-      var font = { family: props.font || "ES Serif", color: S.color(props.ink, "ink") };
+      var font = { family: props.font || "var(--font-serif)", color: S.color(props.ink, "ink") };
       var cy = H * (props.wordY == null ? 0.5 : props.wordY);
       function set(text, fs, cxp, base, tr) {
         var L = S.layout(text, fs, tr), x0 = cxp - (L.inkL + L.inkR) / 2;
@@ -222,7 +913,7 @@
       while (gInk.ink + (reps - 1) * gw < W * 1.04 && reps < 9) reps += 2;
       for (var r = 1; r < reps; r++) gtext = gtext + " " + ghost;
       var ghostG = set(gtext, gfs, W / 2, gbase, 0);
-      var gfont = { family: props.font || "ES Serif", color: S.color(props.ghostColor, "ghost") };
+      var gfont = { family: props.ghostFont || props.font || "var(--font-serif)", color: S.color(props.ghostColor, "ghost") };
       /* tiles */
       var tiles = (props.tiles && props.tiles.length ? props.tiles : LAYOUT.map(function (b, i) { return { label: "tile " + (i + 1) }; }));
       var sz = Math.min(W / 1920, H / 1080) * (props.tileScale || (W < H ? 1.25 : 1));
@@ -266,7 +957,12 @@
 
     function keysOf(props) {
       if (props.__keys) return props.__keys;
-      var K = props.preset && PRESETS[props.preset] ? PRESETS[props.preset] : general(props);
+      /* A replica preset holds only motion and geometry; its words, face, glyph
+         positions and chip outlines arrive as props.replica. Anything the merged
+         preset lacks (a motion preset played without its replica layer) comes
+         from the general keys, so the measured motion runs with any word. */
+      var Q = window.__esRuntime.preset(PRESETS, props);
+      var K = Q ? window.__esRuntime.preset.merge(general(props), Q) : general(props);
       props.__keys = K; return K;
     }
 
@@ -274,7 +970,8 @@
       var box = document.createElement("div"); box.className = "gw-type";
       for (var i = 0; i < text.length; i++) {
         var sp = document.createElement("span"); sp.textContent = text[i];
-        sp.style.fontFamily = '"' + font.family + '"';
+        /* a bare family name is quoted; a token var or a CSS font stack passes through */
+        sp.style.fontFamily = /^var\(|[,"']/.test(font.family) ? font.family : '"' + font.family + '"';
         if (font.wght) { sp.style.fontWeight = String(font.wght); sp.style.fontVariationSettings = "'opsz' " + (font.opsz || 20) + ", 'wght' " + font.wght; }
         sp.style.color = font.color || "var(--color-ink)";
         box.appendChild(sp);
@@ -284,19 +981,23 @@
 
     return {
       /* props (see ghost-word-grow.md):
-           word, ghost, cap (85), stepRatio (1.994), tracking (em), font, ink, ghostColor, ghostCap (0.867 of the short side), ghostY, wordY
-           paper: image slot or none (flat --color-paper)
+           word, ghost, cap (85), stepRatio (1.994), tracking (em), ghostCap (0.867 of the short side), ghostY, wordY
+           font (CSS family or stack, default var(--font-serif)), ghostFont (defaults to font)
+           ink (word colour, token name or CSS colour, default ink), ghostColor (default ghost), paperColor (default paper)
+           paper: image slot or none (flat paperColor)
            tiles: [image slot + { box: [x, y, w, h] fractions of the frame, art: overlay image riding the tile }]
            select: image slot pulled in behind the word; selectFrom, selectTo (x the grown cap), zoom, growEase, chip, chipColor
            scale (duration scale, 1 = 27 frames), phase (cadence phase, 1), beats, exitAt
-           preset: "replica-s6-1-2" plays the measured keys of the source shot */
+           preset: "replica-s6-1-2" plays the measured motion of the source shot (frames, tile boxes and pops, the selected tile's window and picture keys)
+           replica: the source-bound layer merged over the preset (ghost and word text, face and glyph keys, chip outlines and fill); replica plans only */
       render: function (props) {
-        var S = window.__esShared, K = keysOf(props), F = frameOf(props);
+        var S = window.__esRuntime.shared, K = keysOf(props), F = frameOf(props);
         var el = document.createElement("div");
         el.className = "el-ghost-word-grow";
         el.style.width = F.w + "px"; el.style.height = F.h + "px";
         el.setAttribute("data-layout-allow-overflow", ""); el.setAttribute("data-layout-ignore", "");
         var paper = document.createElement("div"); paper.className = "gw-paper";
+        paper.style.background = S.color(props.paperColor, "paper");
         var ps = slotSpec(props.paper);
         if (ps.src) { var pim = document.createElement("img"); pim.src = ps.src; paper.appendChild(pim); }
         el.appendChild(paper);
@@ -337,7 +1038,7 @@
       },
 
       animate: function (tl, el, t0, props) {
-        var S = window.__esShared, K = keysOf(props), FPS = 24;
+        var S = window.__esRuntime.shared, K = keysOf(props), FPS = 24;
         var tf = function (k) { return k <= 0 ? t0 : t0 + (k - 0.25) / FPS; };
         /* one track per node: [[frame, vars], ...]; a step wherever the vars change */
         function run(node, track) {

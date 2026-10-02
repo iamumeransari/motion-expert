@@ -1,1 +1,125 @@
-[]
+{
+  "style": "editorial-select",
+  "unit_ms": 62.5,
+  "fps": 24,
+  "about": "Measured envelopes for every property the hand animates, in the toolkit/schema/move.schema.json shape, plus the composition rules above them. One entry per property, because validate-plan.mjs matches the first entry with a property's name. Durations are in the timing unit (62.5 ms, a frame and a half); 0 units is a zero-duration step, which is how this hand changes most things. references/grammar.md says the same in prose; change both together.",
+  "primitives": [
+    {
+      "property": "x",
+      "family": "ease-out",
+      "curves": ["snap", "glide", "reveal", "drift", "drift-linear", "pass"],
+      "duration_units": [2.7, 32.2],
+      "stagger_units": [0.7, 2.7],
+      "stagger_direction": "forward",
+      "travel_frac": [0.004, 1.09],
+      "overshoot": [0.0, 0.03],
+      "source_moves": ["select-handles glide (6 f)", "cursor hops (4 to 10 f)", "endcard-typeon lockup slide (17 f, reveal)", "chromatic-title line slide (2.01 s)", "camera-rig drift (20 f)", "giant-type-pass pan (1.09 W)"],
+      "notes": "Travel is either short and exact (handles, pointer, a lockup sliding to centre) or giant and cropped by the frame (the pass). Nothing drifts across a held graphic frame except the camera. Every sampled position is held on the 16 fps cadence."
+    },
+    {
+      "property": "y",
+      "family": "ease-out",
+      "curves": ["rise", "snap", "pass", "drift"],
+      "duration_units": [2.7, 19.3],
+      "stagger_units": [0.7, 4.0],
+      "stagger_direction": "forward",
+      "travel_frac": [0.01, 0.68],
+      "overshoot": [0.0, 0.0],
+      "source_moves": ["giant-word-rise (8 f, 0.67 H)", "giant-type-pass rise and later words (29 f)", "camera tilt (13 f, 0.06 H)", "cursor hops"],
+      "notes": "Giant words rise from below the frame and are cropped by it; words never fall in from above. A staggered baseline is held, or settles in one frame (baseline-settle), never bounces."
+    },
+    {
+      "property": "scale",
+      "family": "ease-out",
+      "curves": ["push", "push-hard", "pull", "settle", "glide", "snap"],
+      "duration_units": [0.0, 28.0],
+      "travel_frac": [0.0, 0.0],
+      "overshoot": [0.0, 0.08],
+      "source_moves": ["camera push x1.10 (12 f)", "push-soft x1.34 and push-hard x1.47 (13 f)", "pull-back x0.407 (35 f)", "pull-settle x0.82 (13 f)", "type-fill-echo creep +3 percent (1.75 s)", "steps x1.29, x1.994, x2 in one frame"],
+      "notes": "Two kinds only: a camera move on a picture (log-space scale, 8 to 23 units, ratio 0.41 to 1.47) or a zero-duration step on type or a tile (ratio 1.15 to 2.0). Type never scales smoothly except the 3 percent creep of a held line."
+    },
+    {
+      "property": "opacity",
+      "family": "step",
+      "curves": ["snap"],
+      "duration_units": [0.0, 2.7],
+      "source_moves": ["chromatic plate crossfades (2 to 3 f)", "type ghosting to 0.15 behind a lifted subject (4 f)", "cross-dissolve of an edited colour (2 f)"],
+      "notes": "Things appear and vanish on a single picture. Fades longer than four frames are outside the hand, and no entrance fades in."
+    },
+    {
+      "property": "letterSpacing",
+      "family": "ease-out",
+      "curves": ["snap"],
+      "duration_units": [0.0, 4.7],
+      "source_moves": ["genre-word-card tracking snap from 0.70 to 1.27 of set width (6 f)", "crop-select tracking opening to 0.19 to 0.3 em on a grow step"],
+      "notes": "A word lands crowded or spread and snaps to its set spacing with the handles; tracking opens in one step as a selection grows."
+    },
+    {
+      "property": "clipPath",
+      "family": "step",
+      "curves": ["snap", "pass", "rise"],
+      "duration_units": [0.0, 9.3],
+      "source_moves": ["card-wipe window widening in single steps", "giant-type-pass whiteness edge sweep (14 f)", "radial bloom of the picture behind the pass", "type-fill-echo fill appearing in one picture"],
+      "notes": "Windows open in steps; only the white edge of the pass and the bloom sweep continuously."
+    },
+    {
+      "property": "width",
+      "family": "ease-out",
+      "curves": ["settle", "snap"],
+      "duration_units": [0.0, 11.3],
+      "source_moves": ["crop-select grow steps (a creep then a two-picture jump, 15 to 17 f)", "endcard-typeon handle box growing per word"],
+      "notes": "A selected picture grows by revealing more of itself, never by stretching. The measured per-step curves live in crop-select."
+    },
+    {
+      "property": "height",
+      "family": "ease-out",
+      "curves": ["settle", "snap"],
+      "duration_units": [0.0, 11.3],
+      "source_moves": ["crop-select grow steps"],
+      "notes": "As width."
+    },
+    {
+      "property": "color",
+      "family": "step",
+      "curves": ["snap"],
+      "duration_units": [0.0, 1.3],
+      "source_moves": ["lockup arriving in the accent then turning ink (1 picture)", "mark faint to white to black (single pictures)", "giant pass turning white where the picture lands"],
+      "notes": "Colour changes are steps between token colours."
+    },
+    {
+      "property": "backgroundColor",
+      "family": "step",
+      "curves": ["snap"],
+      "duration_units": [0.0, 1.3],
+      "source_moves": ["icon-tile accent to pale accent in one step", "selection chip pressed to ink"],
+      "notes": "As color."
+    },
+    {
+      "property": "filter",
+      "family": "step",
+      "curves": ["snap", "settle"],
+      "duration_units": [0.0, 2.7],
+      "source_moves": ["subject brightened about 15 percent for two frames on lift-out", "relight bloom peaking and settling over 4 f"],
+      "notes": "Blur is a fixed property of a plate, never animated. Brightness flashes are one to four frames."
+    },
+    { "property": "rotation", "absent": true, "curves": [], "duration_units": [0, 0], "notes": "Nothing designed rotates. The pointer's lean is drawn inside the cursor block, and the camera's measured roll belongs to real footage only." },
+    { "property": "skewX", "absent": true, "curves": [], "duration_units": [0, 0], "notes": "Never seen." },
+    { "property": "skewY", "absent": true, "curves": [], "duration_units": [0, 0], "notes": "Never seen." },
+    { "property": "rotationX", "absent": true, "curves": [], "duration_units": [0, 0], "notes": "No 3D turns; planes in photographs are mapped by homography (billboard), not rotated." },
+    { "property": "rotationY", "absent": true, "curves": [], "duration_units": [0, 0], "notes": "As rotationX." }
+  ],
+  "composition": {
+    "cadence": "Pictures update 16 times a second inside 24 fps: frame f with f mod 3 = 2 repeats frame f - 1 (the end card runs on the other phase). Every block samples its motion on this cadence; footage and real camera moves run on ones.",
+    "cuts": { "hard_share": 0.85, "shot_frames": [4, 144], "median_frames": 15, "card_frames": [8, 15], "soft_only_on": ["giant pass", "statement plate run", "night boards"] },
+    "entrances": "Hard cut or one-picture appearance; no fades, no slides onto a still frame except the camera and the lockup slide.",
+    "exits": "Hard cut, a single-picture vanish, or carried by the next block (shared pan, print into card, grow into full bleed).",
+    "movers_max": 3,
+    "holds": "About half of every graphic card is a held frame. A held statement lasts 28 frames; the end card holds about 3 s. A hold is never stretched past its block's duration range.",
+    "grounds": "Paper beats are calm and photographic beats carry the energy; a piece alternates them.",
+    "energy": "A slow burn with three swells, each higher than the last, separated by near-still graphic beats, and a still ending (templates/film-arc.json).",
+    "eye_path": "Type sits centred on its ink; the selection frames what matters; giant type runs off the frame edges and is read by its first letters.",
+    "copy": "One word per half-second card, two or three words per imperative, four to six words for a held statement, one sentence on the end card.",
+    "scale": "A longer or shorter piece changes the number of items inside elastic beats, never the holds.",
+    "novel": "A new move is legal when every primitive it drives is inside its envelope and every rule above holds; mark it novel in the plan with a grammar note naming its primitives."
+  }
+}

@@ -58,11 +58,11 @@ Two observational shots of printed output and people looking at it. The feeling 
 
 ## Movement four: the scale-up and the sign-off (30.5 to 47.4 s, 36 percent)
 
-### 13. Big, bigger (shots 31 to 33, 30.5 to 34.0 s, 7 percent, energy 0.046)
+### 13. Escalation by steps (shots 31 to 33, 30.5 to 34.0 s, 7 percent, energy 0.046)
 
 A giant ghost word behind tiles that pop in, a small word that grows and is selected, then a single selected photograph that grows in two steps to the full width with its handles, the word growing and tracking open with it. Holds of 14, 13 and 57 frames. The feeling is escalation by steps, each step a decision.
 
-### 14. Oops, print and the street (shots 34 to 37, 34.0 to 36.75 s, 4 percent, energy 0.153)
+### 14. Interjection, print and the street (shots 34 to 37, 34.0 to 36.75 s, 4 percent, energy 0.153)
 
 A short interjection set over a photograph, then the picture shrinks to a print and lands on a billboard in the street. The feeling is a laugh followed by scale: a small mistake becomes a public image.
 
