@@ -73,6 +73,23 @@ def analysis_size(w: int, h: int, long_side: int) -> tuple[int, int]:
     return aw, ah
 
 
+
+_CS = {}
+
+
+def color_space(path) -> str:
+    """The stream's colour matrix tag (bt709, bt470bg, smpte170m, unknown), cached."""
+    k = str(path)
+    if k not in _CS:
+        try:
+            out = subprocess.run([FFPROBE if "FFPROBE" in globals() else "ffprobe", "-v", "error", "-select_streams", "v:0",
+                                  "-show_entries", "stream=color_space", "-of", "default=nw=1:nk=1", k],
+                                 capture_output=True, text=True, timeout=30).stdout.strip()
+        except Exception:
+            out = "unknown"
+        _CS[k] = out or "unknown"
+    return _CS[k]
+
 def iter_frames(path, fps: float, size: tuple[int, int], gray: bool = True, start: float | None = None,
                 end: float | None = None):
     """Yield (index, frame) decoded by ffmpeg at a constant rate `fps` (forces CFR so
@@ -86,7 +103,10 @@ def iter_frames(path, fps: float, size: tuple[int, int], gray: bool = True, star
     cmd += ["-i", str(path)]
     if end is not None:
         cmd += ["-t", f"{max(0.0, end - (start or 0.0)):.6f}"]
-    cmd += ["-an", "-vf", f"fps={fps:.6f},scale={w}:{h}:flags=bicubic", "-pix_fmt", pix,
+    # renders come out tagged BT.709 while found videos are usually untagged BT.601; read
+    # every file in the BT.601 matrix so the same picture gives the same luma either way
+    cm = ",scale=in_color_matrix=bt709:out_color_matrix=bt601" if color_space(path) == "bt709" else ""
+    cmd += ["-an", "-vf", f"fps={fps:.6f}{cm},scale={w}:{h}:flags=bicubic", "-pix_fmt", pix,
             "-f", "rawvideo", "-"]
     # stderr is dropped because closing the pipe early (we stop at the last frame we
     # need) makes ffmpeg report a broken pipe; a decode failure shows up as no frames.
