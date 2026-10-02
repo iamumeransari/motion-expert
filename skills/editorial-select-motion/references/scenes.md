@@ -6,7 +6,7 @@ The source runs 47.4 s, 42 shots between 41 hard cuts, as sixteen beats in four 
 
 ### 1. Word-per-cut titles (shots 1 to 7, 0.0 to 3.3 s, 7 percent, energy 0.039)
 
-Six single serif words, each on its own photographic plate and inside the same four-chip selection, cut every 8 to 15 frames (median 13, about 0.54 s, which sits a little longer than one 136 BPM beat of 0.441 s), then the last word steps up in size and is invaded by photo tiles. Each card holds still apart from the six-frame handle glide and tracking snap at its start, so roughly half of every card is a held frame. It enters cold on the first card with no fade and leaves by tiles covering the last card and a hard cut to paper. The feeling is range and confidence: a fast inventory of everything the subject covers, read one word at a time, each word claimed by the same selection.
+Six single serif words, each on its own photographic plate and inside the same four-chip selection, cut every 8 to 15 frames (median 13, about 0.54 s, which sits a little longer than one 140.3 BPM beat of 0.428 s), then the last word steps up in size and is invaded by photo tiles. Each card holds still apart from the six-frame handle glide and tracking snap at its start, so roughly half of every card is a held frame. It enters cold on the first card with no fade and leaves by tiles covering the last card and a hard cut to paper. The feeling is range and confidence: a fast inventory of everything the subject covers, read one word at a time, each word claimed by the same selection.
 
 ### 2. Scatter and collapse (shot 8, 3.3 to 5.3 s, 4 percent, energy 0.076)
 
