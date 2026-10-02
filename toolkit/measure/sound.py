@@ -15,12 +15,20 @@ Detection. A 96-band mel power spectrogram is compared with a running 1.2 s medi
 per band (the bed); the excess, as the mean of the 12 most excited bands minus the
 median band, is high for an event and near zero for a gain change (a duck releasing,
 a fade, the bed entering). Candidates start at onsets of that excess and run to the
-next onset, so a kick and an effect on the next beat are judged apart. A candidate is
-music when most of its excess energy on the non-vocal stem is also there one beat,
-half a bar, one, two or four bars away (level-matched, best lag, +-40 ms); persistent
-level steps, unvoiced breaths before speech and degenerate blips are dropped. A
-second pass finds sample reuse: a sharp transient under speech that matches another
-sample for sample off the beat grid, or matches an accepted effect, is an effect.
+next onset, so a kick and an effect on the next beat are judged apart. The music test
+is a REPET model at the bar period (refined from the tracker's tempo by onset-flux
+autocorrelation): each of drums, bass, other and the vocal stem outside speech is
+compared with itself one and two bars either side, and a candidate is music when the
+model explains 40% of its excess (unless what is left stands 12 dB over the bed), when
+the older per-candidate lag match explains 90%, or when under 5 dB is left over. A
+copy in the full groove does not explain a short hit inside a stop (context 15 dB
+quieter). Within 80 ms of a cut or move landing the limits relax and such events say
+found_by "visual-prior". Two more detectors add candidates: drum-stem onsets that
+break the bar pattern ("pattern-break") and tonal glides found by a slope transform
+of the other stem's ridges ("glide", with the sweep in "glide"). Persistent level
+steps, unvoiced breaths before speech and degenerate blips are dropped. A last pass
+finds sample reuse: a sharp transient under speech that matches another sample for
+sample off the beat grid, or matches an accepted effect, is an effect.
 
 Per event: onset t and peak_t (2 ms band-limited envelope for the onset, 20 ms for
 peak and end), duration, attack and decay (onset to peak, peak to -20 dB), level as
@@ -85,6 +93,29 @@ P = {
     "vo_under_bed_db": 12.0,
     "recur_ncc": 0.6,
     "onset_db": 6.0,
+    "rep_margin": 2.0,
+    "rep_gain_max_db": 6.0,
+    "rep_unexpl_sim": 0.4,
+    "rep_old_sim": 0.9,
+    "rep_min_unexpl_db": 5.0,
+    "rep_strong_unexpl_db": 12.0,
+    "rep_context_drop_db": 15.0,
+    "pb_lag_tol_s": 0.035,
+    "pb_match_db": 6.0,
+    "pb_prominence": 0.9,
+    "glide_min_s": 0.2,
+    "glide_max_s": 1.5,
+    "glide_min_oct": 0.2,
+    "glide_prom_db": 8.0,
+    "glide_win_s": 0.15,
+    "glide_continuity": 0.85,
+    "glide_min_hz": 1200.0,
+    "glide_max_oct_s": 2.5,
+    "visual_window_s": 0.08,
+    "use_visual_prior": False,  # off: on the pilot it found nothing and added three false events (see SOUND.md)
+    "visual_repeat_sim": 0.6,
+    "visual_old_sim": 0.9,
+    "visual_min_unexpl_db": 3.0,
 }
 
 CLASSES = ["whoosh", "riser", "impact", "click", "pop", "glitch", "chime", "typing", "sub-drop", "other"]
@@ -106,15 +137,24 @@ def decode(path: str) -> np.ndarray:
 def separate(x: np.ndarray, src_hash: str, stems_dir: Path | None, device: str):
     """Return (vocals, nonvocal, method). Cached under stems_dir/<first 12 of the
     source hash>/ so one shared cache folder serves every source."""
+    st, method = separate4(x, src_hash, stems_dir, device)
+    return st["vocals"], st["nonvocal"], method
+
+
+def separate4(x: np.ndarray, src_hash: str, stems_dir: Path | None, device: str):
+    """All four htdemucs stems plus nonvocal, as ({name: (n, 2) array}, method). The
+    cache keeps drums, bass and other beside vocals and nonvocal; a cache written
+    before those were kept still serves vocals and nonvocal."""
+    names = ("drums", "bass", "other")
     if stems_dir is not None:
         stems_dir = Path(stems_dir) / src_hash[:12]
         meta = stems_dir / "stems.json"
         if meta.exists():
             m = json.loads(meta.read_text())
             if m.get("source_sha256") == src_hash and (stems_dir / "vocals.wav").exists():
-                v, _ = sf.read(stems_dir / "vocals.wav", dtype="float32", always_2d=True)
-                nv, _ = sf.read(stems_dir / "nonvocal.wav", dtype="float32", always_2d=True)
-                return v, nv, m.get("method", "demucs")
+                st = {k: sf.read(stems_dir / f"{k}.wav", dtype="float32", always_2d=True)[0]
+                      for k in ("vocals", "nonvocal") + names if (stems_dir / f"{k}.wav").exists()}
+                return st, m.get("method", "demucs")
     try:
         import torch
         from demucs.apply import apply_model
@@ -133,25 +173,19 @@ def separate(x: np.ndarray, src_hash: str, stems_dir: Path | None, device: str):
                               overlap=0.25, progress=False)[0] * sd + mu
         out = out.cpu().numpy()
         stems = {s: out[i].T.astype(np.float32) for i, s in enumerate(model.sources)}
-        vocals = stems["vocals"]
-        nonvocal = (stems["drums"] + stems["bass"] + stems["other"]).astype(np.float32)
+        stems["nonvocal"] = (stems["drums"] + stems["bass"] + stems["other"]).astype(np.float32)
         method = "demucs"
     except Exception as e:  # pragma: no cover - only when torch or the weights are unavailable
         print(f"demucs unavailable ({e}); using the voicing-gated fallback", file=sys.stderr)
-        stems = {}
-        vocals = np.zeros_like(x)
-        nonvocal = x
+        stems = {"vocals": np.zeros_like(x), "nonvocal": x}
         method = "fallback"
     if stems_dir is not None:
         stems_dir.mkdir(parents=True, exist_ok=True)
-        sf.write(stems_dir / "vocals.wav", vocals, SR, subtype="FLOAT")
-        sf.write(stems_dir / "nonvocal.wav", nonvocal, SR, subtype="FLOAT")
-        for s, a in stems.items():
-            if s != "vocals":
-                sf.write(stems_dir / f"{s}.wav", a, SR, subtype="FLOAT")
+        for k, a in stems.items():
+            sf.write(stems_dir / f"{k}.wav", a, SR, subtype="FLOAT")
         (stems_dir / "stems.json").write_text(json.dumps(
             {"source_sha256": src_hash, "model": "htdemucs", "method": method, "device": device}, indent=1) + "\n")
-    return vocals, nonvocal, method
+    return stems, method
 
 
 # ----------------------------------------------------------------------------- speech
@@ -347,7 +381,8 @@ def build_ctx(video: str, stems_dir: str | None, device: str) -> Ctx:
     c = Ctx()
     x = decode(video)
     c.src_hash = sha256(video)
-    vocals, nonvocal, c.method = separate(x, c.src_hash, Path(stems_dir) if stems_dir else None, device)
+    c.stems, c.method = separate4(x, c.src_hash, Path(stems_dir) if stems_dir else None, device)
+    vocals, nonvocal = c.stems["vocals"], c.stems["nonvocal"]
     L = min(len(vocals), len(nonvocal), len(x))
     c.x, c.vocals, c.nonvocal, c.L = x[:L], vocals[:L], nonvocal[:L], L
     c.duration = L / SR
@@ -414,6 +449,7 @@ def build_ctx(video: str, stems_dir: str | None, device: str) -> Ctx:
     # whole-mix silence (digital or near), so level steps out of silence are not events
     mix_pow = (c.fb @ (power_spec(c.mix_mono))).sum(0)[:c.nF]
     c.mix_db = 10 * np.log10(mix_pow + 1e-12)
+    repetition_model(c)
     return c
 
 
@@ -546,8 +582,316 @@ def bar_repeat(c: Ctx, a: int, b: int, bands: np.ndarray) -> tuple[float, float]
     return 1.0 - best / tot, float(10 * np.log10(best / (bg0.sum() + 1e-18) + 1e-12))
 
 
-def measure_region(c: Ctx, a: int, b: int, found_by: str):
-    """Measure one candidate region of the searched signal. Returns (event, reject_reason)."""
+
+# ----------------------------------------------------------------------------- repetition
+
+def bar_period(c: Ctx) -> float | None:
+    """The bar length in seconds, refined from the tracker's tempo. librosa's tempo is a
+    coarse prior (it read 136 BPM for a 140.3 BPM bed); the beat b is the lag, within
+    6% of the prior or its half or double, that maximises the band-wise onset-flux
+    autocorrelation at b, 2b, 4b and 8b together, and the bar is the autocorrelation
+    peak within 3% of 4b. Four beats to the bar is assumed: if the true bar is two of
+    these, the repetition model still compares like with like."""
+    if not c.tempo:
+        return None
+    F = np.clip(np.diff(c.MNdb, axis=1, prepend=c.MNdb[:, :1]), 0, None)
+    F = nd.uniform_filter1d(F, 3, axis=1)
+    F = F - F.mean(1, keepdims=True)
+    n = F.shape[1]
+    maxlag = min(n - 1, int(9.5 * FPS * 60.0 / c.tempo))
+    if maxlag < int(2 * FPS):
+        return None
+    nfft = 1 << int(math.ceil(math.log2(2 * n)))
+    S = np.fft.rfft(F, nfft, axis=1)
+    ac = np.fft.irfft((S * np.conj(S)).sum(0), nfft)[:maxlag + 1]
+    ac = ac / (ac[0] + 1e-12) * n / np.maximum(1, n - np.arange(maxlag + 1))
+
+    def at(lag):
+        i = int(round(lag))
+        return float(ac[i]) if 0 < i <= maxlag else 0.0
+    b0 = 60.0 / c.tempo * FPS
+    best = None
+    for oct_ in (1.0,):
+        for f in np.linspace(0.94, 1.06, 49):
+            b = b0 * oct_ * f
+            if b < 0.25 * FPS or 4 * b > maxlag:
+                continue
+            sc = at(b) + at(2 * b) + at(4 * b) + (at(8 * b) if 8 * b <= maxlag else at(4 * b))
+            if best is None or sc > best[0]:
+                best = (sc, b)
+    if best is None:
+        return None
+    lo, hi = int(4 * best[1] * 0.97), min(maxlag, int(4 * best[1] * 1.03) + 1)
+    k = lo + int(np.argmax(ac[lo:hi]))
+    # parabolic interpolation for sub-frame precision
+    if lo < k < hi - 1:
+        y0, y1, y2 = ac[k - 1], ac[k], ac[k + 1]
+        den = y0 - 2 * y1 + y2
+        k = k + (0.5 * (y0 - y2) / den if den != 0 else 0.0)
+    return float(k / FPS)
+
+
+def stem_specs(c: Ctx) -> dict:
+    """Mel power (L+R) of each stem searched for effects: drums, bass and other, and
+    the vocal stem outside speech (all of it when there is no voice). Falls back to
+    the non-vocal stem alone when the four-stem split is not available."""
+    out = {}
+    for k in ("drums", "bass", "other"):
+        a = c.stems.get(k)
+        if a is not None and len(a) >= c.L:
+            a = a[:c.L]
+            out[k] = c.fb @ (power_spec(a[:, 0]) + power_spec(a[:, 1]))
+    if not out:
+        out["nonvocal"] = c.MN
+    if c.method == "demucs":
+        v = c.vocals
+        if c.vo_present:
+            gate = np.repeat(c.sp.astype(np.float32), HOP)[:c.L]
+            v = v * (1.0 - gate[:len(v)])[:, None]
+        out["vocals"] = c.fb @ (power_spec(v[:, 0]) + power_spec(v[:, 1]))
+    nF = c.nF
+    return {k: np.pad(v, ((0, 0), (0, max(0, nF - v.shape[1]))))[:, :nF] for k, v in out.items()}
+
+
+def repetition_model(c: Ctx):
+    """REPET at the bar period, per stem. Each stem's mel power is compared with copies
+    of itself one and two bars either side, each max-filtered over +-15 ms so timing
+    jitter does not read as novelty, and level-matched by the ratio of the two stems' 1.2 s 90th-percentile levels (within
+    +-6 dB) so a duck or an arrangement swell does not either; a median level would
+    follow how dense the hits are rather than how loud.
+    The model is the second-largest copy where three or more exist (a sound must recur
+    in two other bars to count as the loop), else the smallest. What a stem holds over
+    P["rep_margin"] times its model is unexplained; c.U sums that over stems and c.PS
+    sums the stems' power. Without a bar period both stay None and bar_repeat decides."""
+    c.U = c.PS = None
+    c.bar_s = bar_period(c)
+    if not c.bar_s:
+        return
+    specs = stem_specs(c)
+    c.specs = specs
+    J = max(1, int(round(0.015 * FPS)))
+    W = c.W
+    U = np.zeros_like(c.M)
+    PS = np.zeros_like(c.M)
+    for k, Pk in specs.items():
+        n = Pk.shape[1]
+        lvl = nd.percentile_filter(10 * np.log10(Pk.sum(0) + 1e-12), 90, size=W, mode="nearest")
+        Pm = nd.maximum_filter1d(Pk, 2 * J + 1, axis=1)
+        copies = []
+        for m in (-2, -1, 1, 2):
+            L = int(round(m * c.bar_s * FPS))
+            sh = np.full_like(Pk, np.nan)
+            g = np.full(n, np.nan)
+            if L > 0 and L < n:
+                sh[:, L:] = Pm[:, :-L]
+                g[L:] = lvl[L:] - lvl[:-L]
+            elif L < 0 and -L < n:
+                sh[:, :L] = Pm[:, -L:]
+                g[:L] = lvl[:L] - lvl[-L:]
+            sh = sh * 10 ** (np.clip(g, -P["rep_gain_max_db"], P["rep_gain_max_db"]) / 10)[None, :]
+            copies.append(sh)
+        C = np.stack(copies)
+        cnt = np.isfinite(C[:, 0, :]).sum(0)
+        Cs = np.sort(np.where(np.isfinite(C), C, -np.inf), axis=0)  # ascending, missing first
+        second = Cs[-2]
+        smallest_avail = np.where(np.isfinite(C), C, np.inf).min(0)
+        model = np.where(cnt[None, :] >= 3, second, smallest_avail)
+        model = np.where(np.isfinite(model), model, 0.0)
+        model = np.where(cnt[None, :] == 0, Pk, model)
+        U += np.clip(Pk - P["rep_margin"] * model, 0, None)
+        PS += Pk
+    c.U, c.PS = U, PS
+
+
+def visual_near(c: Ctx, t: float) -> bool:
+    """True within P["visual_window_s"] of a cut or a move landing. Effects in edited
+    pieces land on visual events, so there the music test is relaxed; an event that
+    passes only because of this is recorded as found_by "visual-prior"."""
+    v = getattr(c, "vis_t", None)
+    return v is not None and len(v) > 0 and float(np.min(np.abs(v - t))) <= P["visual_window_s"]
+
+
+def unexplained(c: Ctx, a: int, b: int, bands: np.ndarray) -> tuple[float, float]:
+    """bar_repeat's two numbers from the repetition model: the share of the candidate's
+    excess (over the running-median bed, first 250 ms, its own bands) that the model
+    explains, and the unexplained energy over the bed in dB."""
+    Lp = min(b - a, int(0.25 * FPS)) + 1
+    a0 = max(0, a - 1)
+    sl = slice(a0, min(c.nF, a0 + Lp))
+    e = float(c.E[bands, sl].sum())
+    if e <= 0:
+        return 1.0, -99.0
+    u = float(np.minimum(c.U[bands, sl], c.E[bands, sl]).sum())
+    return 1.0 - u / e, float(10 * np.log10(u / (c.Blin[bands, sl].sum() + 1e-18) + 1e-12))
+
+
+def context_drop(c: Ctx, a: int) -> float:
+    """How far the music has dropped out around a candidate: the median over the bar-lag
+    copies of the mix level in the 0.4 s before them, minus the same before the
+    candidate (dB). A lone hit in a stop sits 15 to 30 dB under its copies, which hold
+    the full groove, so a copy cannot be said to explain it."""
+    if not getattr(c, "bar_s", None):
+        return 0.0
+    w0, w1 = int(0.4 * FPS), int(0.03 * FPS)
+
+    def lev(i):
+        seg = c.mix_db[max(0, i - w0):max(0, i - w1)]
+        return float(np.median(seg)) if len(seg) > 5 else None
+    here = lev(a)
+    if here is None:
+        return 0.0
+    cp = [lev(a + int(round(m * c.bar_s * FPS))) for m in (-2, -1, 1, 2)
+          if 0 <= a + int(round(m * c.bar_s * FPS)) < c.nF]
+    cp = [x for x in cp if x is not None]
+    return float(np.median(cp) - here) if cp else 0.0
+
+
+def pattern_breaks(c: Ctx) -> list:
+    """Drum-stem onsets that break the bar-periodic pattern. An onset is part of the
+    loop when a copy one or two bars either side holds an onset within 35 ms no more
+    than 6 dB weaker, in a context no more than 12 dB louder (a copy in the full
+    groove does not explain a hit in a stop). Only onsets in the top tenth of the drum
+    stem's own onset strengths within +-2 s are considered, so ghost notes and hats do
+    not count. Returns frame indices."""
+    Pd = getattr(c, "specs", {}).get("drums")
+    if Pd is None or not c.bar_s:
+        return []
+    lg = 10 * np.log10(Pd + 1e-12)
+    flux = np.clip(np.diff(lg, axis=1, prepend=lg[:, :1]), 0, None).mean(0)
+    flux = np.convolve(flux, np.ones(2) / 2, "same")
+    pk, _ = ss.find_peaks(flux, height=3.0, distance=max(1, int(0.05 * FPS)))
+    if not len(pk):
+        return []
+    tol = int(round(P["pb_lag_tol_s"] * FPS))
+    W = int(2 * FPS)
+    out = []
+    for i in pk:
+        loc = flux[pk[(pk >= i - W) & (pk <= i + W)]]
+        if flux[i] < np.quantile(loc, P["pb_prominence"]):
+            continue
+        explained = False
+        for m in (-2, -1, 1, 2):
+            j = i + int(round(m * c.bar_s * FPS))
+            if j - tol < 0 or j + tol >= len(flux):
+                continue
+            if flux[j - tol:j + tol + 1].max() >= flux[i] * 10 ** (-P["pb_match_db"] / 10) \
+                    and context_level(c, j) - context_level(c, i) < P["rep_context_drop_db"]:
+                explained = True
+                break
+        if not explained:
+            out.append(int(i))
+    return out
+
+
+def context_level(c: Ctx, i: int) -> float:
+    seg = c.mix_db[max(0, i - int(0.4 * FPS)):max(0, i - int(0.03 * FPS))]
+    return float(np.median(seg)) if len(seg) > 5 else -120.0
+
+
+def glides(c: Ctx) -> list:
+    """Tonal glides: pitch drops, laser sweeps and pitched swishes, which the excess
+    test misses because their energy is spread thin over time and drum hits cut
+    through them. The other stem (the non-vocal one without a four-stem split) is
+    taken to a log-frequency grid of 48 bins per octave, 300 Hz to 12 kHz, and each
+    bin's prominence over the +-1/6 octave median is clipped to 0..20 dB, which keeps
+    sustained partials and drops broadband hits. Prominence is then summed along
+    straight lines of 0.3 to 3 octaves per second either way over P["glide_win_s"]
+    (a Radon transform over slopes); a line whose mean prominence beats
+    P["glide_prom_db"], stands 6 dB on 85% of its frames and beats the flat line from
+    the same point by 3 dB is a
+    glide segment, unless the same line one or two bars away scores half as well
+    (the loop's own synth). Overlapping segments chain into one gesture of
+    P["glide_min_s"] to P["glide_max_s"] covering P["glide_min_oct"] or more.
+    Returns (start frame, end frame, octaves per second, start Hz, end Hz)."""
+    if not getattr(c, "bar_s", None):
+        return []
+    oth = c.stems.get("other")
+    y = (oth[:c.L] if oth is not None and len(oth) >= c.L else c.nonvocal).mean(1)
+    n = 4096
+    _, _, Z = ss.stft(y, fs=SR, window="hann", nperseg=n, noverlap=n - HOP, boundary="even", padded=True)
+    Pw = (np.abs(Z) ** 2).astype(np.float32)
+    fr = np.fft.rfftfreq(n, 1 / SR)
+    bpo = 48
+    grid = 300.0 * 2 ** (np.arange(int(bpo * math.log2(12000 / 300))) / bpo)
+    idx = np.clip(np.searchsorted(fr, grid), 1, len(fr) - 1)
+    G = 10 * np.log10(np.maximum(Pw[idx], Pw[idx - 1]) + 1e-14)
+    R = np.clip(G - nd.median_filter(G, size=(bpo // 3 | 1, 1), mode="nearest"), 0, 20).astype(np.float32)
+    nb, nT = R.shape
+    N = max(4, int(P["glide_win_s"] * FPS))
+
+    def line(s_oct, X=None):
+        X = R if X is None else X
+        acc = np.zeros((nb, nT), np.float32)
+        for j in range(N):
+            dk = int(round(s_oct * bpo * j / FPS))
+            src = X[:, j:]
+            if dk >= 0:
+                acc[:nb - dk, :nT - j] += src[dk:, :] if dk else src
+            else:
+                acc[-dk:, :nT - j] += src[:nb + dk, :]
+        return acc / N
+    flat = line(0.0)
+    # a melody stepping down scale is a staircase, not a line: the ridge must be
+    # present (6 dB) on nearly every frame of the window
+    Rc = (R >= 6.0).astype(np.float32)
+    segs = []
+    for s_oct in (-3.0, -2.2, -1.6, -1.1, -0.7, -0.4, 0.4, 0.7, 1.1, 1.6, 2.2, 3.0):
+        A = line(s_oct)
+        cont = line(s_oct, Rc)
+        ok = (A >= P["glide_prom_db"]) & (A >= flat + 3.0) & (cont >= P["glide_continuity"])
+        for k, t in zip(*np.where(ok)):
+            segs.append((int(t), int(k), s_oct, float(A[k, t])))
+    if not segs:
+        return []
+    Lb = [int(round(m * c.bar_s * FPS)) for m in (-2, -1, 1, 2)]
+
+    def score_at(t, k, s_oct):
+        v, m = 0.0, 0
+        for j in range(N):
+            kk = k + int(round(s_oct * bpo * j / FPS))
+            if 0 <= kk < nb and 0 <= t + j < nT:
+                v += R[kk, t + j]
+                m += 1
+        return v / max(1, m)
+    # keep the best line per start frame, drop looped ones, then chain in time
+    best = {}
+    for t, k, s_oct, v in segs:
+        if t not in best or v > best[t][2]:
+            best[t] = (k, s_oct, v)
+    keep = []
+    for t in sorted(best):
+        k, s_oct, v = best[t]
+        if any(0 <= t + L < nT - N and score_at(t + L, k, s_oct) >= 0.5 * v for L in Lb):
+            continue
+        keep.append((t, k, s_oct))
+    out, cur = [], None
+    for t, k, s_oct in keep:
+        f_start = grid[k]
+        f_end = grid[min(nb - 1, max(0, k + int(round(s_oct * bpo * (N - 1) / FPS))))]
+        if cur and t <= cur["t1"] + 2 and np.sign(s_oct) == np.sign(cur["s"]):
+            cur["t1"] = t + N - 1
+            cur["f1"] = f_end
+            cur["slopes"].append(s_oct)
+        else:
+            if cur:
+                out.append(cur)
+            cur = {"t0": t, "t1": t + N - 1, "f0": f_start, "f1": f_end, "s": s_oct, "slopes": [s_oct]}
+    if cur:
+        out.append(cur)
+    res = []
+    for g in out:
+        d = (g["t1"] - g["t0"]) / FPS
+        span = math.log2(g["f1"] / g["f0"])
+        if P["glide_min_s"] <= d <= P["glide_max_s"] and abs(span) >= P["glide_min_oct"] \
+                and min(g["f0"], g["f1"]) >= P["glide_min_hz"] and abs(span / d) <= P["glide_max_oct_s"]:
+            res.append((g["t0"], g["t1"], span / d, float(g["f0"]), float(g["f1"])))
+    return res
+
+
+def measure_region(c: Ctx, a: int, b: int, found_by: str, force: bool = False):
+    """Measure one candidate region of the searched signal. Returns (event, reject_reason).
+    force replaces the music test with the unexplained-energy floor alone, for
+    candidates whose own detector already tested the loop."""
     Es = c.E[:, a:b]
     if Es.sum() <= 0:
         return None, "empty"
@@ -572,10 +916,41 @@ def measure_region(c: Ctx, a: int, b: int, found_by: str):
         return None, "breath"
     bandw = Es.sum(1)
     bands = np.where(bandw >= bandw.max() * 0.05)[0]
-    rep, unexpl_db = bar_repeat(c, a, b, bands)
-    c.last_diag = {"rep": rep, "unexpl_db": unexpl_db, "rel": rel, "dur": ft["duration"], "t_on": ft["t"]}
-    if rep >= P["music_repeat_sim"]:
+    rep_old, unexpl_old = bar_repeat(c, a, b, bands)
+    if getattr(c, "U", None) is not None:
+        rep, unexpl_db = unexplained(c, a, b, bands)
+    else:
+        rep, unexpl_db = rep_old, unexpl_old
+    c.last_diag = {"rep": rep, "unexpl_db": unexpl_db, "rel": rel, "dur": ft["duration"], "t_on": ft["t"],
+                   "rep_old": rep_old, "unexpl_old": unexpl_old, "lvl_mix": lvl - c.mix_ref_db,
+                   "snr": float(10 * np.log10(Es.sum() / (c.Blin[:, a:b][bands].sum() + 1e-12))),
+                   "cen": f["centroid_hz"], "band_lo": f["band"][0], "band_hi": f["band"][1]}
+    near_vis = visual_near(c, ft["t"])
+    drop = context_drop(c, a)
+    if drop >= P["rep_context_drop_db"] and ft["duration"] <= 0.12 and rep_old < P["rep_old_sim"]:
+        rep = min(rep, 0.0)
+        rep_old = min(rep_old, 0.0)
+        unexpl_db = max(unexpl_db, P["rep_min_unexpl_db"])
+    c.last_diag["context_drop_db"] = drop
+    if force:
+        is_music, prior_only = unexpl_db < P["rep_min_unexpl_db"], False
+    elif getattr(c, "U", None) is None:
+        is_music = rep >= P["music_repeat_sim"]
+        prior_only = False
+    else:
+        def music_at(r, ro, u, rlim, rolim, umin):
+            # explained by the model, by a lag in the lenient per-candidate sense, or
+            # too little left over; a residual far over the bed outweighs the share
+            return (r >= rlim and u < P["rep_strong_unexpl_db"]) or ro >= rolim or u < umin
+        is_music = music_at(rep, rep_old, unexpl_db, P["rep_unexpl_sim"], P["rep_old_sim"], P["rep_min_unexpl_db"])
+        prior_only = False
+        if P["use_visual_prior"] and is_music and near_vis and not music_at(rep, rep_old, unexpl_db, P["visual_repeat_sim"],
+                                                  P["visual_old_sim"], P["visual_min_unexpl_db"]):
+            is_music, prior_only = False, True
+    if is_music:
         return None, "music"
+    if prior_only:
+        found_by = "visual-prior"
     pan, pan_move = pan_of(c.EL[:, a:b], c.ER[:, a:b])
     s0 = max(0, int((ft["t"] - 0.01) * SR))
     env_e, er_e = band_env(c.mono[s0:min(c.L, int((ft["t_end"] + 0.02) * SR))], f["band"][0] * 0.8, f["band"][1] * 1.25)
@@ -592,8 +967,41 @@ def measure_region(c: Ctx, a: int, b: int, found_by: str):
           "attack_ms": ft["attack_ms"], "decay_ms": ft["decay_ms"], "pan": pan, "pan_move": pan_move,
           "found_by": found_by,
           "_snr_db": snr, "_speech_overlap": float(c.sp[i0:i1].mean()) if i1 > i0 else 0.0,
-          "_band": f["band"], "_feats": feats, "_repeat": rep, "_unexpl_db": unexpl_db, "_level_db": lvl}
+          "_band": f["band"], "_feats": feats, "_repeat": rep, "_unexpl_db": unexpl_db, "_level_db": lvl,
+          "_diag": dict(c.last_diag)}
     return ev, None
+
+
+def measure_glide(c: Ctx, g0: int, g1: int, slope: float, f0: float, f1: float):
+    """An event for a tonal glide: onset and end from the track, level and spectrum from
+    the excess in the track's band. Rising glides are risers, falling ones under 300 Hz
+    sub-drops, other falling ones whooshes (a pitched swish); the measured sweep rides
+    along in "glide"."""
+    lo, hi = min(f0, f1) / 1.3, max(f0, f1) * 1.3
+    bands = np.where((c.mel_f >= lo) & (c.mel_f <= hi))[0]
+    if not len(bands):
+        return None
+    Es = c.E[:, g0:g1 + 1]
+    Eb = np.zeros_like(Es)
+    Eb[bands] = Es[bands]
+    if Eb.sum() <= 0:
+        Eb[bands] = c.M[bands, g0:g1 + 1]
+    f = mel_excess_features(c, Eb)
+    epow = np.convolve(Eb.sum(0), np.ones(c.w50) / c.w50, "same")
+    lvl = float(10 * np.log10(epow.max() + 1e-12))
+    t0, t1 = g0 / FPS, g1 / FPS
+    ip = g0 + int(np.argmax(Eb.sum(0)))
+    pan, pan_move = pan_of(c.EL[bands, g0:g1 + 1], c.ER[bands, g0:g1 + 1])
+    cls = "riser" if slope > 0 else ("sub-drop" if max(f0, f1) < 300 else "whoosh")
+    feats = dict(f, duration=t1 - t0, attack_ms=(ip / FPS - t0) * 1000, decay_ms=(t1 - ip / FPS) * 1000,
+                 tonality=1.0, micro_onsets=1, onset_gap_s=0.0, onset_gap_cv=0.0, sweep_oct_s=slope)
+    return {"t": t0, "peak_t": ip / FPS, "duration": t1 - t0, "class": cls, "confidence": 0.5,
+            "level_db_rel_vo": lvl - c.ref_db, "level_db_rel_mix": lvl - c.mix_ref_db,
+            "centroid_hz": float(math.sqrt(f0 * f1)), "bandwidth_hz": f["bandwidth_hz"],
+            "attack_ms": feats["attack_ms"], "decay_ms": feats["decay_ms"], "pan": pan, "pan_move": pan_move,
+            "found_by": "glide", "glide": {"oct_per_s": slope, "f0_hz": f0, "f1_hz": f1},
+            "_snr_db": 0.0, "_speech_overlap": float(c.sp[g0:g1 + 1].mean()), "_band": (lo, hi), "_feats": feats,
+            "_level_db": lvl}
 
 
 def detect_regions(c: Ctx):
@@ -817,6 +1225,8 @@ def measure_recurrent(c: Ctx, s: int, partners: list, y: np.ndarray, score: floa
 def analyse(video: str, moves_path: str | None, out: str, stems_dir: str | None, device: str,
             plot: str | None) -> dict:
     c = build_ctx(video, stems_dir, device)
+    anchors, moves = load_anchors(moves_path)
+    c.vis_t = np.array([a["t"] for a in anchors if a["key"] in ("cut", "land")])
     events, dropped = [], {}
     rejected = []
     for a, b in detect_regions(c):
@@ -826,6 +1236,22 @@ def analyse(video: str, moves_path: str | None, out: str, stems_dir: str | None,
             dropped[why] = dropped.get(why, 0) + 1
             rejected.append({"t": a / FPS, "t_end": b / FPS, "why": why, **(c.last_diag or {})})
         else:
+            events.append(ev)
+    covered = lambda t: any(e["t"] - 0.04 <= t <= e["t"] + max(0.04, e["duration"]) for e in events)  # noqa: E731
+    for i in pattern_breaks(c):
+        if covered(i / FPS):
+            continue
+        c.last_diag = None
+        ev, why = measure_region(c, max(0, i - 1), min(c.nF, i + int(0.08 * FPS)), "pattern-break", force=True)
+        if ev is None:
+            dropped["pattern-break:" + why] = dropped.get("pattern-break:" + why, 0) + 1
+        else:
+            events.append(ev)
+    for g0, g1, slope, f0, f1 in glides(c):
+        if covered(g0 / FPS):
+            continue
+        ev = measure_glide(c, g0, g1, slope, f0, f1)
+        if ev is not None:
             events.append(ev)
     events.sort(key=lambda e: e["t"])
     ded = []
@@ -837,7 +1263,6 @@ def analyse(video: str, moves_path: str | None, out: str, stems_dir: str | None,
     new, n_cand = recurrence_pass(c, events)
     events = sorted(events + new, key=lambda e: e["t"])
 
-    anchors, moves = load_anchors(moves_path)
     out_dir = Path(out).resolve().parent
     clip_dir = out_dir / "clips"
     for i, e in enumerate(events):
@@ -857,6 +1282,7 @@ def analyse(video: str, moves_path: str | None, out: str, stems_dir: str | None,
 
     res = summarise(events, anchors, moves, c.duration, c.method)
     res["music"] = music_stats(c, events, anchors)
+    res["music"]["bar_s"] = getattr(c, "bar_s", None)
     res["vo"] = {"present": bool(c.vo_present), "lufs": c.vo_lufs, "ref_db_p90_50ms": c.vo_ref_db,
                  "speech_share": float(c.sp.mean())}
     res["level_ref"] = c.level_ref
