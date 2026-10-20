@@ -190,16 +190,14 @@ function dotsToMark(p,ds,{x,y,w,vb},t0,anchors,tGlass){
   svg.style.cssText='position:absolute;left:0;top:0;overflow:visible;display:none';
   svg.innerHTML=`<defs><linearGradient id="glg" x1="0" y1="0" x2=".6" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".45" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#E9EEFF" stop-opacity=".14"/></linearGradient>
       <linearGradient id="glr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".5" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity=".85"/></linearGradient>
-      <filter id="glf" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <filter id="glf" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
         <feComponentTransfer in="SourceAlpha" result="inv"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer>
-        <feGaussianBlur in="inv" stdDeviation="${7/k}" result="ib"/>
-        <feOffset id="glo1" in="ib" dx="0" dy="0" result="io1"/><feFlood flood-color="#ffffff" flood-opacity=".95"/><feComposite in2="io1" operator="in" result="hi"/><feComposite in="hi" in2="SourceAlpha" operator="in" result="glow"/>
-        <feGaussianBlur in="inv" stdDeviation="${12/k}" result="ib2"/>
-        <feOffset id="glo2" in="ib2" dx="0" dy="0" result="io2"/><feFlood flood-color="#0B3FC9" flood-opacity=".45"/><feComposite in2="io2" operator="in" result="lo"/><feComposite in="lo" in2="SourceAlpha" operator="in" result="shade"/>
-        <feFlood flood-color="#ffffff" flood-opacity=".16" result="body"/><feComposite in="body" in2="SourceAlpha" operator="in" result="bodyc"/>
-        <feGaussianBlur in="SourceAlpha" stdDeviation="${14/k}" result="ds"/><feOffset in="ds" dy="${14/k}" result="dso"/><feFlood flood-color="#0B3FC9" flood-opacity=".14"/><feComposite in2="dso" operator="in" result="drop"/>
-        <feMerge><feMergeNode in="drop"/><feMergeNode in="bodyc"/><feMergeNode in="shade"/><feMergeNode in="glow"/></feMerge></filter></defs>
-    <g transform="translate(${x} ${y}) scale(${k}) translate(${-vb.x} ${-vb.y})">${ds.map(d=>`<path class="fill" d="${d}" fill="url(#glg)" fill-opacity="0" stroke="none" filter="url(#glf)"/>`).join('')}${anchors.map(a=>`<path class="ln" d="${ds[a.path]}" fill="none" stroke="#fff" stroke-opacity=".92" stroke-width="${1.6/k}" stroke-linecap="round" pathLength="1"/>`).join('')}</g><g id="glassg"><g transform="translate(${x} ${y}) scale(${k}) translate(${-vb.x} ${-vb.y})">${ds.map(d=>`<path class="fill2" d="${d}" fill="#fff" fill-opacity="0" stroke="none" filter="url(#glf)"/>`).join('')}${ds.map(d=>`<path class="rim" d="${d}" fill="none" stroke="url(#glr)" stroke-width="${2.2/k}" stroke-opacity="0"/>`).join('')}${ds.map(d=>`<path class="sweep" d="${d}" fill="none" stroke="#fff" stroke-width="${3.6/k}" stroke-linecap="round" pathLength="1" stroke-dasharray="0.18 0.82" stroke-opacity="0" style="filter:drop-shadow(0 0 ${3/k}px #fff)"/>`).join('')}</g></g>`;
+        <feGaussianBlur in="inv" stdDeviation="${4/k}" result="ib"/>
+        <feOffset id="glo1" in="ib" dx="0" dy="0" result="io1"/><feFlood flood-color="#ffffff" flood-opacity=".42"/><feComposite in2="io1" operator="in" result="hi"/><feComposite in="hi" in2="SourceAlpha" operator="in" result="glow"/>
+        <feFlood flood-color="#ffffff" flood-opacity=".06" result="body"/><feComposite in="body" in2="SourceAlpha" operator="in" result="bodyc"/>
+        <feMerge><feMergeNode in="bodyc"/><feMergeNode in="glow"/></feMerge></filter>
+      <linearGradient id="glr2" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".45" stop-color="#fff" stop-opacity=".18"/><stop offset=".6" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#fff" stop-opacity=".8"/></linearGradient></defs>
+    <g transform="translate(${x} ${y}) scale(${k}) translate(${-vb.x} ${-vb.y})">${ds.map(d=>`<path class="fill" d="${d}" fill="url(#glg)" fill-opacity="0" stroke="none" filter="url(#glf)"/>`).join('')}${anchors.map(a=>`<path class="ln" d="${ds[a.path]}" fill="none" stroke="#fff" stroke-opacity=".92" stroke-width="${1.6/k}" stroke-linecap="round" pathLength="1"/>`).join('')}</g><g id="glassg"><g transform="translate(${x} ${y}) scale(${k}) translate(${-vb.x} ${-vb.y})">${ds.map(d=>`<path class="fill2" d="${d}" fill="#fff" fill-opacity="0" stroke="none" filter="url(#glf)"/>`).join('')}${ds.map(d=>`<path class="rim" d="${d}" fill="none" stroke="url(#glr2)" stroke-width="${2.1/k}" stroke-opacity="0"/>`).join('')}${ds.map(d=>`<path class="sweep" d="${d}" fill="none" stroke="#fff" stroke-width="${3.6/k}" stroke-linecap="round" pathLength="1" stroke-dasharray="0.18 0.82" stroke-opacity="0" style="filter:drop-shadow(0 0 ${3/k}px #fff)"/>`).join('')}</g></g>`;
   p.appendChild(svg);
   const lns=[...svg.querySelectorAll('.ln')], fills=[...svg.querySelectorAll('.fill2')], rims=[...svg.querySelectorAll('.rim')], sweep=[...svg.querySelectorAll('.sweep')], gl=svg.querySelector('#glassg');
   const beads=anchors.map(()=>{ const b=document.createElement('div'); b.style.cssText='position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;border:1.5px solid #fff;box-sizing:border-box;background:rgba(255,255,255,.3);display:none'; p.appendChild(b); return b; });
@@ -210,10 +208,13 @@ function dotsToMark(p,ds,{x,y,w,vb},t0,anchors,tGlass){
       beads[i].style.display=on?'block':'none'; beads[i].style.width=beads[i].style.height='14px'; beads[i].style.margin='-7px 0 0 -7px'; beads[i].style.borderWidth='2px'; beads[i].style.left=a.px+'px'; beads[i].style.top=a.py+'px'; });
     const on2=t>=tGlass; lns.forEach(l=>{ l.style.opacity=on2?0:1; }); beads.forEach(b=>{ b.style.opacity=on2?0:1; });
     gl.setAttribute('transform',`translate(960 540) scale(${on2?0.8:1}) translate(-960 -540)`);
-    const u2=clamp((t-tGlass)/0.36); fills.forEach(f=>f.setAttribute('fill-opacity',on2?1:0)); rims.forEach(r=>r.setAttribute('stroke-opacity',on2?0.22:0));
+    const u2=clamp((t-tGlass)/0.36); fills.forEach(f=>f.setAttribute('fill-opacity',on2?1:0)); rims.forEach(r=>r.setAttribute('stroke-opacity',on2?1:0));
     /* the light travels: the inner glow comes from a direction that turns slowly, the shade sits opposite */
-    const ang=-2.3+1.1*clamp((t-tGlass)/2.0), R1=4.5/k, R2=6/k; const o1=svg.querySelector('#glo1'), o2=svg.querySelector('#glo2');
-    o1.setAttribute('dx',(Math.cos(ang)*R1).toFixed(3)); o1.setAttribute('dy',(Math.sin(ang)*R1).toFixed(3)); o2.setAttribute('dx',(-Math.cos(ang)*R2).toFixed(3)); o2.setAttribute('dy',(-Math.sin(ang)*R2).toFixed(3));
+    const ang=-2.3+1.4*clamp((t-tGlass)/2.2), R1=2.5/k; const o1=svg.querySelector('#glo1');
+    o1.setAttribute('dx',(Math.cos(ang)*R1).toFixed(3)); o1.setAttribute('dy',(Math.sin(ang)*R1).toFixed(3));
+    /* the rim's bright side follows the light round the mark */
+    const gr=svg.querySelector('#glr2'), cx=vb.x+vb.w/2, cy=vb.y+vb.h/2, L=vb.w*0.6;
+    gr.setAttribute('x1',(cx+Math.cos(ang)*L).toFixed(2)); gr.setAttribute('y1',(cy+Math.sin(ang)*L).toFixed(2)); gr.setAttribute('x2',(cx-Math.cos(ang)*L).toFixed(2)); gr.setAttribute('y2',(cy-Math.sin(ang)*L).toFixed(2));
     sweep.forEach(sw=>{ sw.setAttribute('stroke-opacity',on2?(1-u2)*0.95:0); sw.setAttribute('stroke-dashoffset',`${-(0.55+0.5*u2)}`); }); };
 }
 
