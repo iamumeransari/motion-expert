@@ -47,7 +47,12 @@ function centredLine(p,words,times,{y=540,size=GL.SIZE,trimAt=null,keep=1,out=nu
       else c=f<1?GL.PRE:mixc(GL.P0,GL.INK,clamp((f-1)/(ST[i]-1)));
       if(trimAt!=null && i<first){ const k=i, fs=(t-trimAt)*F-[0,3,7,10,13,16,19,22][Math.min(k,7)];
         if(fs>=0){ c=mixc(GL.INK,GL.FADE,clamp(fs/12)); if(fs>=13) w.style.opacity=0; } }
-      w.style.color=rgb(c); });
+      const lead=(cc)=>{ if(trimAt!=null && i<first && (t-trimAt)*F>=0) return cc; return cc; };
+      if(f>=1 && f<ST[i]+1 && !(trimAt!=null && i<first && (t-trimAt)*F-[0,3,7,10,13,16,19,22][Math.min(i,7)]>=0)){
+        const fn=(ff)=>brandIdx.includes(i)?mixc(GL.P0,GL.BRAND,clamp((ff-1)/3)):mixc(GL.P0,GL.INK,clamp((ff-1)/(ST[i]-1)));
+        w.style.color='transparent'; w.style.backgroundImage=`linear-gradient(90deg, ${rgb(fn(f+1.1))}, ${rgb(fn(f-0.9))})`; w.style.webkitBackgroundClip='text'; w.style.backgroundClip='text';
+      } else { w.style.backgroundImage='none'; w.style.color=rgb(c); }
+      if(f<1) w.style.opacity=0.42; });
   };
 }
 
@@ -103,7 +108,9 @@ function labelField3D(p,front,t0,{nameOff=null,size=41,mid=[],back=[],dotsUntil=
       const s=F/(Z-cz); const X=q.X*co-q.Y*si, Y=q.X*si+q.Y*co; const sx=960+X*s/((Z-(Zf-F))/F)*((Z-(Zf-F))/F), sy=540+Y*s;
       const px=960+X*s, py=540+Y*s;
       const sf=tab(SL,t-t0), far=clamp((1-sf)/0.45), on=clamp((t-t0-0.012*i-(kind==='front'?0:kind==='mid'?-0.1:-0.2))/0.3);
-      d.style.transform=`translate(${px}px,${py}px) translateY(-50%) scale(${kind==='mid'?-s:s},${s}) rotate(${(o.rot||0)+th*57.3}deg)`;
+      /* spherical lens: barrel the position, and turn each tag to face the centre (yaw with x, pitch with y) */
+      const dx=px-960, dy=py-540, r2=(dx*dx+dy*dy)/(960*960), bx=960+dx*(1+0.14*r2), by=540+dy*(1+0.14*r2);
+      d.style.transform=`translate(${bx}px,${by}px) translateY(-50%) perspective(900px) rotateY(${(dx/960*30).toFixed(2)}deg) rotateX(${(-dy/540*18).toFixed(2)}deg) scale(${kind==='mid'?-s:s},${s}) rotate(${(o.rot||0)+th*57.3}deg)`;
       const [n,dot,v]=d.children;
       if(kind==='front'){ const k=order.indexOf(i), off=t0+1.16+k*fr(1.6), nOut=t>=off?1:0, vOut=clamp((t-off-fr(2))/fr(8));
         d.style.opacity=on.toFixed(3); d.style.filter=`blur(${(far*4).toFixed(2)}px)`;
@@ -114,7 +121,7 @@ function labelField3D(p,front,t0,{nameOff=null,size=41,mid=[],back=[],dotsUntil=
 }
 /* where a front label's dot is on screen at time t (rolled), for handing dots to the mark */
 function dot3D(o,nameW,t,t0,roll=[-3,1.5]){ const Zf=640,F=295.3, cz=Zf-F/tab(SL,t-t0), s=F/(Zf-cz), u=clamp((t-t0)/2.2), th=(roll[0]+(roll[1]-roll[0])*u)*Math.PI/180;
-  const X=(o.x+nameW+22-960), Y=(o.y-540); return {x:960+(X*Math.cos(th)-Y*Math.sin(th))*s, y:540+(X*Math.sin(th)+Y*Math.cos(th))*s}; }
+  const X=(o.x+nameW+22-960), Y=(o.y-540); const dx=(X*Math.cos(th)-Y*Math.sin(th))*s, dy=(X*Math.sin(th)+Y*Math.cos(th))*s, r2=(dx*dx+dy*dy)/(960*960); return {x:960+dx*(1+0.14*r2), y:540+dy*(1+0.14*r2)}; }
 
 /* roll(parent, from, to, tCut): the word drifts up accelerating for 0.4 s, cut to the brand word just below, which settles up. */
 function roll(p,word,tCut,{size=GL.SIZE,scale=()=>1}={}){
@@ -135,12 +142,12 @@ function meshURL(){ if(MESH) return MESH;
   g.fillStyle='rgb(184,197,252)'; g.fillRect(0,0,W,H);
   const blob=(x,y,rx,ry,rot,col,blur)=>{ g.save(); g.filter=`blur(${blur}px)`; g.fillStyle=col; g.beginPath(); g.ellipse(ox+x,oy+y,rx,ry,rot,0,Math.PI*2); g.fill(); g.restore(); };
   const arc=(x,y,rx,ry,rot,a0,a1,w,col,blur)=>{ g.save(); g.filter=`blur(${blur}px)`; g.strokeStyle=col; g.lineWidth=w; g.lineCap='round'; g.beginPath(); g.ellipse(ox+x,oy+y,rx,ry,rot,a0,a1); g.stroke(); g.restore(); };
-  blob(80,40,520,380,0,'rgb(214,220,254)',160); blob(1850,1060,520,360,0,'rgb(208,214,253)',160); blob(-60,620,300,600,0,'rgb(200,210,253)',150);
-  arc(980,560,930,600,-0.2,-1.0,1.25,300,'rgb(156,150,246)',130);
-  arc(980,560,930,600,-0.2,2.55,3.75,260,'rgb(162,158,247)',140);
-  arc(960,560,640,410,-0.1,0,Math.PI*2,150,'rgb(168,188,252)',90);
-  blob(960,555,560,350,-0.08,'rgb(136,164,250)',150);
-  blob(960,1080,420,120,0,'rgb(140,170,240)',90);
+  blob(60,20,640,460,0,'rgb(212,219,254)',240); blob(1880,1080,640,440,0,'rgb(206,213,253)',240); blob(-80,640,380,700,0,'rgb(198,208,253)',220);
+  arc(990,570,960,620,-0.22,-1.05,1.3,360,'rgb(160,156,247)',230);
+  arc(990,570,960,620,-0.22,2.5,3.8,320,'rgb(165,162,248)',240);
+  blob(960,555,700,440,-0.08,'rgb(150,176,251)',230);
+  blob(960,550,470,290,-0.08,'rgb(136,164,250)',200);
+  blob(960,1100,520,150,0,'rgb(146,174,244)',160);
   MESH=c.toDataURL('image/jpeg',0.95); return MESH; }
 
 /* bloom(parent, t0): the soft ellipse grows from the centre (frames 126–136) and becomes the background (mesh) */
@@ -163,20 +170,22 @@ function bloom(p,t0){
 function dotsToMark(p,ds,{x,y,w,vb},t0,anchors,tGlass){
   const k=w/vb.w, NS='http://www.w3.org/2000/svg', svg=document.createElementNS(NS,'svg'); svg.setAttribute('width',1920); svg.setAttribute('height',1080);
   svg.style.cssText='position:absolute;left:0;top:0;overflow:visible;display:none';
-  svg.innerHTML=`<defs><linearGradient id="glg" x1="0" y1="0" x2=".6" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".62"/><stop offset=".45" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#E9EEFF" stop-opacity=".38"/></linearGradient>
+  svg.innerHTML=`<defs><linearGradient id="glg" x1="0" y1="0" x2=".6" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".45" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#E9EEFF" stop-opacity=".14"/></linearGradient>
       <linearGradient id="glr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".5" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity=".85"/></linearGradient>
-      <filter id="glf" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceAlpha" stdDeviation="${6/k}" result="b"/><feOffset dy="${10/k}" result="o"/><feFlood flood-color="#5468D8" flood-opacity=".28"/><feComposite in2="o" operator="in" result="sh"/><feMerge><feMergeNode in="sh"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-    <g transform="translate(${x} ${y}) scale(${k}) translate(${-vb.x} ${-vb.y})">${ds.map(d=>`<path class="fill" d="${d}" fill="url(#glg)" fill-opacity="0" stroke="none" filter="url(#glf)"/>`).join('')}${anchors.map(a=>`<path class="ln" d="${ds[a.path]}" fill="none" stroke="#fff" stroke-opacity=".92" stroke-width="${1.6/k}" stroke-linecap="round" pathLength="1"/>`).join('')}${ds.map(d=>`<path class="rim" d="${d}" fill="none" stroke="url(#glr)" stroke-width="${2.6/k}" stroke-opacity="0"/>`).join('')}</g>`;
+      <filter id="glf" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceAlpha" stdDeviation="${6/k}" result="b"/><feOffset dy="${10/k}" result="o"/><feFlood flood-color="#5468D8" flood-opacity=".16"/><feComposite in2="o" operator="in" result="sh"/><feMerge><feMergeNode in="sh"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    <g transform="translate(${x} ${y}) scale(${k}) translate(${-vb.x} ${-vb.y})">${ds.map(d=>`<path class="fill" d="${d}" fill="url(#glg)" fill-opacity="0" stroke="none" filter="url(#glf)"/>`).join('')}${anchors.map(a=>`<path class="ln" d="${ds[a.path]}" fill="none" stroke="#fff" stroke-opacity=".92" stroke-width="${1.6/k}" stroke-linecap="round" pathLength="1"/>`).join('')}</g><g id="glassg"><g transform="translate(${x} ${y}) scale(${k}) translate(${-vb.x} ${-vb.y})">${ds.map(d=>`<path class="fill2" d="${d}" fill="url(#glg)" fill-opacity="0" stroke="none" filter="url(#glf)"/>`).join('')}${ds.map(d=>`<path class="rim" d="${d}" fill="none" stroke="url(#glr)" stroke-width="${2.2/k}" stroke-opacity="0"/>`).join('')}${ds.map(d=>`<path class="sweep" d="${d}" fill="none" stroke="#fff" stroke-width="${3.6/k}" stroke-linecap="round" pathLength="1" stroke-dasharray="0.18 0.82" stroke-opacity="0" style="filter:drop-shadow(0 0 ${3/k}px #fff)"/>`).join('')}</g></g>`;
   p.appendChild(svg);
-  const lns=[...svg.querySelectorAll('.ln')], fills=[...svg.querySelectorAll('.fill')], rims=[...svg.querySelectorAll('.rim')];
+  const lns=[...svg.querySelectorAll('.ln')], fills=[...svg.querySelectorAll('.fill2')], rims=[...svg.querySelectorAll('.rim')], sweep=[...svg.querySelectorAll('.sweep')], gl=svg.querySelector('#glassg');
   const beads=anchors.map(()=>{ const b=document.createElement('div'); b.style.cssText='position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;border:1.5px solid #fff;box-sizing:border-box;background:rgba(255,255,255,.3);display:none'; p.appendChild(b); return b; });
   const ease=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
   return t=>{ const on=t>=t0-fr(10); svg.style.display=on?'block':'none';
-    anchors.forEach((a,i)=>{ const st=t0+i*0.12, u=ease(clamp((t-st)/1.5)), h=a.span*u;
+    anchors.forEach((a,i)=>{ const st=t0+i*0.12, u=ease(clamp((t-st)/0.9)), h=a.span*u;
       lns[i].setAttribute('stroke-dasharray',`${2*h} ${1-2*h}`); lns[i].setAttribute('stroke-dashoffset',`${-(a.s-h)}`);
-      lns[i].style.opacity=t<tGlass?1:1-clamp((t-tGlass)/0.25);
-      beads[i].style.display=on?'block':'none'; beads[i].style.width=beads[i].style.height='14px'; beads[i].style.margin='-7px 0 0 -7px'; beads[i].style.borderWidth='2px'; beads[i].style.left=a.px+'px'; beads[i].style.top=a.py+'px'; beads[i].style.opacity=1-clamp((t-tGlass)/0.2); });
-    const g=clamp((t-tGlass)/0.35); fills.forEach(f=>f.setAttribute('fill-opacity',g)); rims.forEach(r=>r.setAttribute('stroke-opacity',g)); };
+      beads[i].style.display=on?'block':'none'; beads[i].style.width=beads[i].style.height='14px'; beads[i].style.margin='-7px 0 0 -7px'; beads[i].style.borderWidth='2px'; beads[i].style.left=a.px+'px'; beads[i].style.top=a.py+'px'; });
+    const on2=t>=tGlass; lns.forEach(l=>{ l.style.opacity=on2?0:1; }); beads.forEach(b=>{ b.style.opacity=on2?0:1; });
+    gl.setAttribute('transform',`translate(960 540) scale(${on2?0.8:1}) translate(-960 -540)`);
+    const u2=clamp((t-tGlass)/0.36); fills.forEach(f=>f.setAttribute('fill-opacity',on2?1:0)); rims.forEach(r=>r.setAttribute('stroke-opacity',on2?0.75:0));
+    sweep.forEach(sw=>{ sw.setAttribute('stroke-opacity',on2?(1-u2)*0.95:0); sw.setAttribute('stroke-dashoffset',`${-(0.55+0.5*u2)}`); }); };
 }
 
 window.GlassLight={GL,F,fr,clamp,lerp,centredLine,labelField,labelField3D,dot3D,dotAt,roll,bloom,dotsToMark,camera,SL,tab};
