@@ -19,6 +19,11 @@ const GL={
   BLOOM_R:[0,167,257,320,373,425,475,535,597,674,750],   // equivalent radius per frame from bloom start (frames 126–136)
   BLOOM_ASPECT:1.9,
 };
+
+let THEME='light';
+function setTheme(t){ THEME=t; if(t==='dark'){ Object.assign(GL,{PAPER:[6,9,20],INK:[238,241,248],PRE:[22,40,96],P0:[64,110,230],FADE:[40,70,150],BRAND:[77,141,255],
+  MESH_CORE:[26,102,255],MESH_EDGE:[10,18,48]}); MESH=null; } }
+const TAGC=()=>THEME==='dark'?{name:[226,231,242],val:[102,156,255],dot:[77,141,255],ring:'rgba(6,9,20,.95)',far:[70,90,140]}:{name:[31,32,35],val:[77,141,255],dot:[77,141,255],ring:'rgba(255,255,255,.9)',far:[170,195,250]};
 // a word settles from P0 to ink over 5 frames (≤5 letters) up to 12 (7 letters)
 const settleFrames=w=>Math.round(5+Math.max(0,w.replace(/[^A-Za-z0-9]/g,'').length-4)*2.33);
 
@@ -124,7 +129,7 @@ function labelField3D(p,front,t0,{nameOff=null,size=41,mid=[],back=[],dotsUntil=
 function dot3D(o,nameW,t,t0,roll=[-1.5,1]){ const Zf=640,F=295.3, cz=Zf-F/tab(SL,t-t0), s=F/(Zf-cz), u=clamp((t-t0)/2.2), th=(roll[0]+(roll[1]-roll[0])*u)*Math.PI/180;
   const X=(o.x+nameW+22-960), Y=(o.y-540); const dx=(X*Math.cos(th)-Y*Math.sin(th))*s, dy=(X*Math.sin(th)+Y*Math.cos(th))*s; const b=lensAt(960+dx,540+dy); return b; }
 
-const LENS_K=0.10;
+const LENS_K=0.05;
 function lensAt(x,y){ const dx=(x-960)/960, dy=(y-540)/960, r2=dx*dx+dy*dy, f=1+LENS_K*r2; return {x:960+(x-960)*f, y:540+(y-540)*f}; }
 let LENSMAP=null;
 function lensMap(){ if(LENSMAP) return LENSMAP; const W=480,H=270,c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d'), im=g.createImageData(W,H), S=160;
@@ -136,7 +141,7 @@ function lensLayer(p){ const NS='http://www.w3.org/2000/svg';
     s.innerHTML=`<filter id="gl-lens" x="0" y="0" width="1920" height="1080" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feImage href="${lensMap()}" x="0" y="0" width="1920" height="1080" preserveAspectRatio="none" result="m"/><feDisplacementMap in="SourceGraphic" in2="m" scale="160" xChannelSelector="R" yChannelSelector="G"/></filter>`; document.body.appendChild(s); }
   const w=document.createElement('div'); w.style.cssText='position:absolute;inset:0;filter:url(#gl-lens)'; p.appendChild(w);
   const soft=document.createElement('div'); soft.style.cssText='position:absolute;inset:0;pointer-events:none;-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);-webkit-mask-image:radial-gradient(62% 70% at 50% 50%,transparent 55%,#000 100%);mask-image:radial-gradient(62% 70% at 50% 50%,transparent 55%,#000 100%)';
-  const wash=document.createElement('div'); wash.style.cssText='position:absolute;inset:0;pointer-events:none;background:radial-gradient(70% 78% at 50% 50%,rgba(253,253,253,0) 55%,rgba(253,253,253,.6) 100%)';
+  const wash=document.createElement('div'); const wc=THEME==='dark'?'6,9,20':'253,253,253'; wash.style.cssText=`position:absolute;inset:0;pointer-events:none;background:radial-gradient(70% 78% at 50% 50%,rgba(${wc},0) 55%,rgba(${wc},.6) 100%)`;
   return {layer:w, edges:[soft,wash]}; }
 
 /* labelSphere(parent, labels, t0, opts): the source's field is a sphere of tags around the word, seen from outside,
@@ -149,11 +154,11 @@ function labelSphere(p,labels,t0,{R=560,D=760,P=1150,size=40,spin=[-14,6],tilt=-
   const g=document.createElement('div'); g.style.cssText='position:absolute;left:960px;top:540px;width:0;height:0;transform-style:preserve-3d'; wrap.appendChild(g); p.appendChild(wrap);
   const N=labels.map((o,i)=>{ const d=document.createElement('div');
     d.style.cssText=`position:absolute;left:0;top:0;white-space:nowrap;font-family:${GL.FONT};font-weight:500;font-size:${size}px;letter-spacing:-0.01em;display:flex;align-items:center;transform-origin:50% 50%;backface-visibility:visible`;
-    d.innerHTML=`<span style="color:rgb(31,32,35)">${o.n}</span><span style="width:8px;height:8px;border-radius:50%;background:rgb(77,141,255);box-shadow:0 0 0 3px rgba(255,255,255,.9);margin:0 18px;flex:none"></span><span style="color:rgb(77,141,255)">${o.v}</span>`;
+    const C=TAGC(); d.innerHTML=`<span style="color:${rgb(C.name)}">${o.n}</span><span style="width:8px;height:8px;border-radius:50%;background:${rgb(C.dot)};box-shadow:0 0 0 3px ${C.ring};margin:0 18px;flex:none"></span><span style="color:${rgb(C.val)}">${o.v}</span>`;
     g.appendChild(d); return {d,o,i,w:0}; });
   N.forEach(q=>{ q.w=q.d.offsetWidth; q.h=q.d.offsetHeight; q.dotX=q.d.children[1].offsetLeft+4-q.w/2; });
   const order=nameOff||labels.map((_,i)=>i), rad=Math.PI/180;
-  const cz=t=>{ const s=t<t0?tab(SD,0):tab(SD,t-t0); return -D + P*(1-1/s)*0.9; };   // push from the measured word-plane scale
+  const cz=t=>{ const s=t<t0?tab(SD,0):tab(SD,t-t0); return -D + P*(1-1/s)*0.55; };   // push from the measured word-plane scale
   const sp=t=>(spin[0]+(spin[1]-spin[0])*clamp((t-t0)/2.6))*rad;
   const world=(o,t)=>{ const lon=o.lon*rad+sp(t), lat=o.lat*rad; return {x:R*Math.cos(lat)*Math.sin(lon), y:R*Math.sin(lat), z:R*Math.cos(lat)*Math.cos(lon)+cz(t)}; };
   const draw=t=>{ wrap.style.display=(t<t0||t>=until)?'none':'block'; if(t<t0||t>=until) return;
@@ -161,7 +166,7 @@ function labelSphere(p,labels,t0,{R=560,D=760,P=1150,size=40,spin=[-14,6],tilt=-
     const zf=R+cz(t);
     for(const q of N){ const {d,o,i}=q, w=world(o,t);
       d.style.transform=`translate(-50%,-50%) rotateY(${o.lon}deg) rotateX(${-o.lat}deg) translateZ(${R}px)`;
-      const blur=Math.min(16,Math.abs(w.z-zf)*0.016), on=clamp((t-t0-0.02*i)/0.36), back=w.z<cz(t);
+      const blur=Math.min(14,Math.abs(w.z-zf)*0.012), on=clamp((t-t0-0.02*i)/0.36), back=w.z<cz(t);
       const k=order.indexOf(i), off=t0+1.16+Math.max(0,k)*fr(1.6), nOut=t>=off?1:0, vOut=clamp((t-off-fr(2))/fr(8));
       d.style.filter=`blur(${blur.toFixed(2)}px)`; d.style.opacity=(E_out(on)*(back?0.55:1)).toFixed(3);
       const [n,dot,v]=d.children; n.style.opacity=1-nOut; v.style.opacity=1-vOut; dot.style.opacity=o.keepDot?1:1-vOut; } };
@@ -187,15 +192,24 @@ let MESH=null;
 function meshURL(){ if(MESH) return MESH;
   const W=2400, H=1350, c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');
   const ox=(W-1920)/2, oy=(H-1080)/2;
-  g.fillStyle='rgb(196,214,255)'; g.fillRect(0,0,W,H);
+  const dark=THEME==='dark';
+  g.fillStyle=dark?'rgb(7,11,26)':'rgb(196,214,255)'; g.fillRect(0,0,W,H);
   const blob=(x,y,rx,ry,rot,col,blur)=>{ g.save(); g.filter=`blur(${blur}px)`; g.fillStyle=col; g.beginPath(); g.ellipse(ox+x,oy+y,rx,ry,rot,0,Math.PI*2); g.fill(); g.restore(); };
   const arc=(x,y,rx,ry,rot,a0,a1,w,col,blur)=>{ g.save(); g.filter=`blur(${blur}px)`; g.strokeStyle=col; g.lineWidth=w; g.lineCap='round'; g.beginPath(); g.ellipse(ox+x,oy+y,rx,ry,rot,a0,a1); g.stroke(); g.restore(); };
+  if(dark){
+    arc(990,570,960,620,-0.22,-1.05,1.3,340,'rgb(26,80,230)',240);
+    arc(990,570,960,620,-0.22,2.5,3.8,300,'rgb(20,64,200)',250);
+    blob(960,555,700,440,-0.08,'rgb(18,60,190)',240);
+    blob(960,550,460,280,-0.08,'rgb(26,102,255)',210);
+    blob(960,540,240,150,-0.08,'rgb(90,150,255)',160);
+    blob(960,1120,520,150,0,'rgb(30,90,240)',170);
+  } else {
   blob(60,20,640,460,0,'rgb(226,236,255)',240); blob(1880,1080,640,440,0,'rgb(220,232,255)',240); blob(-80,640,380,700,0,'rgb(214,228,255)',220);
   arc(990,570,960,620,-0.22,-1.05,1.3,360,'rgb(52,108,255)',230);
   arc(990,570,960,620,-0.22,2.5,3.8,320,'rgb(70,124,255)',240);
   blob(960,555,700,440,-0.08,'rgb(120,166,255)',230);
   blob(960,550,470,290,-0.08,'rgb(64,128,255)',200);
-  blob(960,1100,520,150,0,'rgb(90,145,255)',160);
+  blob(960,1100,520,150,0,'rgb(90,145,255)',160); }
   MESH=c.toDataURL('image/jpeg',0.95); return MESH; }
 
 /* bloom(parent, t0): the soft ellipse grows from the centre (frames 126–136) and becomes the background (mesh) */
@@ -250,5 +264,5 @@ function dotsToMark(p,ds,{x,y,w,vb},t0,anchors,tGlass){
     sweep.forEach(sw=>{ sw.setAttribute('stroke-opacity',on2?(1-u2)*0.95:0); sw.setAttribute('stroke-dashoffset',`${-(0.55+0.5*u2)}`); }); };
 }
 
-window.GlassLight={GL,F,fr,clamp,lerp,centredLine,labelField,labelField3D,labelSphere,lensLayer,lensAt,dot3D,dotAt,roll,bloom,dotsToMark,camera,SL,tab};
+window.GlassLight={setTheme,GL,F,fr,clamp,lerp,centredLine,labelField,labelField3D,labelSphere,lensLayer,lensAt,dot3D,dotAt,roll,bloom,dotsToMark,camera,SL,tab};
 })();
