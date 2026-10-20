@@ -8,7 +8,7 @@
 const F=25, fr=n=>n/F, clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v)), lerp=(a,b,k)=>a+(b-a)*k;
 const rgb=(c)=>`rgb(${c.map(Math.round).join(',')})`, mixc=(a,b,k)=>a.map((v,i)=>lerp(v,b[i],k));
 const GL={
-  FONT:"'SF Pro Display'", WEIGHT:500, SIZE:76.7, TRACK:'-0.01em', GAP:17,          // glyph IoU 0.751, aspect 8.045 vs 8.044
+  FONT:'Satoshi', WEIGHT:500, SIZE:76.7, TRACK:'-0.01em', GAP:17,          // glyph IoU 0.751, aspect 8.045 vs 8.044
   PAPER:[253,253,253], INK:[29,29,30],
   PRE:[208,224,255],   // arrival frame (word at partial opacity, palest periwinkle)
   P0:[122,165,255],    // first full frame
@@ -139,6 +139,38 @@ function lensLayer(p){ const NS='http://www.w3.org/2000/svg';
   const wash=document.createElement('div'); wash.style.cssText='position:absolute;inset:0;pointer-events:none;background:radial-gradient(70% 78% at 50% 50%,rgba(253,253,253,0) 55%,rgba(253,253,253,.6) 100%)';
   return {layer:w, edges:[soft,wash]}; }
 
+/* labelSphere(parent, labels, t0, opts): the source's field is a sphere of tags around the word, seen from outside,
+   turning slowly. labels = [{n, v, lat, lon}] in degrees (lon 0 faces the camera). Each tag sits on the surface facing
+   outward, so tags compress as they curve away and show mirrored on the far side; depth of field from each tag's real
+   depth (front in focus); the camera pushes on the measured creep / cut-in / ease-out. Names cut off, values fade, the
+   separator dots stay (dotsAt(t) returns their screen positions for the hand-over). */
+function labelSphere(p,labels,t0,{R=560,D=760,P=1150,size=40,spin=[-14,6],tilt=-6,nameOff=null,until=1e9}={}){
+  const wrap=document.createElement('div'); wrap.style.cssText=`position:absolute;inset:0;perspective:${P}px;perspective-origin:960px 540px`;
+  const g=document.createElement('div'); g.style.cssText='position:absolute;left:960px;top:540px;width:0;height:0;transform-style:preserve-3d'; wrap.appendChild(g); p.appendChild(wrap);
+  const N=labels.map((o,i)=>{ const d=document.createElement('div');
+    d.style.cssText=`position:absolute;left:0;top:0;white-space:nowrap;font-family:${GL.FONT};font-weight:500;font-size:${size}px;letter-spacing:-0.01em;display:flex;align-items:center;transform-origin:50% 50%;backface-visibility:visible`;
+    d.innerHTML=`<span style="color:rgb(31,32,35)">${o.n}</span><span style="width:8px;height:8px;border-radius:50%;background:rgb(77,141,255);box-shadow:0 0 0 3px rgba(255,255,255,.9);margin:0 18px;flex:none"></span><span style="color:rgb(77,141,255)">${o.v}</span>`;
+    g.appendChild(d); return {d,o,i,w:0}; });
+  N.forEach(q=>{ q.w=q.d.offsetWidth; q.h=q.d.offsetHeight; q.dotX=q.d.children[1].offsetLeft+4-q.w/2; });
+  const order=nameOff||labels.map((_,i)=>i), rad=Math.PI/180;
+  const cz=t=>{ const s=t<t0?tab(SD,0):tab(SD,t-t0); return -D + P*(1-1/s)*0.9; };   // push from the measured word-plane scale
+  const sp=t=>(spin[0]+(spin[1]-spin[0])*clamp((t-t0)/2.6))*rad;
+  const world=(o,t)=>{ const lon=o.lon*rad+sp(t), lat=o.lat*rad; return {x:R*Math.cos(lat)*Math.sin(lon), y:R*Math.sin(lat), z:R*Math.cos(lat)*Math.cos(lon)+cz(t)}; };
+  const draw=t=>{ wrap.style.display=(t<t0||t>=until)?'none':'block'; if(t<t0||t>=until) return;
+    g.style.transform=`translateZ(${cz(t).toFixed(1)}px) rotateX(${tilt}deg) rotateY(${(sp(t)/rad).toFixed(3)}deg)`;
+    const zf=R+cz(t);
+    for(const q of N){ const {d,o,i}=q, w=world(o,t);
+      d.style.transform=`translate(-50%,-50%) rotateY(${o.lon}deg) rotateX(${-o.lat}deg) translateZ(${R}px)`;
+      const blur=Math.min(16,Math.abs(w.z-zf)*0.016), on=clamp((t-t0-0.02*i)/0.36), back=w.z<cz(t);
+      const k=order.indexOf(i), off=t0+1.16+Math.max(0,k)*fr(1.6), nOut=t>=off?1:0, vOut=clamp((t-off-fr(2))/fr(8));
+      d.style.filter=`blur(${blur.toFixed(2)}px)`; d.style.opacity=(E_out(on)*(back?0.55:1)).toFixed(3);
+      const [n,dot,v]=d.children; n.style.opacity=1-nOut; v.style.opacity=1-vOut; dot.style.opacity=o.keepDot?1:1-vOut; } };
+  draw.dotsAt=t=>N.filter(q=>q.o.keepDot).map(q=>{ const w=world(q.o,t), sc=P/(P-w.z), ang=sp(t);
+      const ox=q.dotX*Math.cos(o2r(q.o.lon)+ang); return {x:960+(w.x+ox)*sc, y:540+w.y*sc}; });
+  return draw;
+}
+const E_out=u=>1-Math.pow(1-u,3), o2r=d=>d*Math.PI/180;
+
 /* roll(parent, from, to, tCut): the word drifts up accelerating for 0.4 s, cut to the brand word just below, which settles up. */
 function roll(p,word,tCut,{size=GL.SIZE,scale=()=>1}={}){
   const b=document.createElement('div'); b.style.cssText=`position:absolute;left:960px;top:0;white-space:nowrap;font-family:${GL.FONT};font-weight:500;font-size:${size}px;letter-spacing:${GL.TRACK};color:${rgb(GL.BRAND)};display:none`;
@@ -218,5 +250,5 @@ function dotsToMark(p,ds,{x,y,w,vb},t0,anchors,tGlass){
     sweep.forEach(sw=>{ sw.setAttribute('stroke-opacity',on2?(1-u2)*0.95:0); sw.setAttribute('stroke-dashoffset',`${-(0.55+0.5*u2)}`); }); };
 }
 
-window.GlassLight={GL,F,fr,clamp,lerp,centredLine,labelField,labelField3D,lensLayer,lensAt,dot3D,dotAt,roll,bloom,dotsToMark,camera,SL,tab};
+window.GlassLight={GL,F,fr,clamp,lerp,centredLine,labelField,labelField3D,labelSphere,lensLayer,lensAt,dot3D,dotAt,roll,bloom,dotsToMark,camera,SL,tab};
 })();
