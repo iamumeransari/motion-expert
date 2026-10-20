@@ -85,6 +85,37 @@ function labelField(p,labels,t0,{nameOff=null,size=41,ghost=true,dotsUntil=1e9}=
 /* where a label's separator dot sits on screen at time t (to hand the dots over to the mark) */
 function dotAt(o,t,t0,size=41,nameW){ const s=camera(t0).field(t); return {x:960+(o.x+nameW+18+4-960)*s, y:540+(o.y-540)*s}; }
 
+/* labelField3D(parent, front, t0, opts): the source's field as a real 3D space. front = [{n,v,x,y,rot,keepDot}] at rest
+   positions (screen, scale 1 at t0+0.96); behind it two more planes of labels (mid mirrored, back plain) at depth, all on one
+   camera whose front-plane scale follows the measured table (creep, cut-in, ease out), with a slow roll of the whole space.
+   Depth gives parallax, blur and atmospheric fade; names cut off in order, values fade, kept dots stay. */
+function labelField3D(p,front,t0,{nameOff=null,size=41,mid=[],back=[],dotsUntil=1e9,roll=[-3,1.5]}={}){
+  const Zf=640, F=295.3, c=t=>Zf-F/tab(SL,t-t0);
+  const mk=(o,i,Z,kind)=>{ const d=document.createElement('div');
+    d.style.cssText=`position:absolute;left:0;top:0;white-space:nowrap;font-family:${GL.FONT};font-weight:500;font-size:${size}px;letter-spacing:-0.01em;display:flex;align-items:center;transform-origin:0 50%`;
+    d.innerHTML=`<span style="color:rgb(31,32,35)">${o.n}</span><span style="width:8px;height:8px;border-radius:50%;background:rgb(167,169,233);box-shadow:0 0 0 3px rgba(255,255,255,.9),0 1px 4px rgba(120,130,200,.35);margin:0 18px;flex:none"></span><span style="color:rgb(163,172,230)">${o.v}</span>`;
+    p.appendChild(d); const X=(o.x-960)*(Z-(Zf-F))/F, Y=(o.y-540)*(Z-(Zf-F))/F; return {d,o,i,Z,X,Y,kind}; };
+  const N=[...front.map((o,i)=>mk(o,i,Zf,'front')),...mid.map((o,i)=>mk(o,i,1150,'mid')),...back.map((o,i)=>mk(o,i,1800,'back'))];
+  const order=nameOff||front.map((_,i)=>i);
+  return t=>{ const cz=c(t), u=clamp((t-t0)/2.2), th=(roll[0]+(roll[1]-roll[0])*u)*Math.PI/180, co=Math.cos(th), si=Math.sin(th);
+    for(const q of N){ const {d,o,i,Z,kind}=q;
+      if(t<t0||t>=dotsUntil){ d.style.display='none'; continue; } d.style.display='flex';
+      const s=F/(Z-cz); const X=q.X*co-q.Y*si, Y=q.X*si+q.Y*co; const sx=960+X*s/((Z-(Zf-F))/F)*((Z-(Zf-F))/F), sy=540+Y*s;
+      const px=960+X*s, py=540+Y*s;
+      const sf=tab(SL,t-t0), far=clamp((1-sf)/0.45), on=clamp((t-t0-0.012*i-(kind==='front'?0:kind==='mid'?-0.1:-0.2))/0.3);
+      d.style.transform=`translate(${px}px,${py}px) translateY(-50%) scale(${kind==='mid'?-s:s},${s}) rotate(${(o.rot||0)+th*57.3}deg)`;
+      const [n,dot,v]=d.children;
+      if(kind==='front'){ const k=order.indexOf(i), off=t0+1.16+k*fr(1.6), nOut=t>=off?1:0, vOut=clamp((t-off-fr(2))/fr(8));
+        d.style.opacity=on.toFixed(3); d.style.filter=`blur(${(far*4).toFixed(2)}px)`;
+        n.style.color=rgb(mixc([31,32,35],[178,188,236],far)); n.style.opacity=1-nOut; v.style.opacity=1-vOut; dot.style.opacity=o.keepDot?1:1-vOut; }
+      else { const fade=1-clamp((t-t0-1.0)/0.4), b=kind==='mid'?6:11, a=kind==='mid'?0.42:0.22;
+        d.style.opacity=(on*a*fade).toFixed(3); d.style.filter=`blur(${b}px)`; n.style.color=rgb([150,160,205]); } }
+  };
+}
+/* where a front label's dot is on screen at time t (rolled), for handing dots to the mark */
+function dot3D(o,nameW,t,t0,roll=[-3,1.5]){ const Zf=640,F=295.3, cz=Zf-F/tab(SL,t-t0), s=F/(Zf-cz), u=clamp((t-t0)/2.2), th=(roll[0]+(roll[1]-roll[0])*u)*Math.PI/180;
+  const X=(o.x+nameW+22-960), Y=(o.y-540); return {x:960+(X*Math.cos(th)-Y*Math.sin(th))*s, y:540+(X*Math.sin(th)+Y*Math.cos(th))*s}; }
+
 /* roll(parent, from, to, tCut): the word drifts up accelerating for 0.4 s, cut to the brand word just below, which settles up. */
 function roll(p,word,tCut,{size=GL.SIZE,scale=()=>1}={}){
   const b=document.createElement('div'); b.style.cssText=`position:absolute;left:960px;top:0;white-space:nowrap;font-family:${GL.FONT};font-weight:500;font-size:${size}px;letter-spacing:${GL.TRACK};color:${rgb(GL.BRAND)};display:none`;
@@ -94,11 +125,27 @@ function roll(p,word,tCut,{size=GL.SIZE,scale=()=>1}={}){
       b.style.transform=`translate(-50%,0) translate(0,${540-14*s-0.62*size*s+26*(1-e)}px) scale(${s})`; }, el:b};
 }
 
+/* the blue: not a radial gradient. A saturated core, a lighter periwinkle band, and violet bands curving round the right side
+   and lower left like a heavily blurred ring, lifting to lavender at the edges (colours sampled from the source's 5.5–9.2 s).
+   Painted once with canvas blur filters, then only transformed. */
+let MESH=null;
+function meshURL(){ if(MESH) return MESH;
+  const W=2400, H=1350, c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');
+  const ox=(W-1920)/2, oy=(H-1080)/2;
+  g.fillStyle='rgb(184,197,252)'; g.fillRect(0,0,W,H);
+  const blob=(x,y,rx,ry,rot,col,blur)=>{ g.save(); g.filter=`blur(${blur}px)`; g.fillStyle=col; g.beginPath(); g.ellipse(ox+x,oy+y,rx,ry,rot,0,Math.PI*2); g.fill(); g.restore(); };
+  const arc=(x,y,rx,ry,rot,a0,a1,w,col,blur)=>{ g.save(); g.filter=`blur(${blur}px)`; g.strokeStyle=col; g.lineWidth=w; g.lineCap='round'; g.beginPath(); g.ellipse(ox+x,oy+y,rx,ry,rot,a0,a1); g.stroke(); g.restore(); };
+  blob(80,40,520,380,0,'rgb(214,220,254)',160); blob(1850,1060,520,360,0,'rgb(208,214,253)',160); blob(-60,620,300,600,0,'rgb(200,210,253)',150);
+  arc(980,560,930,600,-0.2,-1.0,1.25,300,'rgb(156,150,246)',130);
+  arc(980,560,930,600,-0.2,2.55,3.75,260,'rgb(162,158,247)',140);
+  arc(960,560,640,410,-0.1,0,Math.PI*2,150,'rgb(168,188,252)',90);
+  blob(960,555,560,350,-0.08,'rgb(136,164,250)',150);
+  blob(960,1080,420,120,0,'rgb(140,170,240)',90);
+  MESH=c.toDataURL('image/jpeg',0.95); return MESH; }
+
 /* bloom(parent, t0): the soft ellipse grows from the centre (frames 126–136) and becomes the background (mesh) */
 function bloom(p,t0){
-  const m=document.createElement('div'); m.style.cssText='position:absolute;inset:-12%;display:none;background:'+
-    'radial-gradient(42% 46% at 50% 50%, rgb(138,167,250) 0%, rgba(138,167,250,0) 100%),radial-gradient(40% 50% at 86% 22%, rgb(164,150,246) 0%, rgba(164,150,246,0) 100%),'+
-    'radial-gradient(50% 50% at 12% 14%, rgb(196,206,252) 0%, rgba(196,206,252,0) 100%),radial-gradient(50% 45% at 20% 92%, rgb(190,202,252) 0%, rgba(190,202,252,0) 100%),rgb(176,192,251)';
+  const m=document.createElement('img'); m.src=meshURL(); m.style.cssText='position:absolute;left:-240px;top:-135px;width:2400px;height:1350px;display:none';
   const e=document.createElement('div'); e.style.cssText='position:absolute;left:960px;top:540px;border-radius:50%;display:none;background:radial-gradient(closest-side, rgb(138,167,250) 0%, rgb(138,167,250) 30%, rgba(150,176,250,.55) 62%, rgba(170,190,251,.18) 84%, rgba(190,204,252,0) 100%)';
   p.appendChild(m); p.appendChild(e);
   const R=GL.BLOOM_R, full=t0+fr(R.length);
@@ -108,7 +155,7 @@ function bloom(p,t0){
     if(f>=R.length+1){ e.style.display='none'; } else { const r=f<R.length-1?lerp(R[Math.floor(f)],R[Math.min(R.length-1,Math.floor(f)+1)],f-Math.floor(f)):R.at(-1)*1.4;
       const a=r*Math.sqrt(GL.BLOOM_ASPECT), b=r/Math.sqrt(GL.BLOOM_ASPECT); e.style.display='block';
       e.style.width=2*a+'px'; e.style.height=2*b+'px'; e.style.marginLeft=-a+'px'; e.style.marginTop=-b+'px'; }
-    const q=clamp((t-full)/4); m.style.transform=`translate(${-30*q}px,${10*q}px) scale(${1+0.03*q})`; };
+    const q=clamp((t-full)/4), e2=1-Math.pow(1-q,2); m.style.transform=`translate(${-36*e2}px,${12*e2}px) scale(${1+0.04*e2}) rotate(${-1.2*e2}deg)`; };
 }
 
 /* dotsToMark(parent, svgPathDs, place, t0, dots): the dots stand where the labels left them; from t0 white hairlines grow
@@ -116,19 +163,21 @@ function bloom(p,t0){
 function dotsToMark(p,ds,{x,y,w,vb},t0,anchors,tGlass){
   const k=w/vb.w, NS='http://www.w3.org/2000/svg', svg=document.createElementNS(NS,'svg'); svg.setAttribute('width',1920); svg.setAttribute('height',1080);
   svg.style.cssText='position:absolute;left:0;top:0;overflow:visible;display:none';
-  svg.innerHTML=`<defs><linearGradient id="glg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".5" stop-color="#fff" stop-opacity=".14"/><stop offset="1" stop-color="#fff" stop-opacity=".32"/></linearGradient></defs>
-    <g transform="translate(${x} ${y}) scale(${k}) translate(${-vb.x} ${-vb.y})">${ds.map(d=>`<path class="fill" d="${d}" fill="url(#glg)" fill-opacity="0" stroke="none"/>`).join('')}${anchors.map(a=>`<path class="ln" d="${ds[a.path]}" fill="none" stroke="#fff" stroke-opacity=".92" stroke-width="${1.6/k}" stroke-linecap="round" pathLength="1"/>`).join('')}${ds.map(d=>`<path class="rim" d="${d}" fill="none" stroke="#fff" stroke-width="${1.6/k}" stroke-opacity="0"/>`).join('')}</g>`;
+  svg.innerHTML=`<defs><linearGradient id="glg" x1="0" y1="0" x2=".6" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".62"/><stop offset=".45" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#E9EEFF" stop-opacity=".38"/></linearGradient>
+      <linearGradient id="glr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".5" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity=".85"/></linearGradient>
+      <filter id="glf" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceAlpha" stdDeviation="${6/k}" result="b"/><feOffset dy="${10/k}" result="o"/><feFlood flood-color="#5468D8" flood-opacity=".28"/><feComposite in2="o" operator="in" result="sh"/><feMerge><feMergeNode in="sh"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    <g transform="translate(${x} ${y}) scale(${k}) translate(${-vb.x} ${-vb.y})">${ds.map(d=>`<path class="fill" d="${d}" fill="url(#glg)" fill-opacity="0" stroke="none" filter="url(#glf)"/>`).join('')}${anchors.map(a=>`<path class="ln" d="${ds[a.path]}" fill="none" stroke="#fff" stroke-opacity=".92" stroke-width="${1.6/k}" stroke-linecap="round" pathLength="1"/>`).join('')}${ds.map(d=>`<path class="rim" d="${d}" fill="none" stroke="url(#glr)" stroke-width="${2.6/k}" stroke-opacity="0"/>`).join('')}</g>`;
   p.appendChild(svg);
   const lns=[...svg.querySelectorAll('.ln')], fills=[...svg.querySelectorAll('.fill')], rims=[...svg.querySelectorAll('.rim')];
   const beads=anchors.map(()=>{ const b=document.createElement('div'); b.style.cssText='position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;border:1.5px solid #fff;box-sizing:border-box;background:rgba(255,255,255,.3);display:none'; p.appendChild(b); return b; });
   const ease=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
   return t=>{ const on=t>=t0-fr(10); svg.style.display=on?'block':'none';
-    anchors.forEach((a,i)=>{ const st=t0+i*0.06, u=ease(clamp((t-st)/1.0)), h=a.span*u;
+    anchors.forEach((a,i)=>{ const st=t0+i*0.12, u=ease(clamp((t-st)/1.5)), h=a.span*u;
       lns[i].setAttribute('stroke-dasharray',`${2*h} ${1-2*h}`); lns[i].setAttribute('stroke-dashoffset',`${-(a.s-h)}`);
       lns[i].style.opacity=t<tGlass?1:1-clamp((t-tGlass)/0.25);
-      beads[i].style.display=on?'block':'none'; beads[i].style.left=a.px+'px'; beads[i].style.top=a.py+'px'; beads[i].style.opacity=1-clamp((t-tGlass)/0.2); });
-    const g=clamp((t-tGlass)/0.3); fills.forEach(f=>f.setAttribute('fill-opacity',g)); rims.forEach(r=>r.setAttribute('stroke-opacity',0.85*g)); };
+      beads[i].style.display=on?'block':'none'; beads[i].style.width=beads[i].style.height='14px'; beads[i].style.margin='-7px 0 0 -7px'; beads[i].style.borderWidth='2px'; beads[i].style.left=a.px+'px'; beads[i].style.top=a.py+'px'; beads[i].style.opacity=1-clamp((t-tGlass)/0.2); });
+    const g=clamp((t-tGlass)/0.35); fills.forEach(f=>f.setAttribute('fill-opacity',g)); rims.forEach(r=>r.setAttribute('stroke-opacity',g)); };
 }
 
-window.GlassLight={GL,F,fr,clamp,lerp,centredLine,labelField,dotAt,roll,bloom,dotsToMark,camera};
+window.GlassLight={GL,F,fr,clamp,lerp,centredLine,labelField,labelField3D,dot3D,dotAt,roll,bloom,dotsToMark,camera,SL,tab};
 })();
