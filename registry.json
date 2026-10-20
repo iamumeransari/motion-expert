@@ -7,6 +7,22 @@
       "captured": "2026-10-01",
       "status": "capturing",
       "fingerprint": "skills/editorial-select-motion/fingerprint.json"
+    },
+    {
+      "slug": "glass-light",
+      "skill": "skills/glass-light-motion",
+      "source": "file://Grey_-_Introducing_Bevel_3.0",
+      "captured": "2026-10-20",
+      "status": "capturing",
+      "fingerprint": "skills/glass-light-motion/fingerprint.json"
+    },
+    {
+      "slug": "founder-panels",
+      "skill": "skills/founder-panels-motion",
+      "source": "file://Diogo_Almeida_-_After_co-inventing",
+      "captured": "2026-10-20",
+      "status": "capturing",
+      "fingerprint": "skills/founder-panels-motion/fingerprint.json"
     }
   ]
 }
