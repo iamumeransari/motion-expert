@@ -197,12 +197,19 @@ function meshURL(){ if(MESH) return MESH;
   const blob=(x,y,rx,ry,rot,col,blur)=>{ g.save(); g.filter=`blur(${blur}px)`; g.fillStyle=col; g.beginPath(); g.ellipse(ox+x,oy+y,rx,ry,rot,0,Math.PI*2); g.fill(); g.restore(); };
   const arc=(x,y,rx,ry,rot,a0,a1,w,col,blur)=>{ g.save(); g.filter=`blur(${blur}px)`; g.strokeStyle=col; g.lineWidth=w; g.lineCap='round'; g.beginPath(); g.ellipse(ox+x,oy+y,rx,ry,rot,a0,a1); g.stroke(); g.restore(); };
   if(dark){
-    arc(990,570,960,620,-0.22,-1.05,1.3,340,'rgb(26,80,230)',240);
-    arc(990,570,960,620,-0.22,2.5,3.8,300,'rgb(20,64,200)',250);
-    blob(960,555,700,440,-0.08,'rgb(18,60,190)',240);
-    blob(960,550,460,280,-0.08,'rgb(26,102,255)',210);
-    blob(960,540,240,150,-0.08,'rgb(90,150,255)',160);
-    blob(960,1120,520,150,0,'rgb(30,90,240)',170);
+    /* depth: navy base that deepens toward the corners, one sweeping arc of light with a lit rim (Bevel's curve), a deep
+       counter-arc below, an off-centre core that runs from Beam blue to a pale highlight, then fine grain so nothing bands */
+    const bg=g.createLinearGradient(0,0,W,H); bg.addColorStop(0,'rgb(5,8,20)'); bg.addColorStop(0.55,'rgb(8,16,44)'); bg.addColorStop(1,'rgb(10,26,78)'); g.fillStyle=bg; g.fillRect(0,0,W,H);
+    arc(980,600,820,520,-0.22,-1.15,1.35,400,'rgb(16,58,190)',250);          // the broad sweep
+    arc(980,600,820,520,-0.22,-0.95,1.15,160,'rgb(36,106,255)',140);         // its body
+    arc(980,600,820,520,-0.22,-0.8,0.9,40,'rgb(160,198,255)',40);          // the lit rim
+    arc(990,560,940,600,-0.22,2.45,3.85,300,'rgb(14,46,160)',240);            // counter-arc, deeper
+    blob(900,520,720,430,-0.12,'rgb(16,56,185)',250);
+    blob(930,520,430,260,-0.12,'rgb(26,102,255)',200);                       // Beam blue core, a touch up-left
+    blob(990,470,190,120,-0.12,'rgb(130,176,255)',130);                      // pale highlight
+    blob(1460,980,620,200,-0.2,'rgb(22,78,230)',190);                        // floor bounce
+    const vg=g.createRadialGradient(ox+960,oy+540,300,ox+960,oy+540,1500); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(2,4,12,.72)'); g.fillStyle=vg; g.fillRect(0,0,W,H);
+    const id=g.getImageData(0,0,W,H), d=id.data; let r=1234567; for(let i=0;i<d.length;i+=4){ r^=r<<13; r^=r>>>17; r^=r<<5; const n=((r>>>0)%9)-4; d[i]+=n; d[i+1]+=n; d[i+2]+=n; } g.putImageData(id,0,0);
   } else {
   blob(60,20,640,460,0,'rgb(226,236,255)',240); blob(1880,1080,640,440,0,'rgb(220,232,255)',240); blob(-80,640,380,700,0,'rgb(214,228,255)',220);
   arc(990,570,960,620,-0.22,-1.05,1.3,360,'rgb(52,108,255)',230);
