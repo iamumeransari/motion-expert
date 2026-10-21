@@ -71,11 +71,11 @@ const camera=t0=>({word:t=>t<t0?1:tab(SD,t-t0), field:t=>tab(SL,t-t0)});
 /* labelField(parent, labels, t0, opts): labels = [{n, v, x, y, rot, keepDot}] at their rest positions (scale 1, which the
    field reaches at t0+0.96). Names cut off in the given order from t0+1.24, values fade over 8 frames, kept dots stay.
    A mirrored ghost of the same field sits behind (blur 7, opacity 0.3), as in the source. */
-function labelField(p,labels,t0,{nameOff=null,size=41,ghost=true,dotsUntil=1e9}={}){
+function labelField(p,labels,t0,{nameOff=null,size=41,ghost=true,mirror=false,dotsUntil=1e9}={}){
   const cam=camera(t0), N=[];
   const mk=(o,i,back)=>{ const d=document.createElement('div');
     d.style.cssText=`position:absolute;left:0;top:0;white-space:nowrap;font-family:${GL.FONT};font-weight:500;font-size:${size}px;letter-spacing:-0.01em;display:flex;align-items:center;transform-origin:0 50%`;
-    d.innerHTML=`<span style="color:rgb(31,32,35)">${o.n}</span><span style="width:8px;height:8px;border-radius:50%;background:rgb(77,141,255);box-shadow:0 0 0 3px rgba(255,255,255,.9),0 1px 4px rgba(120,130,200,.35);margin:0 18px;flex:none"></span><span style="color:rgb(77,141,255)">${o.v}</span>`;
+    const C=TAGC(); d.innerHTML=`<span style="color:${rgb(C.name)}">${o.n}</span><span style="width:8px;height:8px;border-radius:50%;background:${rgb(C.dot)};box-shadow:0 0 0 3px ${C.ring};margin:0 18px;flex:none"></span><span style="color:${rgb(C.val)}">${o.v}</span>`;
     p.appendChild(d); N.push({d,o,i,back}); };
   labels.forEach((o,i)=>mk(o,i,false)); if(ghost) labels.forEach((o,i)=>mk({...o,x:960-(o.x+150-960)*1.22-150,y:540+(o.y-540)*1.18-30},i,true));
   const order=nameOff||labels.map((_,i)=>i);
@@ -83,12 +83,12 @@ function labelField(p,labels,t0,{nameOff=null,size=41,ghost=true,dotsUntil=1e9}=
     for(const {d,o,i,back} of N){
       if(t<t0||t>=dotsUntil){ d.style.display='none'; continue; } d.style.display='flex';
       const sc=s*(back?0.9:1), on=clamp((t-t0-0.012*i)/0.24);
-      d.style.transform=`translate(${960+(o.x-960)*sc}px,${540+(o.y-540)*sc}px) translateY(-50%) scale(${back?-sc:sc},${sc}) rotate(${o.rot||0}deg)`;
+      d.style.transform=`translate(${960+(o.x-960)*sc}px,${540+(o.y-540)*sc}px) translateY(-50%) scale(${back&&mirror?-sc:sc},${sc}) rotate(${o.rot||0}deg)`;
       const k=order.indexOf(i), off=t0+1.16+k*fr(1.6);
       const nOut=back?clamp((t-t0-1.06)/0.3):(t>=off?1:0), vOut=back?clamp((t-t0-1.16)/0.3):clamp((t-off-fr(2))/fr(8));
       d.style.opacity=(on*(back?0.3:1)*(back?1-vOut:1)).toFixed(3);
       d.style.filter=`blur(${back?7:(far*4).toFixed(2)}px)`;
-      const [n,dot,v]=d.children; n.style.color=rgb(mixc([31,32,35],[178,188,236],back?0.6:far)); n.style.opacity=1-nOut; v.style.opacity=1-vOut;
+      const [n,dot,v]=d.children; const C=TAGC(); n.style.color=rgb(mixc(C.name,C.far,back?0.6:far)); n.style.opacity=1-nOut; v.style.opacity=1-vOut;
       dot.style.opacity=back?1-vOut:(o.keepDot?1:1-vOut); }
   };
 }
