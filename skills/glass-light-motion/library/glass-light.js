@@ -213,10 +213,10 @@ function meshURL(){ if(MESH) return MESH;
   MESH=c.toDataURL('image/jpeg',0.95); return MESH; }
 
 /* bloom(parent, t0): the soft ellipse grows from the centre (frames 126–136) and becomes the background (mesh) */
-function bloom(p,t0){
-  const m=document.createElement('img'); m.src=meshURL(); m.style.cssText='position:absolute;left:-240px;top:-135px;width:2400px;height:1350px;display:none';
+function bloom(p,t0,{src=null}={}){   // src: an image to bloom into (a brand's key gradient) instead of the painted mesh
+  const m=document.createElement('img'); m.src=src||meshURL(); m.style.cssText='position:absolute;left:-240px;top:-135px;width:2400px;height:1350px;display:none';
   /* the bloom is the blue itself, seen through a very soft opening that grows (no flat ellipse of colour) */
-  const e=document.createElement('div'); e.style.cssText='position:absolute;inset:0;display:none'; const ei=document.createElement('img'); ei.src=meshURL(); ei.style.cssText='position:absolute;left:-240px;top:-135px;width:2400px;height:1350px'; e.appendChild(ei);
+  const e=document.createElement('div'); e.style.cssText='position:absolute;inset:0;display:none'; const ei=document.createElement('img'); ei.src=src||meshURL(); ei.style.cssText='position:absolute;left:-240px;top:-135px;width:2400px;height:1350px'; e.appendChild(ei);
   p.appendChild(m); p.appendChild(e);
   const R=GL.BLOOM_R, full=t0+fr(R.length);
   return t=>{ const f=(t-t0)*F;
